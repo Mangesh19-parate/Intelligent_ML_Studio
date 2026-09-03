@@ -1,0 +1,69 @@
+import axios from 'axios';
+
+const API_BASE_URL = import.meta.env.VITE_API_URL || '/api/v1';
+
+const apiClient = axios.create({
+  baseURL: API_BASE_URL,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+// Request interceptor: Attach JWT token if present
+apiClient.interceptors.request.use((config) => {
+  const token = localStorage.getItem('access_token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+}, (error) => {
+  return Promise.reject(error);
+});
+
+// Response interceptor: handle 401 logout
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response && error.response.status === 401) {
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('refresh_token');
+      localStorage.removeItem('user');
+      if (window.location.pathname !== '/login') {
+        window.location.href = '/login';
+      }
+    }
+    return Promise.reject(error);
+  }
+);
+
+export const authApi = {
+  login: (email, password) => apiClient.post('/auth/login', { email, password }),
+  register: (fullName, email, password, roleName = 'ML_ENGINEER') =>
+    apiClient.post('/auth/register', { full_name: fullName, email, password, role_name: roleName }),
+  getMe: () => apiClient.get('/auth/me'),
+};
+
+export const projectApi = {
+  list: (skip = 0, limit = 100) => apiClient.get(`/projects?skip=${skip}&limit=${limit}`),
+  get: (id) => apiClient.get(`/projects/${id}`),
+  create: (projectName, targetColumn = null) =>
+    apiClient.post('/projects', { project_name: projectName, target_column: targetColumn }),
+  update: (id, payload) => apiClient.put(`/projects/${id}`, payload),
+  delete: (id) => apiClient.delete(`/projects/${id}`),
+};
+
+export const datasetApi = {
+  upload: (projectId, file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return apiClient.post(`/projects/${projectId}/datasets`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  },
+  listVersions: (projectId) => apiClient.get(`/projects/${projectId}/datasets`),
+  getColumns: (datasetId) => apiClient.get(`/datasets/${datasetId}/columns`),
+};
+
+export default apiClient;

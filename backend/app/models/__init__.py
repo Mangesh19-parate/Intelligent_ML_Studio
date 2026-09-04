@@ -11,8 +11,10 @@ from app.models.dataset_split import DatasetSplit
 from app.models.profiling_report import ProfilingReport
 from app.models.recommendation import Recommendation
 from app.models.transformation_config import TransformationConfig
+from app.models.transformation_snapshot import TransformationSnapshot
 from app.models.experiment import Experiment
 from app.models.feature_selection_fold_result import FeatureSelectionFoldResult
+from app.models.feature_selection_snapshot import FeatureSelectionSnapshot
 from app.models.feature_importance_score import FeatureImportanceScore
 from app.models.trained_model import TrainedModel
 from app.models.model_metric import ModelMetric
@@ -31,8 +33,10 @@ __all__ = [
     "ProfilingReport",
     "Recommendation",
     "TransformationConfig",
+    "TransformationSnapshot",
     "Experiment",
     "FeatureSelectionFoldResult",
+    "FeatureSelectionSnapshot",
     "FeatureImportanceScore",
     "TrainedModel",
     "ModelMetric",

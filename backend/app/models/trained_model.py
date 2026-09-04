@@ -33,6 +33,20 @@ class TrainedModel(Base):
     # Day 7: Fit diagnosis and composite model selection score
     fit_diagnosis = Column(String(30), nullable=True)
     model_selection_score = Column(Numeric(5, 2), nullable=True)
+
+    # Day 8: Model artifact serialization & snapshot links
+    artifact_path = Column(Text, nullable=True)
+    artifact_checksum = Column(String(64), nullable=True)
+    preprocessing_snapshot_id = Column(
+        Uuid(as_uuid=True),
+        ForeignKey("transformation_snapshots.id", ondelete="SET NULL"),
+        nullable=True
+    )
+    feature_selection_snapshot_id = Column(
+        Uuid(as_uuid=True),
+        ForeignKey("feature_selection_snapshots.id", ondelete="SET NULL"),
+        nullable=True
+    )
     
     status = Column(String(20), nullable=False, default="COMPLETED", server_default="COMPLETED")
     error_message = Column(Text, nullable=True)
@@ -56,6 +70,14 @@ class TrainedModel(Base):
         back_populates="trained_models",
         foreign_keys=[experiment_id]
     )
+    preprocessing_snapshot = relationship(
+        "TransformationSnapshot",
+        foreign_keys=[preprocessing_snapshot_id]
+    )
+    feature_selection_snapshot = relationship(
+        "FeatureSelectionSnapshot",
+        foreign_keys=[feature_selection_snapshot_id]
+    )
     metrics = relationship(
         "ModelMetric",
         back_populates="model",
@@ -64,5 +86,5 @@ class TrainedModel(Base):
     )
 
     def __repr__(self) -> str:
-        return f"<TrainedModel id={self.id} algorithm={self.algorithm_name} score={self.quick_cv_score} fit={self.fit_diagnosis} status={self.status}>"
+        return f"<TrainedModel id={self.id} algorithm={self.algorithm_name} score={self.quick_cv_score} fit={self.fit_diagnosis} checksum={self.artifact_checksum}>"
 

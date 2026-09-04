@@ -13,6 +13,7 @@ from app.schemas.experiment import (
     ExperimentResponse,
     ExperimentCreateResponse,
     TrainedModelResponse,
+    ExperimentLineageResponse,
 )
 from app.schemas.model_metric import SelectionRecordResponse, ModelMetricResponse
 from app.services.experiment_service import ExperimentService
@@ -291,4 +292,20 @@ def list_project_experiments(
         )
 
     return response_list
+
+
+@router.get(
+    "/experiments/{id}/lineage",
+    response_model=ExperimentLineageResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Get complete lineage and reproducibility metadata for an experiment (READ permission required)",
+)
+def get_experiment_lineage_endpoint(
+    id: UUID,
+    current_user: User = Depends(require_permission("READ")),
+    db: Session = Depends(get_db),
+):
+    service = ExperimentService(db)
+    return service.get_experiment_lineage(id)
+
 

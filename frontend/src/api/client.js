@@ -94,6 +94,7 @@ export const experimentApi = {
   get: (experimentId) => apiClient.get(`/experiments/${experimentId}`),
   listByProject: (projectId) => apiClient.get(`/projects/${projectId}/experiments`),
   getSelection: (experimentId) => apiClient.get(`/experiments/${experimentId}/selection`),
+  getLineage: (experimentId) => apiClient.get(`/experiments/${experimentId}/lineage`),
   finalize: (experimentId) => apiClient.post(`/experiments/${experimentId}/finalize`),
   diagnosticRerun: (experimentId) => apiClient.post(`/experiments/${experimentId}/diagnostic-rerun`),
 };

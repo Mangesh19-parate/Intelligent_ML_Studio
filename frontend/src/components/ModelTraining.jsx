@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { experimentApi, modelApi } from '../api/client';
+import { LineageViewer } from './LineageViewer';
 import {
   Cpu,
   Play,
@@ -22,6 +23,7 @@ import {
   Check,
   AlertCircle,
   HelpCircle,
+  FileCode,
 } from 'lucide-react';
 
 const REGRESSION_ALGORITHMS = [
@@ -92,6 +94,8 @@ export const ModelTraining = ({ projectId, taskType, targetColumn, onExperimentC
   const [pollingActive, setPollingActive] = useState(false);
   const [selectedModelMetrics, setSelectedModelMetrics] = useState(null);
   const [modelModalOpen, setModelModalOpen] = useState(false);
+  const [lineageModalOpen, setLineageModalOpen] = useState(false);
+  const [lineageExperimentId, setLineageExperimentId] = useState(null);
   const [rerunningDiagnostic, setRerunningDiagnostic] = useState(false);
 
   const pollingTimerRef = useRef(null);
@@ -600,8 +604,21 @@ export const ModelTraining = ({ projectId, taskType, targetColumn, onExperimentC
                     </p>
                   </div>
 
-                  <div className="text-right text-[11px] text-slate-400 font-mono">
-                    {leaderboard.models.length} competing models
+                  <div className="flex items-center space-x-3">
+                    <button
+                      onClick={() => {
+                        setLineageExperimentId(activeExperiment.id);
+                        setLineageModalOpen(true);
+                      }}
+                      className="px-3 py-1.5 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 text-xs font-semibold flex items-center space-x-1.5 transition-colors cursor-pointer"
+                      title="Inspect full experiment lineage, software environment, and artifact checksums"
+                    >
+                      <ShieldCheck className="w-3.5 h-3.5 text-indigo-400" />
+                      <span>Lineage & Integrity</span>
+                    </button>
+                    <div className="text-right text-[11px] text-slate-400 font-mono">
+                      {leaderboard.models.length} models
+                    </div>
                   </div>
                 </div>
 
@@ -791,6 +808,15 @@ export const ModelTraining = ({ projectId, taskType, targetColumn, onExperimentC
           </div>
         </div>
       )}
+
+      {/* Lineage & Integrity Modal */}
+      {lineageModalOpen && lineageExperimentId && (
+        <LineageViewer
+          experimentId={lineageExperimentId}
+          onClose={() => setLineageModalOpen(false)}
+        />
+      )}
     </div>
   );
 };
+

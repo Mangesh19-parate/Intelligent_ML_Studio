@@ -1,5 +1,8 @@
 import logging
 import secrets
+import hashlib
+import joblib
+from pathlib import Path
 from datetime import datetime, timezone
 from uuid import UUID
 from typing import Any
@@ -10,8 +13,13 @@ from sqlalchemy.orm import Session
 from sklearn.model_selection import KFold, StratifiedKFold
 from sklearn.impute import SimpleImputer
 
+from app.core.config import settings
 from app.core.database import SessionLocal
 from app.models.project import Project
+from app.models.dataset_split import DatasetSplit
+from app.models.transformation_config import TransformationConfig
+from app.models.transformation_snapshot import TransformationSnapshot
+from app.models.feature_selection_snapshot import FeatureSelectionSnapshot
 from app.models.experiment import Experiment
 from app.models.trained_model import TrainedModel
 from app.models.model_metric import ModelMetric
@@ -22,6 +30,7 @@ from app.services.dataset_split_service import DatasetSplitService
 from app.services.transformation_service import TransformationService
 from app.services.feature_selection_service import FeatureSelectionService
 from app.services.evaluation_service import EvaluationService
+from app.services.environment_capture_service import EnvironmentCaptureService
 from app.services.storage_service import StorageService, get_storage_service
 from app.services.trainers import (
     RegressionTrainer,
@@ -199,7 +208,27 @@ class ExperimentService:
         # Generate seed if not provided
         cv_seed = seed if seed is not None else secrets.randbelow(1_000_000)
 
-        # 2. Retrieve or create Experiment record
+        # 2. Validate dataset existence and fetch metadata
+        datasets = self.dataset_repo.get_by_project(project.id)
+        if not datasets:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="No dataset found for this project."
+            )
+        latest_dataset = datasets[0]
+        dataset_content_hash = latest_dataset.content_hash
+
+        # Capture current environment & library versions (Day 8 Lineage)
+        env_info = EnvironmentCaptureService.capture_current_environment()
+
+        # Split metadata
+        dev_split = self.db.query(DatasetSplit).filter(
+            DatasetSplit.dataset_id == latest_dataset.id,
+            DatasetSplit.split_type == "DEVELOPMENT"
+        ).first()
+        split_seed = dev_split.split_seed if dev_split else 42
+
+        # 3. Retrieve or create Experiment record
         if experiment_id is not None:
             experiment = self.exp_repo.get_by_id(experiment_id)
             if not experiment:
@@ -211,6 +240,14 @@ class ExperimentService:
                     selection_metric=eff_metric,
                     selection_direction=eff_direction,
                     status="RUNNING",
+                    dataset_content_hash=dataset_content_hash,
+                    code_version=env_info.get("code_version"),
+                    python_version=env_info.get("python_version"),
+                    sklearn_version=env_info.get("sklearn_version"),
+                    numpy_version=env_info.get("numpy_version"),
+                    pandas_version=env_info.get("pandas_version"),
+                    model_library_versions=env_info.get("model_library_versions"),
+                    environment_capture_method="CAPTURED_LIVE",
                 )
             else:
                 experiment.task_type = task_type
@@ -219,6 +256,14 @@ class ExperimentService:
                 experiment.selection_metric = eff_metric
                 experiment.selection_direction = eff_direction
                 experiment.status = "RUNNING"
+                experiment.dataset_content_hash = dataset_content_hash
+                experiment.code_version = env_info.get("code_version")
+                experiment.python_version = env_info.get("python_version")
+                experiment.sklearn_version = env_info.get("sklearn_version")
+                experiment.numpy_version = env_info.get("numpy_version")
+                experiment.pandas_version = env_info.get("pandas_version")
+                experiment.model_library_versions = env_info.get("model_library_versions")
+                experiment.environment_capture_method = "CAPTURED_LIVE"
                 self.db.add(experiment)
                 self.db.commit()
         else:
@@ -230,16 +275,73 @@ class ExperimentService:
                 selection_metric=eff_metric,
                 selection_direction=eff_direction,
                 status="RUNNING",
+                dataset_content_hash=dataset_content_hash,
+                code_version=env_info.get("code_version"),
+                python_version=env_info.get("python_version"),
+                sklearn_version=env_info.get("sklearn_version"),
+                numpy_version=env_info.get("numpy_version"),
+                pandas_version=env_info.get("pandas_version"),
+                model_library_versions=env_info.get("model_library_versions"),
+                environment_capture_method="CAPTURED_LIVE",
             )
 
-        datasets = self.dataset_repo.get_by_project(project.id)
-        if not datasets:
-            self.exp_repo.update_status(experiment.id, "FAILED")
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="No dataset found for this project."
-            )
-        latest_dataset = datasets[0]
+        # 4. Deep copy current transformation configs into TransformationSnapshot (Day 8)
+        trans_configs = self.db.query(TransformationConfig).filter(
+            TransformationConfig.project_id == project.id
+        ).order_by(TransformationConfig.column_name.asc()).all()
+        frozen_trans_json = [
+            {
+                "id": str(tc.id),
+                "column_name": tc.column_name,
+                "missing_value_strategy": tc.missing_value_strategy,
+                "encoding_strategy": tc.encoding_strategy,
+                "scaling_strategy": tc.scaling_strategy,
+                "outlier_strategy": tc.outlier_strategy,
+                "is_active": tc.is_active,
+            }
+            for tc in trans_configs
+        ]
+
+        trans_snapshot = self.exp_repo.create_transformation_snapshot(
+            experiment_id=experiment.id,
+            config_json=frozen_trans_json,
+        )
+
+        cv_strategy = "STRATIFIED_KFOLD" if task_type == "CLASSIFICATION" else "KFOLD"
+
+        # 5. Assemble and freeze experiment_config (SRS §2.5 / Day 8) - never edited after
+        experiment.experiment_config = {
+            "task_type": task_type,
+            "target": project.target_column,
+            "split": {
+                "seed": split_seed,
+                "locked_test_pct": 20,
+            },
+            "cv": {
+                "strategy": cv_strategy,
+                "folds": folds,
+                "seed": cv_seed,
+            },
+            "preprocessing": {
+                "snapshot_id": str(trans_snapshot.id),
+            },
+            "feature_selection": {
+                "method": "rank_aggregation_ensemble",
+            },
+            "threshold_selection": {
+                "objective": "F1",
+                "search_range": [0.10, 0.90],
+                "resolution": 0.01,
+                "tie_break": "closest_to_0.5",
+            },
+            "deployment_threshold": {
+                "metric": eff_metric,
+                "min_value": None,
+            },
+        }
+        self.db.add(experiment)
+        self.db.commit()
+        self.db.refresh(experiment)
 
         try:
             # 3. Load Development partition ONLY (Zero Test Leakage Invariant)
@@ -867,6 +969,66 @@ class ExperimentService:
         # Fit fresh winning model on full Development partition
         trainer.fit(X_dev_selected, y_dev_fit)
 
+        # Day 8: Create Feature Selection Snapshot on Full Development Set
+        fs_snapshot = self.exp_repo.create_feature_selection_snapshot(
+            experiment_id=experiment.id,
+            final_selected_features=final_selected,
+            final_selection_method="rank_aggregation_ensemble",
+        )
+        experiment.feature_selection_snapshot_id = fs_snapshot.id
+
+        # Day 8: Serialize fitted pipeline to disk (/data/models/{project_id}/{experiment_id}/{algorithm_name}.joblib)
+        artifact_dir = Path(settings.STORAGE_LOCAL_DIR) / "models" / str(project.id) / str(experiment.id)
+        artifact_dir.mkdir(parents=True, exist_ok=True)
+        artifact_file = artifact_dir / f"{winning_model.algorithm_name}.joblib"
+
+        fitted_pipeline = {
+            "experiment_id": str(experiment.id),
+            "project_id": str(project.id),
+            "algorithm_name": winning_model.algorithm_name,
+            "task_type": task_type,
+            "target_column": target_col,
+            "feature_names_in": candidate_cols,
+            "transformer": transformer,
+            "selected_feature_names": final_selected,
+            "selected_indices": selected_indices,
+            "estimator": trainer.estimator if hasattr(trainer, "estimator") else trainer,
+            "hyperparameters": winning_model.hyperparameters,
+            "fitted_at": datetime.now(timezone.utc).isoformat(),
+        }
+        joblib.dump(fitted_pipeline, artifact_file)
+
+        # Compute SHA-256 Integrity Checksum
+        hasher = hashlib.sha256()
+        with open(artifact_file, "rb") as f:
+            while chunk := f.read(65536):
+                hasher.update(chunk)
+        artifact_checksum = hasher.hexdigest()
+
+        # Update winning model record with artifact path, checksum, and snapshot foreign keys
+        winning_model.artifact_path = str(artifact_file)
+        winning_model.artifact_checksum = artifact_checksum
+        winning_model.feature_selection_snapshot_id = fs_snapshot.id
+
+        # Retrieve preprocessing snapshot ID
+        trans_snapshot_id = None
+        if experiment.experiment_config and isinstance(experiment.experiment_config, dict):
+            trans_snapshot_id = experiment.experiment_config.get("preprocessing", {}).get("snapshot_id")
+        if not trans_snapshot_id:
+            trans_snapshots = self.exp_repo.get_transformation_snapshots(experiment.id)
+            if trans_snapshots:
+                trans_snapshot_id = str(trans_snapshots[0].id)
+        if trans_snapshot_id:
+            try:
+                from uuid import UUID as PyUUID
+                winning_model.preprocessing_snapshot_id = PyUUID(trans_snapshot_id) if isinstance(trans_snapshot_id, str) else trans_snapshot_id
+            except Exception:
+                pass
+
+        self.db.add(experiment)
+        self.db.add(winning_model)
+        self.db.commit()
+
         # Evaluate final refit on Development partition
         y_dev_pred = trainer.predict(X_dev_selected)
         if task_type == "REGRESSION":
@@ -993,6 +1155,90 @@ class ExperimentService:
             "locked_test_consumed": True,
             "locked_test_consumed_at": now.isoformat(),
             "locked_test_metrics": locked_test_metrics,
+            "artifact_path": winning_model.artifact_path,
+            "artifact_checksum": winning_model.artifact_checksum,
+            "feature_selection_snapshot_id": str(fs_snapshot.id),
+            "preprocessing_snapshot_id": str(winning_model.preprocessing_snapshot_id) if winning_model.preprocessing_snapshot_id else None,
+        }
+
+    def get_experiment_lineage(self, experiment_id: UUID | str) -> dict[str, Any]:
+        """
+        Retrieves the complete experiment lineage bundle (SRS §2.17 / Day 8).
+        """
+        experiment = self.exp_repo.get_with_models(experiment_id)
+        if not experiment:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Experiment not found"
+            )
+
+        trans_snapshots = self.exp_repo.get_transformation_snapshots(experiment.id)
+        fs_snapshots = self.exp_repo.get_feature_selection_snapshots(experiment.id)
+
+        winning_model = None
+        if experiment.selected_model_id:
+            winning_model = next((m for m in experiment.trained_models if m.id == experiment.selected_model_id), None)
+
+        trans_snap_data = None
+        if trans_snapshots:
+            ts = trans_snapshots[0]
+            trans_snap_data = {
+                "id": str(ts.id),
+                "experiment_id": str(ts.experiment_id),
+                "config_json": ts.config_json,
+                "created_at": ts.created_at.isoformat() if ts.created_at else None,
+            }
+
+        fs_snap_data = None
+        if fs_snapshots:
+            fs = fs_snapshots[0]
+            fs_snap_data = {
+                "id": str(fs.id),
+                "experiment_id": str(fs.experiment_id),
+                "final_selected_features": fs.final_selected_features,
+                "final_selection_method": fs.final_selection_method,
+                "created_at": fs.created_at.isoformat() if fs.created_at else None,
+            }
+        elif experiment.feature_selection_snapshot_id:
+            fs = self.db.query(FeatureSelectionSnapshot).filter(FeatureSelectionSnapshot.id == experiment.feature_selection_snapshot_id).first()
+            if fs:
+                fs_snap_data = {
+                    "id": str(fs.id),
+                    "experiment_id": str(fs.experiment_id),
+                    "final_selected_features": fs.final_selected_features,
+                    "final_selection_method": fs.final_selection_method,
+                    "created_at": fs.created_at.isoformat() if fs.created_at else None,
+                }
+
+        winning_model_data = None
+        if winning_model:
+            winning_model_data = {
+                "id": str(winning_model.id),
+                "algorithm_name": winning_model.algorithm_name,
+                "artifact_path": winning_model.artifact_path,
+                "artifact_checksum": winning_model.artifact_checksum,
+                "preprocessing_snapshot_id": str(winning_model.preprocessing_snapshot_id) if winning_model.preprocessing_snapshot_id else None,
+                "feature_selection_snapshot_id": str(winning_model.feature_selection_snapshot_id) if winning_model.feature_selection_snapshot_id else None,
+            }
+
+        return {
+            "experiment_id": str(experiment.id),
+            "project_id": str(experiment.project_id),
+            "status": experiment.status,
+            "experiment_config": experiment.experiment_config,
+            "dataset_content_hash": experiment.dataset_content_hash,
+            "environment_capture_method": experiment.environment_capture_method,
+            "code_version": experiment.code_version,
+            "python_version": experiment.python_version,
+            "sklearn_version": experiment.sklearn_version,
+            "numpy_version": experiment.numpy_version,
+            "pandas_version": experiment.pandas_version,
+            "model_library_versions": experiment.model_library_versions or {},
+            "transformation_snapshot": trans_snap_data,
+            "feature_selection_snapshot": fs_snap_data,
+            "winning_model": winning_model_data,
+            "created_at": experiment.created_at.isoformat() if experiment.created_at else None,
+            "completed_at": experiment.completed_at.isoformat() if experiment.completed_at else None,
         }
 
     def rerun_locked_test_diagnostic(self, experiment_id: UUID | str) -> dict[str, Any]:

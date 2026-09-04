@@ -4,6 +4,8 @@ from typing import Any
 from sqlalchemy.orm import Session, joinedload
 from app.models.experiment import Experiment
 from app.models.feature_selection_fold_result import FeatureSelectionFoldResult
+from app.models.transformation_snapshot import TransformationSnapshot
+from app.models.feature_selection_snapshot import FeatureSelectionSnapshot
 from app.models.trained_model import TrainedModel
 from app.models.model_metric import ModelMetric
 from app.repositories.base import BaseRepository
@@ -21,6 +23,15 @@ class ExperimentRepository(BaseRepository[Experiment]):
         selection_metric: str | None = None,
         selection_direction: str = "MAXIMIZE",
         status: str = "RUNNING",
+        experiment_config: dict | None = None,
+        dataset_content_hash: str | None = None,
+        code_version: str | None = None,
+        python_version: str | None = None,
+        sklearn_version: str | None = None,
+        numpy_version: str | None = None,
+        pandas_version: str | None = None,
+        model_library_versions: dict | None = None,
+        environment_capture_method: str | None = None,
     ) -> Experiment:
         if isinstance(project_id, str):
             try:
@@ -35,6 +46,15 @@ class ExperimentRepository(BaseRepository[Experiment]):
             selection_metric=selection_metric,
             selection_direction=selection_direction,
             status=status,
+            experiment_config=experiment_config,
+            dataset_content_hash=dataset_content_hash,
+            code_version=code_version,
+            python_version=python_version,
+            sklearn_version=sklearn_version,
+            numpy_version=numpy_version,
+            pandas_version=pandas_version,
+            model_library_versions=model_library_versions,
+            environment_capture_method=environment_capture_method,
         )
         self.db.add(exp)
         self.db.commit()
@@ -293,4 +313,77 @@ class ExperimentRepository(BaseRepository[Experiment]):
         if split:
             q = q.filter(ModelMetric.split == split)
         return q.order_by(ModelMetric.created_at.asc()).all()
+
+    def create_transformation_snapshot(
+        self,
+        experiment_id: PyUUID | str,
+        config_json: list[dict[str, Any]] | dict[str, Any],
+    ) -> TransformationSnapshot:
+        if isinstance(experiment_id, str):
+            try:
+                experiment_id = PyUUID(experiment_id)
+            except Exception:
+                pass
+        snapshot = TransformationSnapshot(
+            experiment_id=experiment_id,
+            config_json=config_json,
+        )
+        self.db.add(snapshot)
+        self.db.commit()
+        self.db.refresh(snapshot)
+        return snapshot
+
+    def create_feature_selection_snapshot(
+        self,
+        experiment_id: PyUUID | str,
+        final_selected_features: list[str],
+        final_selection_method: str = "rank_aggregation_ensemble",
+    ) -> FeatureSelectionSnapshot:
+        if isinstance(experiment_id, str):
+            try:
+                experiment_id = PyUUID(experiment_id)
+            except Exception:
+                pass
+        snapshot = FeatureSelectionSnapshot(
+            experiment_id=experiment_id,
+            final_selected_features=final_selected_features,
+            final_selection_method=final_selection_method,
+        )
+        self.db.add(snapshot)
+        self.db.commit()
+        self.db.refresh(snapshot)
+        return snapshot
+
+    def get_transformation_snapshots(
+        self,
+        experiment_id: PyUUID | str,
+    ) -> list[TransformationSnapshot]:
+        if isinstance(experiment_id, str):
+            try:
+                experiment_id = PyUUID(experiment_id)
+            except Exception:
+                pass
+        return (
+            self.db.query(TransformationSnapshot)
+            .filter(TransformationSnapshot.experiment_id == experiment_id)
+            .order_by(TransformationSnapshot.created_at.asc())
+            .all()
+        )
+
+    def get_feature_selection_snapshots(
+        self,
+        experiment_id: PyUUID | str,
+    ) -> list[FeatureSelectionSnapshot]:
+        if isinstance(experiment_id, str):
+            try:
+                experiment_id = PyUUID(experiment_id)
+            except Exception:
+                pass
+        return (
+            self.db.query(FeatureSelectionSnapshot)
+            .filter(FeatureSelectionSnapshot.experiment_id == experiment_id)
+            .order_by(FeatureSelectionSnapshot.created_at.asc())
+            .all()
+        )
+
 

@@ -1,18 +1,18 @@
 import uuid
 from datetime import datetime, timezone
-from sqlalchemy import Column, String, ForeignKey, DateTime, Uuid, CheckConstraint
+from sqlalchemy import Column, String, Integer, ForeignKey, DateTime, Uuid, CheckConstraint
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.core.database import Base
 
 class Experiment(Base):
     """
-    Minimal experiments shell table (Day 5).
+    Experiments execution tracking table.
     
     ARCHITECTURAL NOTE (SRS §2.5 / §2.17):
     - Day 5 shell table stores core execution tracking for CV feature selection fold attachments.
-    - Day 6 will ALTER this table to add training columns.
-    - Day 8 will ALTER this table to add lineage columns (experiment_config, dataset_content_hash, etc.).
+    - Day 6 ALTER adds task_type (frozen at start), fold_count, and cv_seed.
+    - Day 8 will ALTER this table to add full lineage columns (experiment_config, dataset_content_hash, etc.).
     """
     __tablename__ = "experiments"
 
@@ -29,6 +29,10 @@ class Experiment(Base):
         default="RUNNING",
         server_default="RUNNING"
     )
+    task_type = Column(String(30), nullable=True)
+    fold_count = Column(Integer, nullable=True)
+    cv_seed = Column(Integer, nullable=True)
+    
     created_at = Column(
         DateTime(timezone=True),
         server_default=func.now(),
@@ -51,6 +55,12 @@ class Experiment(Base):
         cascade="all, delete-orphan",
         order_by="FeatureSelectionFoldResult.fold_index"
     )
+    trained_models = relationship(
+        "TrainedModel",
+        back_populates="experiment",
+        cascade="all, delete-orphan",
+        order_by="TrainedModel.created_at"
+    )
 
     def __repr__(self) -> str:
-        return f"<Experiment id={self.id} project_id={self.project_id} status={self.status}>"
+        return f"<Experiment id={self.id} project_id={self.project_id} status={self.status} task_type={self.task_type}>"

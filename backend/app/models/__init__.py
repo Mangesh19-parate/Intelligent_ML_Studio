@@ -14,6 +14,7 @@ from app.models.transformation_config import TransformationConfig
 from app.models.experiment import Experiment
 from app.models.feature_selection_fold_result import FeatureSelectionFoldResult
 from app.models.feature_importance_score import FeatureImportanceScore
+from app.models.trained_model import TrainedModel
 
 __all__ = [
     "Base",
@@ -32,4 +33,5 @@ __all__ = [
     "Experiment",
     "FeatureSelectionFoldResult",
     "FeatureImportanceScore",
+    "TrainedModel",
 ]

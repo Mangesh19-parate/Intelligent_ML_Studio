@@ -30,6 +30,12 @@ from app.schemas.feature_selection import (
     FeatureSelectionFoldListResponse,
     FeatureSelectionThresholdUpdateRequest,
 )
+from app.schemas.experiment import (
+    ExperimentCreateRequest,
+    TrainedModelResponse,
+    ExperimentResponse,
+    ExperimentCreateResponse,
+)
 
 __all__ = [
     "PermissionResponse",
@@ -59,4 +65,8 @@ __all__ = [
     "FeatureSelectionFoldResponse",
     "FeatureSelectionFoldListResponse",
     "FeatureSelectionThresholdUpdateRequest",
+    "ExperimentCreateRequest",
+    "TrainedModelResponse",
+    "ExperimentResponse",
+    "ExperimentCreateResponse",
 ]

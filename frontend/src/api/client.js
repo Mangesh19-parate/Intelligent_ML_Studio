@@ -89,4 +89,10 @@ export const transformationApi = {
     }),
 };
 
+export const experimentApi = {
+  create: (projectId, payload) => apiClient.post(`/projects/${projectId}/experiments`, payload),
+  get: (experimentId) => apiClient.get(`/experiments/${experimentId}`),
+  listByProject: (projectId) => apiClient.get(`/projects/${projectId}/experiments`),
+};
+
 export default apiClient;

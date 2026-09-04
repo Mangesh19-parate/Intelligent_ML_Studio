@@ -7,6 +7,7 @@ import { CorrelationHeatmap } from '../components/CorrelationHeatmap';
 import { RecommendationsList } from '../components/RecommendationsList';
 import { ColumnStatsTable } from '../components/ColumnStatsTable';
 import { TransformationsTable } from '../components/TransformationsTable';
+import { ModelTraining } from '../components/ModelTraining';
 import {
   Upload,
   Database,
@@ -32,7 +33,8 @@ import {
   Table,
   Activity,
   Flame,
-  Wand2
+  Wand2,
+  Cpu
 } from 'lucide-react';
 
 export const ProjectDetail = () => {
@@ -412,6 +414,18 @@ export const ProjectDetail = () => {
             </button>
 
             <button
+              onClick={() => setActiveTab('TRAINING')}
+              className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer shrink-0 ${
+                activeTab === 'TRAINING'
+                  ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/20'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+              }`}
+            >
+              <Cpu className="w-4 h-4" />
+              <span>Model Training</span>
+            </button>
+
+            <button
               onClick={() => setActiveTab('SPLIT')}
               className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer shrink-0 ${
                 activeTab === 'SPLIT'
@@ -731,6 +745,21 @@ export const ProjectDetail = () => {
                   }}
                 />
               )}
+            </div>
+          )}
+
+          {/* TAB: MODEL TRAINING */}
+          {activeTab === 'TRAINING' && (
+            <div className="space-y-6">
+              <ModelTraining
+                projectId={id}
+                taskType={project?.task_type}
+                targetColumn={project?.target_column}
+                onExperimentCompleted={async () => {
+                  const projRes = await projectApi.get(id);
+                  setProject(projRes.data);
+                }}
+              />
             </div>
           )}
 

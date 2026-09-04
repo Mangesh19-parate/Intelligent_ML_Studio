@@ -11,6 +11,9 @@ from app.models.dataset_split import DatasetSplit
 from app.models.profiling_report import ProfilingReport
 from app.models.recommendation import Recommendation
 from app.models.transformation_config import TransformationConfig
+from app.models.experiment import Experiment
+from app.models.feature_selection_fold_result import FeatureSelectionFoldResult
+from app.models.feature_importance_score import FeatureImportanceScore
 
 __all__ = [
     "Base",
@@ -26,4 +29,7 @@ __all__ = [
     "ProfilingReport",
     "Recommendation",
     "TransformationConfig",
+    "Experiment",
+    "FeatureSelectionFoldResult",
+    "FeatureImportanceScore",
 ]

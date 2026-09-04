@@ -22,6 +22,14 @@ from app.schemas.profiling import (
     ProfilingReportResponse,
 )
 from app.schemas.recommendation import RecommendationResponse
+from app.schemas.feature_selection import (
+    FeatureSelectionRunRequest,
+    FeatureImportanceItemResponse,
+    FeatureImportanceListResponse,
+    FeatureSelectionFoldResponse,
+    FeatureSelectionFoldListResponse,
+    FeatureSelectionThresholdUpdateRequest,
+)
 
 __all__ = [
     "PermissionResponse",
@@ -45,4 +53,10 @@ __all__ = [
     "CorrelationMatrixResponse",
     "ProfilingReportResponse",
     "RecommendationResponse",
+    "FeatureSelectionRunRequest",
+    "FeatureImportanceItemResponse",
+    "FeatureImportanceListResponse",
+    "FeatureSelectionFoldResponse",
+    "FeatureSelectionFoldListResponse",
+    "FeatureSelectionThresholdUpdateRequest",
 ]

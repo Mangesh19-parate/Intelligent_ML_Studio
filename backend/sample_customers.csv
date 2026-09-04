@@ -1,0 +1,21 @@
+age,income,credit_score,city,churn
+34,55000,720,New York,No
+45,82000,680,London,No
+29,,610,Tokyo,Yes
+,,590,New York,Yes
+52,120000,790,Paris,No
+150,45000,640,London,No
+-25,95000,710,Tokyo,Yes
+38,62000,,Paris,No
+41,71000,730,New York,No
+36,58000,690,London,No
+48,91000,760,Tokyo,No
+22,28000,580,Paris,Yes
+59,145000,810,New York,No
+31,49000,650,London,Yes
+27,39000,620,Tokyo,Yes
+44,88000,740,Paris,No
+50,110000,780,New York,No
+33,52000,670,London,No
+28,41000,600,Tokyo,Yes
+63,160000,820,Paris,No

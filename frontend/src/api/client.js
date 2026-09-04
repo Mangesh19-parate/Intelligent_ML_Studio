@@ -66,4 +66,12 @@ export const datasetApi = {
   getColumns: (datasetId) => apiClient.get(`/datasets/${datasetId}/columns`),
 };
 
+export const datasetSplitApi = {
+  createSplit: (datasetId, payload = { locked_test_pct: 20, seed: null }) =>
+    apiClient.post(`/datasets/${datasetId}/split`, payload),
+  getSplit: (datasetId) => apiClient.get(`/datasets/${datasetId}/split`),
+  getDevelopmentPreview: (datasetId, limit = 10) =>
+    apiClient.get(`/datasets/${datasetId}/development-preview?limit=${limit}`),
+};
+
 export default apiClient;

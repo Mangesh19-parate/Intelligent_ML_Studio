@@ -15,6 +15,7 @@ class Dataset(Base):
     row_count = Column(Integer, nullable=False)
     column_count = Column(Integer, nullable=False)
     stage = Column(String(30), nullable=False, default="RAW", server_default="RAW")
+    content_hash = Column(String(64), nullable=True)
     uploaded_by = Column(Uuid(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), default=lambda: datetime.now(timezone.utc), nullable=False)
 
@@ -25,6 +26,7 @@ class Dataset(Base):
     project = relationship("Project", back_populates="datasets")
     uploader = relationship("User", back_populates="datasets")
     columns = relationship("DatasetColumn", back_populates="dataset", cascade="all, delete-orphan", order_by="DatasetColumn.column_name")
+    splits = relationship("DatasetSplit", back_populates="dataset", cascade="all, delete-orphan")
 
     def __repr__(self) -> str:
         return f"<Dataset project_id={self.project_id} v={self.version_number}>"

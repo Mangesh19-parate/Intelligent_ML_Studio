@@ -7,6 +7,7 @@ from app.models.user import User
 from app.models.project import Project
 from app.models.dataset import Dataset
 from app.models.dataset_column import DatasetColumn
+from app.models.dataset_split import DatasetSplit
 
 __all__ = [
     "Base",
@@ -18,4 +19,5 @@ __all__ = [
     "Project",
     "Dataset",
     "DatasetColumn",
+    "DatasetSplit",
 ]

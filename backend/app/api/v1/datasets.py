@@ -1,5 +1,5 @@
 from uuid import UUID
-from fastapi import APIRouter, Depends, UploadFile, File, status, HTTPException
+from fastapi import APIRouter, Depends, UploadFile, File, status, HTTPException, Query
 from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.dependencies import require_permission
@@ -8,8 +8,12 @@ from app.schemas.dataset import (
     DatasetResponse,
     DatasetColumnResponse,
     DatasetDetailResponse,
+    DatasetSplitCreate,
+    DatasetSplitSummaryResponse,
+    DatasetDevelopmentPreviewResponse,
 )
 from app.services.dataset_service import DatasetService
+from app.services.dataset_split_service import DatasetSplitService
 from app.services.project_service import ProjectService
 
 router = APIRouter(tags=["Datasets"])
@@ -40,7 +44,7 @@ async def upload_dataset(
 
     dataset_service = DatasetService(db)
     
-    # 1. Structural upload (saves file and creates dataset record)
+    # 1. Structural upload (computes SHA-256 hash, saves file and creates dataset record)
     dataset = dataset_service.upload(
         project_id=project.id,
         filename=file.filename or "dataset.csv",
@@ -63,6 +67,7 @@ async def upload_dataset(
         row_count=dataset.row_count,
         column_count=dataset.column_count,
         stage=dataset.stage,
+        content_hash=dataset.content_hash,
         uploaded_by=dataset.uploaded_by,
         created_at=dataset.created_at,
         columns=column_responses,
@@ -106,3 +111,85 @@ def get_dataset_columns(
     project_service.get_project_by_id(dataset.project_id, current_user)
 
     return dataset_service.get_columns_for_dataset(dataset.id)
+
+@router.post(
+    "/datasets/{id}/split",
+    response_model=DatasetSplitSummaryResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Create Development / Locked Test outer split partition"
+)
+def create_dataset_split(
+    id: UUID,
+    payload: DatasetSplitCreate,
+    current_user: User = Depends(require_permission("EDIT_DATA")),
+    db: Session = Depends(get_db),
+):
+    dataset_service = DatasetService(db)
+    dataset = dataset_service.dataset_repo.get_by_id(id)
+    if not dataset:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Dataset not found")
+
+    # Verify project edit access
+    project_service = ProjectService(db)
+    project_service.get_project_by_id(dataset.project_id, current_user)
+
+    split_service = DatasetSplitService(db)
+    split_summary = split_service.create_outer_split(
+        dataset_id=dataset.id,
+        locked_test_pct=payload.locked_test_pct,
+        seed=payload.seed
+    )
+    return DatasetSplitSummaryResponse.model_validate(split_summary)
+
+@router.get(
+    "/datasets/{id}/split",
+    response_model=DatasetSplitSummaryResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Get outer split summary for a dataset"
+)
+def get_dataset_split(
+    id: UUID,
+    current_user: User = Depends(require_permission("EDIT_DATA")),
+    db: Session = Depends(get_db),
+):
+    dataset_service = DatasetService(db)
+    dataset = dataset_service.dataset_repo.get_by_id(id)
+    if not dataset:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Dataset not found")
+
+    project_service = ProjectService(db)
+    project_service.get_project_by_id(dataset.project_id, current_user)
+
+    split_service = DatasetSplitService(db)
+    summary = split_service.get_split_summary(dataset.id)
+    if not summary:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No outer split exists for this dataset version yet."
+        )
+
+    return DatasetSplitSummaryResponse.model_validate(summary)
+
+@router.get(
+    "/datasets/{id}/development-preview",
+    response_model=DatasetDevelopmentPreviewResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Get preview of Development partition only (first ~10 rows)"
+)
+def get_development_preview(
+    id: UUID,
+    limit: int = Query(default=10, ge=1, le=50),
+    current_user: User = Depends(require_permission("EDIT_DATA")),
+    db: Session = Depends(get_db),
+):
+    dataset_service = DatasetService(db)
+    dataset = dataset_service.dataset_repo.get_by_id(id)
+    if not dataset:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Dataset not found")
+
+    project_service = ProjectService(db)
+    project_service.get_project_by_id(dataset.project_id, current_user)
+
+    split_service = DatasetSplitService(db)
+    preview = split_service.get_development_preview(dataset.id, limit=limit)
+    return DatasetDevelopmentPreviewResponse.model_validate(preview)

@@ -28,6 +28,9 @@ wheels/
 # Data and Storage
 data/
 /data/
+*.db
+*.sqlite
+*.sqlite3
 
 # Node
 node_modules/

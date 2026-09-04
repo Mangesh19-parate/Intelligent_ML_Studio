@@ -1,4 +1,5 @@
 import io
+import hashlib
 from pathlib import Path
 from uuid import UUID
 from decimal import Decimal
@@ -132,7 +133,10 @@ class DatasetService:
         # 3. Determine next version number for project
         next_version = self.dataset_repo.get_next_version_number(project.id)
 
-        # 4. Save file via StorageService
+        # 4. Compute content hash (SHA-256) for file integrity
+        content_hash = hashlib.sha256(content).hexdigest()
+
+        # 5. Save file via StorageService
         saved_file_path = self.storage.save_file(
             project_id=project.id,
             version=next_version,
@@ -140,7 +144,7 @@ class DatasetService:
             content=content
         )
 
-        # 5. Create Dataset record
+        # 6. Create Dataset record
         dataset = Dataset(
             project_id=project.id,
             file_path=saved_file_path,
@@ -148,6 +152,7 @@ class DatasetService:
             row_count=row_count,
             column_count=column_count,
             stage="RAW",
+            content_hash=content_hash,
             uploaded_by=uploaded_by_id,
         )
         created_dataset = self.dataset_repo.create(dataset)

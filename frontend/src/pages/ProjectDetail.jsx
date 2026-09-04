@@ -6,6 +6,7 @@ import { TaskTypeSelector } from '../components/TaskTypeSelector';
 import { CorrelationHeatmap } from '../components/CorrelationHeatmap';
 import { RecommendationsList } from '../components/RecommendationsList';
 import { ColumnStatsTable } from '../components/ColumnStatsTable';
+import { TransformationsTable } from '../components/TransformationsTable';
 import {
   Upload,
   Database,
@@ -30,7 +31,8 @@ import {
   Lightbulb,
   Table,
   Activity,
-  Flame
+  Flame,
+  Wand2
 } from 'lucide-react';
 
 export const ProjectDetail = () => {
@@ -381,10 +383,10 @@ export const ProjectDetail = () => {
         {/* Right Area: Tabs Navigation & Workflows */}
         <div className="lg:col-span-3 space-y-6">
           {/* Tabs */}
-          <div className="flex items-center space-x-2 border-b border-slate-800 pb-3">
+          <div className="flex items-center space-x-2 border-b border-slate-800 pb-3 overflow-x-auto">
             <button
               onClick={() => setActiveTab('PROFILING')}
-              className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer ${
+              className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer shrink-0 ${
                 activeTab === 'PROFILING'
                   ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/20'
                   : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
@@ -398,8 +400,20 @@ export const ProjectDetail = () => {
             </button>
 
             <button
+              onClick={() => setActiveTab('TRANSFORMATIONS')}
+              className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer shrink-0 ${
+                activeTab === 'TRANSFORMATIONS'
+                  ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/20'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+              }`}
+            >
+              <Wand2 className="w-4 h-4" />
+              <span>Feature Transformations</span>
+            </button>
+
+            <button
               onClick={() => setActiveTab('SPLIT')}
-              className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer ${
+              className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer shrink-0 ${
                 activeTab === 'SPLIT'
                   ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/20'
                   : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
@@ -411,7 +425,7 @@ export const ProjectDetail = () => {
 
             <button
               onClick={() => setActiveTab('SCHEMA')}
-              className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer ${
+              className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer shrink-0 ${
                 activeTab === 'SCHEMA'
                   ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/20'
                   : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
@@ -692,6 +706,30 @@ export const ProjectDetail = () => {
                     </div>
                   )}
                 </div>
+              )}
+            </div>
+          )}
+
+          {/* TAB: FEATURE TRANSFORMATIONS */}
+          {activeTab === 'TRANSFORMATIONS' && (
+            <div className="space-y-6">
+              {!selectedDataset ? (
+                <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-8 text-center space-y-4">
+                  <Database className="w-12 h-12 mx-auto text-amber-400" />
+                  <h3 className="text-base font-bold text-white">Dataset Required</h3>
+                  <p className="text-xs text-slate-400 max-w-md mx-auto">
+                    Please upload or select a dataset version to configure column transformations.
+                  </p>
+                </div>
+              ) : (
+                <TransformationsTable
+                  projectId={id}
+                  isTargetColumn={(colName) => project?.target_column === colName}
+                  onTransformationChanged={async () => {
+                    const projRes = await projectApi.get(id);
+                    setProject(projRes.data);
+                  }}
+                />
               )}
             </div>
           )}

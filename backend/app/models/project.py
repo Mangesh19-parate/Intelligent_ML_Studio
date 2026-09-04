@@ -31,6 +31,7 @@ class Project(Base, TimestampMixin):
     owner = relationship("User", back_populates="projects")
     datasets = relationship("Dataset", back_populates="project", cascade="all, delete-orphan", order_by="desc(Dataset.version_number)")
     recommendations = relationship("Recommendation", back_populates="project", cascade="all, delete-orphan")
+    transformation_configs = relationship("TransformationConfig", back_populates="project", cascade="all, delete-orphan")
 
     def __repr__(self) -> str:
         return f"<Project {self.project_name} ({self.task_type})>"

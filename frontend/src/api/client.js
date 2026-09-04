@@ -78,4 +78,15 @@ export const datasetSplitApi = {
     apiClient.get(`/datasets/${datasetId}/development-preview?limit=${limit}`),
 };
 
+export const transformationApi = {
+  getConfigs: (projectId) => apiClient.get(`/projects/${projectId}/transformations`),
+  updateColumn: (projectId, column, payload) =>
+    apiClient.put(`/projects/${projectId}/transformations/${encodeURIComponent(column)}`, payload),
+  preview: (projectId, column, sampleSize = 50) =>
+    apiClient.post(`/projects/${projectId}/transformations/preview`, {
+      column,
+      sample_size: sampleSize,
+    }),
+};
+
 export default apiClient;

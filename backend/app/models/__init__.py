@@ -10,6 +10,7 @@ from app.models.dataset_column import DatasetColumn
 from app.models.dataset_split import DatasetSplit
 from app.models.profiling_report import ProfilingReport
 from app.models.recommendation import Recommendation
+from app.models.transformation_config import TransformationConfig
 
 __all__ = [
     "Base",
@@ -24,4 +25,5 @@ __all__ = [
     "DatasetSplit",
     "ProfilingReport",
     "Recommendation",
+    "TransformationConfig",
 ]

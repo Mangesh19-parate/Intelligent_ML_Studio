@@ -1,20 +1,19 @@
 import uuid
 from datetime import datetime, timezone
-from sqlalchemy import Column, String, ForeignKey, DateTime, Uuid, Numeric, Text, JSON
+from sqlalchemy import Column, String, ForeignKey, DateTime, Uuid, Numeric, Text, JSON, CheckConstraint
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.core.database import Base
 
 class TrainedModel(Base):
     """
-    Trained models table (Day 6 first pass).
+    Trained models table (Day 7 updated).
     
-    ARCHITECTURAL NOTE (SRS §2.8):
-    - quick_cv_score: TEMPORARY sanity metric (R2 for regression, Accuracy for classification)
-      to prove the fit->predict roundtrip works end to end across CV folds.
-      Superseded by Day 7's real model_metrics table — do not treat this as the final leaderboard.
-    - Full lineage/checksum/readiness columns are added on Day 7/8.
-    - Day 6 trains algorithms over cross-validation folds and averages fold quick scores.
+    ARCHITECTURAL NOTE (SRS §2.8 / §2.9 / §2.10):
+    - fit_diagnosis: 'GOOD_FIT', 'POTENTIAL_OVERFIT', 'POTENTIAL_UNDERFIT_WEAK_SIGNAL', 'INSUFFICIENT_DATA'
+    - model_selection_score: composite convenience indicator (never used for leaderboard sorting)
+    - metrics: relationship to ModelMetric table
+    - Day 8 adds artifact checksum and snapshots.
     """
     __tablename__ = "trained_models"
 
@@ -28,8 +27,13 @@ class TrainedModel(Base):
     algorithm_name = Column(String(60), nullable=False)
     hyperparameters = Column(JSON, nullable=False, default=dict)
     
-    # TEMPORARY sanity metric, superseded by Day 7's real model_metrics table — do not treat this as the leaderboard.
+    # TEMPORARY sanity metric from Day 6 (retained for backward compat, populated from CV mean primary metric)
     quick_cv_score = Column(Numeric(10, 5), nullable=True)
+    
+    # Day 7: Fit diagnosis and composite model selection score
+    fit_diagnosis = Column(String(30), nullable=True)
+    model_selection_score = Column(Numeric(5, 2), nullable=True)
+    
     status = Column(String(20), nullable=False, default="COMPLETED", server_default="COMPLETED")
     error_message = Column(Text, nullable=True)
     
@@ -40,7 +44,25 @@ class TrainedModel(Base):
         nullable=False
     )
 
-    experiment = relationship("Experiment", back_populates="trained_models")
+    __table_args__ = (
+        CheckConstraint(
+            "fit_diagnosis IS NULL OR fit_diagnosis IN ('GOOD_FIT', 'POTENTIAL_OVERFIT', 'POTENTIAL_UNDERFIT_WEAK_SIGNAL', 'INSUFFICIENT_DATA')",
+            name="chk_trained_model_fit_diagnosis"
+        ),
+    )
+
+    experiment = relationship(
+        "Experiment",
+        back_populates="trained_models",
+        foreign_keys=[experiment_id]
+    )
+    metrics = relationship(
+        "ModelMetric",
+        back_populates="model",
+        cascade="all, delete-orphan",
+        order_by="ModelMetric.created_at"
+    )
 
     def __repr__(self) -> str:
-        return f"<TrainedModel id={self.id} algorithm={self.algorithm_name} score={self.quick_cv_score} status={self.status}>"
+        return f"<TrainedModel id={self.id} algorithm={self.algorithm_name} score={self.quick_cv_score} fit={self.fit_diagnosis} status={self.status}>"
+

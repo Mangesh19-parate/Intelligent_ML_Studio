@@ -8,18 +8,20 @@ import pandas as pd
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 from sklearn.model_selection import KFold, StratifiedKFold
-from sklearn.metrics import r2_score, accuracy_score
+from sklearn.impute import SimpleImputer
 
 from app.core.database import SessionLocal
 from app.models.project import Project
 from app.models.experiment import Experiment
 from app.models.trained_model import TrainedModel
+from app.models.model_metric import ModelMetric
 from app.repositories.project_repository import ProjectRepository
 from app.repositories.dataset_repository import DatasetRepository
 from app.repositories.experiment_repository import ExperimentRepository
 from app.services.dataset_split_service import DatasetSplitService
 from app.services.transformation_service import TransformationService
 from app.services.feature_selection_service import FeatureSelectionService
+from app.services.evaluation_service import EvaluationService
 from app.services.storage_service import StorageService, get_storage_service
 from app.services.trainers import (
     RegressionTrainer,
@@ -31,21 +33,17 @@ logger = logging.getLogger(__name__)
 
 class ExperimentService:
     """
-    Service responsible for coordinating Leakage-Safe Model Training Experiments (SRS §2.8).
+    Service responsible for coordinating Leakage-Safe Model Training Experiments,
+    Multi-Metric Evaluation, Authoritative Model Selection, and Guarded Locked Test Evaluation (SRS §2.8-§2.12).
     
     ARCHITECTURAL INVARIANTS:
-    1. Zero Test Leakage (Invariant 1, 2, 6): Runs EXCLUSIVELY on Development partition via
-       `DatasetSplitService.get_development_data()`. Locked Test partition is NEVER accessed.
-    2. Shared Selection Per Fold: ColumnTransformer and 4-technique Rank-Aggregation Feature Selection
-       are fit ONCE per CV fold. All competing algorithms evaluate on top of that same fold's
-       transformed + selected training data.
-    3. Evaluation-Only Cross-Validation: Every fold's fitted pipeline is temporary and discarded
-       after computing quick sanity scores. No full Development refit or .joblib artifact is persisted
-       today (Day 7 handles evaluation/model selection; Day 8 handles final winner refit and artifacts).
-    4. Fault Isolation: A failure in an individual algorithm marks that algorithm's `trained_models`
-       record as FAILED while other algorithms finish normally, and the experiment completes.
-    5. Strict Validation: Algorithm names are validated against project `task_type` before execution,
-       raising HTTP 422 on mismatch.
+    1. Zero Test Leakage (Invariants 1, 2, 6): CV runs EXCLUSIVELY on the Development partition.
+    2. Shared Selection Per Fold: Preprocessing transformer and rank-aggregation feature selection
+       fit once per fold on fold-train slice only.
+    3. Multi-Metric Evaluation: Stores full TRAIN, VALIDATION, and CV_MEAN metrics per algorithm.
+    4. Primary-Metric Driven Leaderboard: Sorting strictly by selection_metric / selection_direction.
+    5. Single Locked Test Evaluation: Exactly one evaluation for the winning model, permanently consumed.
+    6. Fault Isolation: Single fold failure fails that algorithm entirely; surviving algorithms complete.
     """
 
     VALID_REGRESSION_ALGORITHMS = {
@@ -69,6 +67,49 @@ class ExperimentService:
         self.split_service = DatasetSplitService(db, self.storage)
         self.trans_service = TransformationService(db, self.storage)
         self.fs_service = FeatureSelectionService(db, self.storage)
+
+    @staticmethod
+    def normalize_selection_metric(
+        metric_name: str | None,
+        task_type: str,
+        direction: str | None = None
+    ) -> tuple[str, str]:
+        """
+        Normalizes selection metric and derives default direction:
+        Regression default: rmse (MINIMIZE)
+        Classification default: f1_macro (MAXIMIZE)
+        """
+        if not metric_name:
+            if task_type == "REGRESSION":
+                return "rmse", "MINIMIZE"
+            else:
+                return "f1_macro", "MAXIMIZE"
+
+        cleaned = metric_name.lower().replace("-", "_").strip()
+        if cleaned in ["macro_f1", "macro-f1", "f1_macro", "f1"]:
+            canonical_metric = "f1_macro"
+        elif cleaned in ["weighted_f1", "weighted-f1", "f1_weighted"]:
+            canonical_metric = "f1_weighted"
+        elif cleaned in ["r_2", "r2", "r_squared"]:
+            canonical_metric = "r2"
+        elif cleaned in ["adjusted_r2", "adj_r2", "adj_r_squared"]:
+            canonical_metric = "adjusted_r2"
+        elif cleaned in ["roc_auc", "roc-auc", "auc"]:
+            canonical_metric = "roc_auc"
+        else:
+            canonical_metric = cleaned
+
+        if direction:
+            canonical_direction = direction.upper().strip()
+            if canonical_direction not in ["MAXIMIZE", "MINIMIZE"]:
+                canonical_direction = "MINIMIZE" if canonical_metric in ["rmse", "mae", "mse", "log_loss"] else "MAXIMIZE"
+        else:
+            if canonical_metric in ["rmse", "mae", "mse", "log_loss"]:
+                canonical_direction = "MINIMIZE"
+            else:
+                canonical_direction = "MAXIMIZE"
+
+        return canonical_metric, canonical_direction
 
     def validate_algorithms(self, task_type: str, algorithms: list[str]) -> list[str]:
         """
@@ -119,10 +160,15 @@ class ExperimentService:
         folds: int = 5,
         seed: int | None = None,
         threshold: float = 0.0,
+        selection_metric: str | None = None,
+        selection_direction: str | None = None,
         experiment_id: UUID | str | None = None,
+        auto_finalize: bool = True,
     ) -> dict[str, Any]:
         """
         Executes the cross-validation training experiment across requested algorithms.
+        Computes full multi-metric evaluations, fit diagnostics, composite scores, and
+        optionally executes authoritative finalization & Locked Test evaluation.
         """
         project = self.project_repo.get_by_id(project_id)
         if not project:
@@ -147,6 +193,9 @@ class ExperimentService:
         # 1. Validate requested algorithms against project task type
         canonical_algs = self.validate_algorithms(task_type, algorithms)
 
+        # Determine selection metric & direction
+        eff_metric, eff_direction = self.normalize_selection_metric(selection_metric, task_type, selection_direction)
+
         # Generate seed if not provided
         cv_seed = seed if seed is not None else secrets.randbelow(1_000_000)
 
@@ -159,12 +208,16 @@ class ExperimentService:
                     task_type=task_type,
                     fold_count=folds,
                     cv_seed=cv_seed,
+                    selection_metric=eff_metric,
+                    selection_direction=eff_direction,
                     status="RUNNING",
                 )
             else:
                 experiment.task_type = task_type
                 experiment.fold_count = folds
                 experiment.cv_seed = cv_seed
+                experiment.selection_metric = eff_metric
+                experiment.selection_direction = eff_direction
                 experiment.status = "RUNNING"
                 self.db.add(experiment)
                 self.db.commit()
@@ -174,6 +227,8 @@ class ExperimentService:
                 task_type=task_type,
                 fold_count=folds,
                 cv_seed=cv_seed,
+                selection_metric=eff_metric,
+                selection_direction=eff_direction,
                 status="RUNNING",
             )
 
@@ -217,8 +272,12 @@ class ExperimentService:
                 splitter = KFold(n_splits=folds, shuffle=True, random_state=cv_seed)
 
             # Tracking per algorithm across folds
-            # alg -> list of fold scores
-            fold_scores: dict[str, list[float]] = {alg: [] for alg in canonical_algs}
+            # alg -> list of fold metric dictionaries
+            fold_train_metrics: dict[str, list[dict[str, Any]]] = {alg: [] for alg in canonical_algs}
+            fold_val_metrics: dict[str, list[dict[str, Any]]] = {alg: [] for alg in canonical_algs}
+            fold_baselines: list[dict[str, float]] = []
+            min_val_fold_size = n_samples
+
             algorithm_errors: dict[str, str] = {}
             algorithm_hyperparams: dict[str, dict[str, Any]] = {}
 
@@ -231,9 +290,13 @@ class ExperimentService:
                 if len(leakage_overlap) > 0:
                     raise RuntimeError(f"Data leakage detected in fold {fold_idx}: overlap={leakage_overlap}")
 
+                val_size = len(val_idx)
+                if val_size < min_val_fold_size:
+                    min_val_fold_size = val_size
+
                 logger.info(
                     f"Experiment {experiment.id} Fold {fold_idx}: "
-                    f"Train size={len(train_idx)}, Val size={len(val_idx)}, Overlap=0"
+                    f"Train size={len(train_idx)}, Val size={val_size}, Overlap=0"
                 )
 
                 X_train_fold = X_df.iloc[train_idx].copy()
@@ -271,7 +334,6 @@ class ExperimentService:
                         X_train_trans = np.asarray(X_arr, dtype=np.float64)
 
                 if np.isnan(X_train_trans).any():
-                    from sklearn.impute import SimpleImputer
                     fallback_imputer = SimpleImputer(strategy="mean")
                     X_train_trans = fallback_imputer.fit_transform(X_train_trans)
 
@@ -288,6 +350,10 @@ class ExperimentService:
                 else:
                     y_fit = y_train_fold.astype(float)
                     y_val_eval = y_val_fold.astype(float)
+
+                # Compute baseline metrics for this fold
+                fold_baseline = EvaluationService.compute_naive_baseline(y_fit, task_type)
+                fold_baselines.append(fold_baseline)
 
                 # Step 5b: Run 4-technique Feature Selection ONCE per fold
                 technique_results: dict[str, dict[str, Any]] = {}
@@ -423,7 +489,7 @@ class ExperimentService:
                 # Step 5c: Train and evaluate each competing algorithm on top of shared selection
                 for alg_name in canonical_algs:
                     if alg_name in algorithm_errors:
-                        # Skip if already failed in prior fold
+                        # Carry-in decision: any fold failure fails that algorithm entirely
                         continue
 
                     try:
@@ -444,18 +510,29 @@ class ExperimentService:
                         # Fit estimator on fold training data
                         trainer.fit(X_train_selected, y_fit)
 
-                        # Predict on fold validation data
+                        # Predict on fold training & validation data
+                        y_train_pred = trainer.predict(X_train_selected)
                         y_val_pred = trainer.predict(X_val_selected)
 
-                        # Compute quick sanity score
                         if task_type == "REGRESSION":
-                            score = float(r2_score(y_val_eval, y_val_pred))
-                            if np.isnan(score):
-                                score = 0.0
+                            train_metrics = EvaluationService.evaluate_regression(
+                                y_fit, y_train_pred, n=len(y_fit), p=len(fold_selected)
+                            )
+                            val_metrics = EvaluationService.evaluate_regression(
+                                y_val_eval, y_val_pred, n=len(y_val_eval), p=len(fold_selected)
+                            )
                         else:
-                            score = float(accuracy_score(y_val_eval, y_val_pred))
+                            y_train_proba = trainer.predict_proba(X_train_selected)
+                            y_val_proba = trainer.predict_proba(X_val_selected)
+                            train_metrics = EvaluationService.evaluate_classification(
+                                y_fit, y_train_pred, y_proba=y_train_proba
+                            )
+                            val_metrics = EvaluationService.evaluate_classification(
+                                y_val_eval, y_val_pred, y_proba=y_val_proba
+                            )
 
-                        fold_scores[alg_name].append(score)
+                        fold_train_metrics[alg_name].append(train_metrics)
+                        fold_val_metrics[alg_name].append(val_metrics)
 
                     except Exception as alg_err:
                         logger.error(
@@ -463,33 +540,139 @@ class ExperimentService:
                         )
                         algorithm_errors[alg_name] = str(alg_err)
 
-            # 6. Accumulate Average Quick CV Scores and Insert TrainedModel Records
-            # Fault tolerance: failed algorithms are recorded with status=FAILED, others succeed
+            # Compute overall average baseline across folds
+            avg_baseline: dict[str, float] = {}
+            if fold_baselines:
+                for k in fold_baselines[0].keys():
+                    vals = [b[k] for b in fold_baselines if b.get(k) is not None]
+                    if vals:
+                        avg_baseline[k] = float(np.mean(vals))
+
+            # 6. Accumulate CV_MEAN Metrics, Diagnose Fit, Insert TrainedModel & ModelMetric Records
+            created_model_records: dict[str, TrainedModel] = {}
             for alg_name in canonical_algs:
                 params = algorithm_hyperparams.get(alg_name, {})
-                if alg_name in algorithm_errors or len(fold_scores[alg_name]) == 0:
+                has_failed = alg_name in algorithm_errors or len(fold_val_metrics[alg_name]) != folds
+
+                if has_failed:
                     err_msg = algorithm_errors.get(alg_name, "Model execution failed across CV folds.")
-                    self.exp_repo.add_trained_model(
+                    model_rec = self.exp_repo.add_trained_model(
                         experiment_id=experiment.id,
                         algorithm_name=alg_name,
                         hyperparameters=params,
                         quick_cv_score=None,
+                        fit_diagnosis=None,
+                        model_selection_score=None,
                         status="FAILED",
                         error_message=err_msg,
                     )
                 else:
-                    avg_quick_score = float(np.mean(fold_scores[alg_name]))
-                    self.exp_repo.add_trained_model(
+                    # Compute average train and validation metrics across all folds
+                    val_fold_list = fold_val_metrics[alg_name]
+                    train_fold_list = fold_train_metrics[alg_name]
+
+                    cv_mean_metrics: dict[str, float] = {}
+                    train_mean_metrics: dict[str, float] = {}
+
+                    # Numeric keys only for averaging
+                    metric_keys = [k for k, v in val_fold_list[0].items() if isinstance(v, (int, float))]
+                    for mk in metric_keys:
+                        cv_mean_vals = [f[mk] for f in val_fold_list if f.get(mk) is not None]
+                        if cv_mean_vals:
+                            cv_mean_metrics[mk] = float(np.mean(cv_mean_vals))
+
+                        train_mean_vals = [f[mk] for f in train_fold_list if f.get(mk) is not None]
+                        if train_mean_vals:
+                            train_mean_metrics[mk] = float(np.mean(train_mean_vals))
+
+                    # Fit diagnosis
+                    fit_diag = EvaluationService.diagnose_fit(
+                        train_metrics=train_mean_metrics,
+                        cv_mean_metrics=cv_mean_metrics,
+                        baseline_metrics=avg_baseline,
+                        metric_name=eff_metric,
+                        n_val_samples=min_val_fold_size,
+                    )
+
+                    # Model selection score (composite)
+                    sel_score = EvaluationService.compute_model_selection_score(
+                        task_type=task_type,
+                        cv_mean_metrics=cv_mean_metrics,
+                        baseline_metrics=avg_baseline,
+                    )
+
+                    # Quick CV score = primary selection metric mean
+                    primary_val = cv_mean_metrics.get(eff_metric)
+
+                    model_rec = self.exp_repo.add_trained_model(
                         experiment_id=experiment.id,
                         algorithm_name=alg_name,
                         hyperparameters=params,
-                        quick_cv_score=avg_quick_score,
+                        quick_cv_score=primary_val,
+                        fit_diagnosis=fit_diag,
+                        model_selection_score=sel_score,
                         status="COMPLETED",
                         error_message=None,
                     )
+                    created_model_records[alg_name] = model_rec
 
-            # 7. Finalize Experiment & Transition Project Pipeline Stage
-            self.exp_repo.update_status(experiment.id, "COMPLETED")
+                    # Persist per-fold TRAIN and VALIDATION metrics
+                    for f_idx in range(folds):
+                        t_met = train_fold_list[f_idx]
+                        v_met = val_fold_list[f_idx]
+
+                        for m_k, m_v in t_met.items():
+                            if isinstance(m_v, (int, float)):
+                                self.exp_repo.add_model_metric(
+                                    model_id=model_rec.id,
+                                    metric_name=m_k,
+                                    split="TRAIN",
+                                    metric_value=float(m_v),
+                                    fold_index=f_idx,
+                                )
+                            elif isinstance(m_v, (list, dict)):
+                                self.exp_repo.add_model_metric(
+                                    model_id=model_rec.id,
+                                    metric_name=m_k,
+                                    split="TRAIN",
+                                    metric_json=m_v,
+                                    fold_index=f_idx,
+                                )
+
+                        for m_k, m_v in v_met.items():
+                            if isinstance(m_v, (int, float)):
+                                self.exp_repo.add_model_metric(
+                                    model_id=model_rec.id,
+                                    metric_name=m_k,
+                                    split="VALIDATION",
+                                    metric_value=float(m_v),
+                                    fold_index=f_idx,
+                                )
+                            elif isinstance(m_v, (list, dict)):
+                                self.exp_repo.add_model_metric(
+                                    model_id=model_rec.id,
+                                    metric_name=m_k,
+                                    split="VALIDATION",
+                                    metric_json=m_v,
+                                    fold_index=f_idx,
+                                )
+
+                    # Persist CV_MEAN rows
+                    for m_k, m_v in cv_mean_metrics.items():
+                        self.exp_repo.add_model_metric(
+                            model_id=model_rec.id,
+                            metric_name=m_k,
+                            split="CV_MEAN",
+                            metric_value=float(m_v),
+                            fold_index=None,
+                        )
+
+            # 7. Finalize Experiment & Locked Test Single Evaluation
+            if auto_finalize and any(m.status == "COMPLETED" for m in self.exp_repo.get_trained_models(experiment.id)):
+                self.finalize_experiment(experiment.id)
+            else:
+                self.exp_repo.update_status(experiment.id, "COMPLETED")
+
             project.pipeline_stage = "TRAINED"
             self.db.add(project)
             self.db.commit()
@@ -497,22 +680,29 @@ class ExperimentService:
             return {
                 "experiment_id": experiment.id,
                 "project_id": project.id,
-                "status": "COMPLETED",
+                "status": experiment.status,
                 "task_type": task_type,
                 "fold_count": folds,
                 "cv_seed": cv_seed,
+                "selection_metric": eff_metric,
+                "selection_direction": eff_direction,
+                "selected_model_id": experiment.selected_model_id,
+                "locked_test_consumed": experiment.locked_test_consumed,
                 "trained_models": [
                     {
                         "id": m.id,
                         "algorithm_name": m.algorithm_name,
                         "hyperparameters": m.hyperparameters,
                         "quick_cv_score": float(m.quick_cv_score) if m.quick_cv_score is not None else None,
+                        "fit_diagnosis": m.fit_diagnosis,
+                        "model_selection_score": float(m.model_selection_score) if m.model_selection_score is not None else None,
                         "status": m.status,
                         "error_message": m.error_message,
                     }
                     for m in self.exp_repo.get_trained_models(experiment.id)
                 ],
             }
+
 
         except Exception as e:
             self.exp_repo.update_status(experiment.id, "FAILED")
@@ -523,6 +713,461 @@ class ExperimentService:
                 detail=f"Experiment execution failed: {str(e)}"
             )
 
+    def finalize_experiment(self, experiment_id: UUID | str) -> dict[str, Any]:
+        """
+        Finalizes the experiment (SRS §2.9, §2.12):
+        1. Selects the winning model based purely on selection_metric in selection_direction.
+        2. Performs final fresh refit on the entire Development partition.
+        3. Executes the single permitted Locked Test evaluation for the winning model.
+        4. Permanently consumes the Locked Test partition for this experiment.
+        """
+        experiment = self.exp_repo.get_with_models(experiment_id)
+        if not experiment:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Experiment not found"
+            )
+
+        # Locked Test Guard
+        if experiment.locked_test_consumed:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Locked test partition has already been consumed for this experiment."
+            )
+
+        project = self.project_repo.get_by_id(experiment.project_id)
+        if not project:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Associated project not found"
+            )
+
+        datasets = self.dataset_repo.get_by_project(project.id)
+        if not datasets:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="No dataset found for this project"
+            )
+        latest_dataset = datasets[0]
+
+        completed_models = [m for m in experiment.trained_models if m.status == "COMPLETED"]
+        if not completed_models:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="No completed models available to select a winner."
+            )
+
+        # 1. Authoritative Winner Selection based strictly on selection_metric
+        task_type = experiment.task_type or project.task_type or "REGRESSION"
+        metric_name = experiment.selection_metric or ("rmse" if task_type == "REGRESSION" else "f1_macro")
+        direction = experiment.selection_direction or ("MINIMIZE" if metric_name in ["rmse", "mae", "mse"] else "MAXIMIZE")
+
+        # Map each model to its primary metric value from CV_MEAN
+        model_scores = []
+        for model in completed_models:
+            cv_metric = next(
+                (m for m in model.metrics if m.split == "CV_MEAN" and m.metric_name == metric_name),
+                None
+            )
+            val = float(cv_metric.metric_value) if cv_metric and cv_metric.metric_value is not None else float(model.quick_cv_score or 0.0)
+            model_scores.append((model, val))
+
+        if direction == "MINIMIZE":
+            winning_model, winning_score = min(model_scores, key=lambda x: x[1])
+        else:
+            winning_model, winning_score = max(model_scores, key=lambda x: x[1])
+
+        experiment.selected_model_id = winning_model.id
+        self.db.add(experiment)
+        self.db.commit()
+
+        # 2. Final Refit on ENTIRE Development Partition
+        dev_df = self.split_service.get_development_data(latest_dataset.id)
+        total_dev_rows = len(dev_df)
+        logger.info(
+            f"Final refit for winning model {winning_model.id} ({winning_model.algorithm_name}) "
+            f"on full Development partition: {total_dev_rows} rows."
+        )
+
+        target_col = project.target_column
+        y_dev = dev_df[target_col].values
+        X_dev = dev_df.drop(columns=[target_col])
+        candidate_cols = list(X_dev.columns)
+
+        # Fresh Transformer on full Development data
+        transformer = self.trans_service.build_pipeline(project.id)
+        X_dev_trans = transformer.fit_transform(X_dev)
+        if hasattr(X_dev_trans, "toarray"):
+            X_dev_trans = X_dev_trans.toarray()
+
+        if isinstance(X_dev_trans, pd.DataFrame):
+            df_num = X_dev_trans.copy()
+            for c in df_num.columns:
+                if not pd.api.types.is_numeric_dtype(df_num[c]):
+                    df_num[c] = pd.factorize(df_num[c])[0].astype(np.float64)
+            X_dev_trans = df_num.to_numpy(dtype=np.float64)
+        else:
+            X_arr = np.asarray(X_dev_trans)
+            if not np.issubdtype(X_arr.dtype, np.number):
+                n_rows, n_cols = X_arr.shape
+                num_matrix = np.zeros((n_rows, n_cols), dtype=np.float64)
+                for j in range(n_cols):
+                    col_data = X_arr[:, j]
+                    try:
+                        num_matrix[:, j] = col_data.astype(np.float64)
+                    except (ValueError, TypeError):
+                        codes, _ = pd.factorize(col_data)
+                        num_matrix[:, j] = codes.astype(np.float64)
+                X_dev_trans = num_matrix
+            else:
+                X_dev_trans = np.asarray(X_arr, dtype=np.float64)
+
+        if np.isnan(X_dev_trans).any():
+            fallback_imp = SimpleImputer(strategy="mean")
+            X_dev_trans = fallback_imp.fit_transform(X_dev_trans)
+
+        dev_feature_names = self.fs_service.extract_clean_feature_names(transformer, candidate_cols)
+
+        # Format y_dev
+        if task_type == "CLASSIFICATION":
+            if pd.api.types.is_numeric_dtype(y_dev) and not np.isnan(y_dev).any():
+                y_dev_fit = y_dev.astype(int)
+            else:
+                y_dev_fit = pd.Series(y_dev).astype(str).values
+        else:
+            y_dev_fit = y_dev.astype(float)
+
+        # Select features on full development data (Rank Aggregation)
+        final_selected = self._select_features_for_refit(
+            X_dev_trans, y_dev_fit, task_type, dev_feature_names, experiment.cv_seed or 42
+        )
+
+        selected_indices = [
+            i for i, c in enumerate(dev_feature_names) if c in final_selected
+        ]
+        if not selected_indices:
+            selected_indices = list(range(len(dev_feature_names)))
+
+        X_dev_selected = X_dev_trans[:, selected_indices]
+
+        # Fresh Estimator for winning algorithm
+        if task_type == "REGRESSION":
+            trainer = RegressionTrainer(
+                algorithm_name=winning_model.algorithm_name,
+                hyperparameters=winning_model.hyperparameters,
+                random_state=experiment.cv_seed or 42,
+            )
+        else:
+            trainer = ClassificationTrainer(
+                algorithm_name=winning_model.algorithm_name,
+                hyperparameters=winning_model.hyperparameters,
+                random_state=experiment.cv_seed or 42,
+            )
+
+        # Fit fresh winning model on full Development partition
+        trainer.fit(X_dev_selected, y_dev_fit)
+
+        # Evaluate final refit on Development partition
+        y_dev_pred = trainer.predict(X_dev_selected)
+        if task_type == "REGRESSION":
+            refit_train_metrics = EvaluationService.evaluate_regression(
+                y_dev_fit, y_dev_pred, n=len(y_dev_fit), p=len(final_selected)
+            )
+        else:
+            y_dev_proba = trainer.predict_proba(X_dev_selected)
+            refit_train_metrics = EvaluationService.evaluate_classification(
+                y_dev_fit, y_dev_pred, y_proba=y_dev_proba
+            )
+
+        # Store refit TRAIN metrics for winning model (fold_index=None to distinguish from fold metrics)
+        for m_k, m_v in refit_train_metrics.items():
+            if isinstance(m_v, (int, float)):
+                self.exp_repo.add_model_metric(
+                    model_id=winning_model.id,
+                    metric_name=m_k,
+                    split="TRAIN",
+                    metric_value=float(m_v),
+                    fold_index=None,
+                )
+            elif isinstance(m_v, (list, dict)):
+                self.exp_repo.add_model_metric(
+                    model_id=winning_model.id,
+                    metric_name=m_k,
+                    split="TRAIN",
+                    metric_json=m_v,
+                    fold_index=None,
+                )
+
+        # 3. The Single Locked Test Evaluation
+        locked_test_df = self.split_service.get_locked_test_data(latest_dataset.id)
+        y_test_raw = locked_test_df[target_col].values
+        X_test_raw = locked_test_df.drop(columns=[target_col])
+
+        # Transform Locked Test data (transform ONLY, NEVER fit)
+        X_test_trans = transformer.transform(X_test_raw)
+        if hasattr(X_test_trans, "toarray"):
+            X_test_trans = X_test_trans.toarray()
+
+        if isinstance(X_test_trans, pd.DataFrame):
+            df_t = X_test_trans.copy()
+            for c in df_t.columns:
+                if not pd.api.types.is_numeric_dtype(df_t[c]):
+                    df_t[c] = pd.factorize(df_t[c])[0].astype(np.float64)
+            X_test_trans = df_t.to_numpy(dtype=np.float64)
+        else:
+            X_t_arr = np.asarray(X_test_trans)
+            if not np.issubdtype(X_t_arr.dtype, np.number):
+                n_r, n_c = X_t_arr.shape
+                num_m = np.zeros((n_r, n_c), dtype=np.float64)
+                for j in range(n_c):
+                    col_d = X_t_arr[:, j]
+                    try:
+                        num_m[:, j] = col_d.astype(np.float64)
+                    except (ValueError, TypeError):
+                        codes, _ = pd.factorize(col_d)
+                        num_m[:, j] = codes.astype(np.float64)
+                X_test_trans = num_m
+            else:
+                X_test_trans = np.asarray(X_t_arr, dtype=np.float64)
+
+        if np.isnan(X_test_trans).any():
+            fallback_imp = SimpleImputer(strategy="mean")
+            X_test_trans = fallback_imp.fit_transform(X_test_trans)
+
+        X_test_selected = X_test_trans[:, selected_indices]
+
+        if task_type == "CLASSIFICATION":
+            if pd.api.types.is_numeric_dtype(y_test_raw) and not np.isnan(y_test_raw).any():
+                y_test_eval = y_test_raw.astype(int)
+            else:
+                y_test_eval = pd.Series(y_test_raw).astype(str).values
+        else:
+            y_test_eval = y_test_raw.astype(float)
+
+        # Predict on Locked Test data (predict ONLY, NEVER fit)
+        y_test_pred = trainer.predict(X_test_selected)
+
+        if task_type == "REGRESSION":
+            locked_test_metrics = EvaluationService.evaluate_regression(
+                y_test_eval, y_test_pred, n=len(y_test_eval), p=len(final_selected)
+            )
+        else:
+            y_test_proba = trainer.predict_proba(X_test_selected)
+            locked_test_metrics = EvaluationService.evaluate_classification(
+                y_test_eval, y_test_pred, y_proba=y_test_proba
+            )
+
+        # Store LOCKED_TEST model_metrics rows for the winning model
+        for m_k, m_v in locked_test_metrics.items():
+            if isinstance(m_v, (int, float)):
+                self.exp_repo.add_model_metric(
+                    model_id=winning_model.id,
+                    metric_name=m_k,
+                    split="LOCKED_TEST",
+                    metric_value=float(m_v),
+                    fold_index=None,
+                )
+            elif isinstance(m_v, (list, dict)):
+                self.exp_repo.add_model_metric(
+                    model_id=winning_model.id,
+                    metric_name=m_k,
+                    split="LOCKED_TEST",
+                    metric_json=m_v,
+                    fold_index=None,
+                )
+
+        # 4. Mark Locked Test as Permanently Consumed & Experiment Completed
+        now = datetime.now(timezone.utc)
+        self.exp_repo.mark_locked_test_consumed(experiment.id, consumed_at=now)
+        self.exp_repo.update_status(experiment.id, "COMPLETED", completed_at=now)
+
+        return {
+            "experiment_id": experiment.id,
+            "status": "COMPLETED",
+            "selected_model_id": winning_model.id,
+            "winning_algorithm": winning_model.algorithm_name,
+            "selection_metric": metric_name,
+            "selection_direction": direction,
+            "development_rows_fit": total_dev_rows,
+            "locked_test_rows": len(locked_test_df),
+            "locked_test_consumed": True,
+            "locked_test_consumed_at": now.isoformat(),
+            "locked_test_metrics": locked_test_metrics,
+        }
+
+    def rerun_locked_test_diagnostic(self, experiment_id: UUID | str) -> dict[str, Any]:
+        """
+        Debug / Diagnostic rerun of locked test evaluation (SRS §2.12).
+        Stores metrics with split='TEST_REUSED_DIAGNOSTIC'.
+        NEVER overwrites split='LOCKED_TEST' rows and NEVER changes selected_model_id.
+        """
+        experiment = self.exp_repo.get_with_models(experiment_id)
+        if not experiment:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Experiment not found"
+            )
+
+        if not experiment.selected_model_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Experiment has no selected winning model to re-evaluate."
+            )
+
+        project = self.project_repo.get_by_id(experiment.project_id)
+        datasets = self.dataset_repo.get_by_project(project.id)
+        if not datasets:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="No dataset found for this project"
+            )
+        latest_dataset = datasets[0]
+
+        winning_model = next((m for m in experiment.trained_models if m.id == experiment.selected_model_id), None)
+        if not winning_model:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Selected model record not found"
+            )
+
+        task_type = experiment.task_type or project.task_type or "REGRESSION"
+        dev_df = self.split_service.get_development_data(latest_dataset.id)
+        target_col = project.target_column
+        y_dev = dev_df[target_col].values
+        X_dev = dev_df.drop(columns=[target_col])
+        candidate_cols = list(X_dev.columns)
+
+        transformer = self.trans_service.build_pipeline(project.id)
+        X_dev_trans = transformer.fit_transform(X_dev)
+        if hasattr(X_dev_trans, "toarray"):
+            X_dev_trans = X_dev_trans.toarray()
+
+        dev_feature_names = self.fs_service.extract_clean_feature_names(transformer, candidate_cols)
+
+        if task_type == "CLASSIFICATION":
+            if pd.api.types.is_numeric_dtype(y_dev) and not np.isnan(y_dev).any():
+                y_dev_fit = y_dev.astype(int)
+            else:
+                y_dev_fit = pd.Series(y_dev).astype(str).values
+        else:
+            y_dev_fit = y_dev.astype(float)
+
+        final_selected = self._select_features_for_refit(
+            X_dev_trans, y_dev_fit, task_type, dev_feature_names, experiment.cv_seed or 42
+        )
+        selected_indices = [i for i, c in enumerate(dev_feature_names) if c in final_selected] or list(range(len(dev_feature_names)))
+        X_dev_selected = X_dev_trans[:, selected_indices]
+
+        if task_type == "REGRESSION":
+            trainer = RegressionTrainer(
+                algorithm_name=winning_model.algorithm_name,
+                hyperparameters=winning_model.hyperparameters,
+                random_state=experiment.cv_seed or 42,
+            )
+        else:
+            trainer = ClassificationTrainer(
+                algorithm_name=winning_model.algorithm_name,
+                hyperparameters=winning_model.hyperparameters,
+                random_state=experiment.cv_seed or 42,
+            )
+
+        trainer.fit(X_dev_selected, y_dev_fit)
+
+        # Load Locked Test data & evaluate
+        locked_test_df = self.split_service.get_locked_test_data(latest_dataset.id)
+        y_test_raw = locked_test_df[target_col].values
+        X_test_raw = locked_test_df.drop(columns=[target_col])
+
+        X_test_trans = transformer.transform(X_test_raw)
+        if hasattr(X_test_trans, "toarray"):
+            X_test_trans = X_test_trans.toarray()
+        X_test_selected = X_test_trans[:, selected_indices]
+
+        if task_type == "CLASSIFICATION":
+            if pd.api.types.is_numeric_dtype(y_test_raw) and not np.isnan(y_test_raw).any():
+                y_test_eval = y_test_raw.astype(int)
+            else:
+                y_test_eval = pd.Series(y_test_raw).astype(str).values
+            y_test_pred = trainer.predict(X_test_selected)
+            y_test_proba = trainer.predict_proba(X_test_selected)
+            diag_metrics = EvaluationService.evaluate_classification(
+                y_test_eval, y_test_pred, y_proba=y_test_proba
+            )
+        else:
+            y_test_eval = y_test_raw.astype(float)
+            y_test_pred = trainer.predict(X_test_selected)
+            diag_metrics = EvaluationService.evaluate_regression(
+                y_test_eval, y_test_pred, n=len(y_test_eval), p=len(final_selected)
+            )
+
+        # Store with split='TEST_REUSED_DIAGNOSTIC'
+        for m_k, m_v in diag_metrics.items():
+            if isinstance(m_v, (int, float)):
+                self.exp_repo.add_model_metric(
+                    model_id=winning_model.id,
+                    metric_name=m_k,
+                    split="TEST_REUSED_DIAGNOSTIC",
+                    metric_value=float(m_v),
+                    fold_index=None,
+                )
+            elif isinstance(m_v, (list, dict)):
+                self.exp_repo.add_model_metric(
+                    model_id=winning_model.id,
+                    metric_name=m_k,
+                    split="TEST_REUSED_DIAGNOSTIC",
+                    metric_json=m_v,
+                    fold_index=None,
+                )
+
+        return {
+            "experiment_id": experiment.id,
+            "selected_model_id": winning_model.id,
+            "split": "TEST_REUSED_DIAGNOSTIC",
+            "message": "Diagnostic test evaluation recorded. This does not alter authoritative leaderboard evidence.",
+            "metrics": diag_metrics,
+        }
+
+    def _select_features_for_refit(
+        self,
+        X_trans: np.ndarray,
+        y: np.ndarray,
+        task_type: str,
+        feature_names: list[str],
+        seed: int,
+    ) -> list[str]:
+        """Helper to run 4-technique rank aggregation on full Development data for refit."""
+        technique_results = {}
+        try:
+            corr = self.fs_service.compute_correlation_scores(X_trans, y, task_type)
+            technique_results["Correlation"] = {"status": "APPLIED", "raw_scores": corr, "status_reason": None}
+        except Exception as e:
+            technique_results["Correlation"] = {"status": "FAILED", "raw_scores": None, "status_reason": str(e)}
+
+        try:
+            lasso = self.fs_service.compute_lasso_scores(X_trans, y, task_type, seed=seed)
+            technique_results["Lasso"] = {"status": "APPLIED", "raw_scores": lasso, "status_reason": None}
+        except Exception as e:
+            technique_results["Lasso"] = {"status": "FAILED", "raw_scores": None, "status_reason": str(e)}
+
+        try:
+            rf = self.fs_service.compute_random_forest_scores(X_trans, y, task_type, seed=seed)
+            technique_results["Random Forest"] = {"status": "APPLIED", "raw_scores": rf, "status_reason": None}
+        except Exception as e:
+            technique_results["Random Forest"] = {"status": "FAILED", "raw_scores": None, "status_reason": str(e)}
+
+        try:
+            perm = self.fs_service.compute_permutation_scores(X_trans, y, task_type, seed=seed)
+            technique_results["Permutation"] = {"status": "APPLIED", "raw_scores": perm, "status_reason": None}
+        except Exception as e:
+            technique_results["Permutation"] = {"status": "FAILED", "raw_scores": None, "status_reason": str(e)}
+
+        _, ensemble = self.fs_service.aggregate_technique_scores_for_fold(feature_names, technique_results)
+        selected = [feat for feat, sc in ensemble.items() if sc >= 0.0]
+        if not selected:
+            top_col = max(ensemble.items(), key=lambda x: x[1])[0]
+            selected = [top_col]
+        return selected
+
     @classmethod
     def run_experiment_background(
         cls,
@@ -532,6 +1177,8 @@ class ExperimentService:
         folds: int = 5,
         seed: int | None = None,
         threshold: float = 0.0,
+        selection_metric: str | None = None,
+        selection_direction: str | None = None,
     ) -> None:
         """
         Background task runner for executing an experiment with an isolated database session.
@@ -545,7 +1192,10 @@ class ExperimentService:
                 folds=folds,
                 seed=seed,
                 threshold=threshold,
+                selection_metric=selection_metric,
+                selection_direction=selection_direction,
                 experiment_id=experiment_id,
+                auto_finalize=True,
             )
         except Exception as e:
             logger.exception(f"Background experiment {experiment_id} error: {str(e)}")

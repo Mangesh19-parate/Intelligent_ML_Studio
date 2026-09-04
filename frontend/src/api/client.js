@@ -93,6 +93,16 @@ export const experimentApi = {
   create: (projectId, payload) => apiClient.post(`/projects/${projectId}/experiments`, payload),
   get: (experimentId) => apiClient.get(`/experiments/${experimentId}`),
   listByProject: (projectId) => apiClient.get(`/projects/${projectId}/experiments`),
+  getSelection: (experimentId) => apiClient.get(`/experiments/${experimentId}/selection`),
+  finalize: (experimentId) => apiClient.post(`/experiments/${experimentId}/finalize`),
+  diagnosticRerun: (experimentId) => apiClient.post(`/experiments/${experimentId}/diagnostic-rerun`),
+};
+
+export const modelApi = {
+  getLeaderboard: (projectId, experimentId = null) =>
+    apiClient.get(`/projects/${projectId}/leaderboard${experimentId ? `?experiment_id=${experimentId}` : ''}`),
+  getMetrics: (modelId) => apiClient.get(`/models/${modelId}/metrics`),
 };
 
 export default apiClient;
+

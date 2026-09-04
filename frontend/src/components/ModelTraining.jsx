@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { experimentApi } from '../api/client';
+import { experimentApi, modelApi } from '../api/client';
 import {
   Cpu,
   Play,
@@ -15,6 +15,12 @@ import {
   ChevronRight,
   TrendingUp,
   XCircle,
+  Trophy,
+  Lock,
+  Eye,
+  Sliders,
+  Check,
+  AlertCircle,
   HelpCircle,
 } from 'lucide-react';
 
@@ -74,28 +80,46 @@ export const ModelTraining = ({ projectId, taskType, targetColumn, onExperimentC
   );
   const [folds, setFolds] = useState(5);
   const [seed, setSeed] = useState('');
+  const [selectionMetric, setSelectionMetric] = useState(isRegression ? 'rmse' : 'f1_macro');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
 
-  // Active Experiment & History State
+  // Active Experiment, Leaderboard & History State
   const [activeExperiment, setActiveExperiment] = useState(null);
+  const [leaderboard, setLeaderboard] = useState(null);
   const [experimentsHistory, setExperimentsHistory] = useState([]);
   const [pollingActive, setPollingActive] = useState(false);
+  const [selectedModelMetrics, setSelectedModelMetrics] = useState(null);
+  const [modelModalOpen, setModelModalOpen] = useState(false);
+  const [rerunningDiagnostic, setRerunningDiagnostic] = useState(false);
+
   const pollingTimerRef = useRef(null);
 
   useEffect(() => {
     setSelectedAlgorithms(availableAlgs.map((a) => a.id));
+    setSelectionMetric(isRegression ? 'rmse' : 'f1_macro');
   }, [taskType]);
+
+  const loadLeaderboardData = async (experimentId = null) => {
+    try {
+      const res = await modelApi.getLeaderboard(projectId, experimentId);
+      setLeaderboard(res.data);
+    } catch (err) {
+      console.error('Failed to load leaderboard:', err);
+    }
+  };
 
   const loadHistory = async () => {
     try {
       const res = await experimentApi.listByProject(projectId);
       setExperimentsHistory(res.data || []);
-      if (res.data && res.data.length > 0 && !activeExperiment) {
-        setActiveExperiment(res.data[0]);
-        if (res.data[0].status === 'RUNNING') {
-          startPolling(res.data[0].id);
+      if (res.data && res.data.length > 0) {
+        const latest = res.data[0];
+        setActiveExperiment(latest);
+        await loadLeaderboardData(latest.id);
+        if (latest.status === 'RUNNING') {
+          startPolling(latest.id);
         }
       }
     } catch (err) {
@@ -120,6 +144,8 @@ export const ModelTraining = ({ projectId, taskType, targetColumn, onExperimentC
       try {
         const res = await experimentApi.get(experimentId);
         setActiveExperiment(res.data);
+        await loadLeaderboardData(experimentId);
+
         if (res.data.status === 'COMPLETED' || res.data.status === 'FAILED') {
           clearInterval(pollingTimerRef.current);
           setPollingActive(false);
@@ -139,7 +165,7 @@ export const ModelTraining = ({ projectId, taskType, targetColumn, onExperimentC
 
   const handleToggleAlgorithm = (algId) => {
     if (selectedAlgorithms.includes(algId)) {
-      if (selectedAlgorithms.length === 1) return; // Keep at least one
+      if (selectedAlgorithms.length === 1) return;
       setSelectedAlgorithms(selectedAlgorithms.filter((id) => id !== algId));
     } else {
       setSelectedAlgorithms([...selectedAlgorithms, algId]);
@@ -170,16 +196,74 @@ export const ModelTraining = ({ projectId, taskType, targetColumn, onExperimentC
         algorithms: selectedAlgorithms,
         folds: Number(folds),
         seed: seed ? Number(seed) : null,
+        selection_metric: selectionMetric,
       };
 
       const res = await experimentApi.create(projectId, payload);
-      setSuccessMsg('Cross-validation training experiment launched.');
+      setSuccessMsg('Cross-validation training & evaluation launched.');
       startPolling(res.data.experiment_id);
     } catch (err) {
       setError(err.response?.data?.detail || 'Failed to launch training experiment');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleDiagnosticRerun = async () => {
+    if (!activeExperiment) return;
+    setError('');
+    setSuccessMsg('');
+    try {
+      setRerunningDiagnostic(true);
+      const res = await experimentApi.diagnosticRerun(activeExperiment.id);
+      setSuccessMsg(res.data.message || 'Diagnostic rerun completed. Stored as TEST_REUSED_DIAGNOSTIC.');
+      await loadLeaderboardData(activeExperiment.id);
+    } catch (err) {
+      setError(err.response?.data?.detail || 'Diagnostic rerun failed');
+    } finally {
+      setRerunningDiagnostic(false);
+    }
+  };
+
+  const handleOpenModelMetrics = async (modelId) => {
+    try {
+      const res = await modelApi.getMetrics(modelId);
+      setSelectedModelMetrics(res.data);
+      setModelModalOpen(true);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const renderFitBadge = (diagnosis) => {
+    if (!diagnosis) return <span className="text-slate-500 text-[10px]">N/A</span>;
+
+    if (diagnosis === 'GOOD_FIT') {
+      return (
+        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
+          Good Fit
+        </span>
+      );
+    }
+    if (diagnosis === 'POTENTIAL_OVERFIT') {
+      return (
+        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/10 border border-amber-500/20 text-amber-400">
+          Potential Overfit
+        </span>
+      );
+    }
+    if (diagnosis === 'POTENTIAL_UNDERFIT_WEAK_SIGNAL') {
+      return (
+        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/10 border border-amber-500/20 text-amber-400">
+          Weak Signal / Underfit
+        </span>
+      );
+    }
+    return (
+      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-800 border border-slate-700 text-slate-400">
+        Insufficient Data
+      </span>
+    );
   };
 
   if (!taskType || !['REGRESSION', 'CLASSIFICATION'].includes(taskType)) {
@@ -194,14 +278,16 @@ export const ModelTraining = ({ projectId, taskType, targetColumn, onExperimentC
     );
   }
 
+  const winningModel = leaderboard?.models?.find((m) => m.is_winner);
+
   return (
     <div className="space-y-6">
-      {/* Leakage Isolation Banner */}
+      {/* Leakage Isolation & Locked Test Banner */}
       <div className="p-4 rounded-xl bg-indigo-500/5 border border-indigo-500/15 text-xs text-indigo-300 flex items-start space-x-3">
         <ShieldCheck className="w-4 h-4 text-indigo-400 shrink-0 mt-0.5" />
         <div>
-          <strong className="font-semibold text-white">Leakage-Controlled CV Harness: </strong>
-          Feature preprocessing and rank-aggregation selection are fit once per CV fold on the training slice only. Models compete on top of the shared selected features with zero Locked Test data leakage.
+          <strong className="font-semibold text-white">Leakage-Safe Protocol & Locked Test Boundary: </strong>
+          Inner CV evaluation drives model ranking by primary metric. Upon finalization, the winning model is refit on full Development data and evaluated exactly ONCE against the Locked Test partition.
         </div>
       </div>
 
@@ -220,7 +306,7 @@ export const ModelTraining = ({ projectId, taskType, targetColumn, onExperimentC
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left 1 Column: Training Configuration */}
+        {/* Left Column: Training Configuration */}
         <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 space-y-5 shadow-xl">
           <div className="flex items-center justify-between border-b border-slate-800 pb-3">
             <div className="flex items-center space-x-2">
@@ -284,6 +370,35 @@ export const ModelTraining = ({ projectId, taskType, targetColumn, onExperimentC
               </div>
             </div>
 
+            {/* Primary Selection Metric */}
+            <div className="space-y-1">
+              <label className="text-[11px] font-semibold text-slate-300 flex items-center justify-between">
+                <span>Primary Selection Metric (Sort Basis)</span>
+                <span className="text-[10px] text-indigo-400">Authoritative</span>
+              </label>
+              <select
+                value={selectionMetric}
+                onChange={(e) => setSelectionMetric(e.target.value)}
+                className="w-full px-3 py-2 text-xs rounded-lg border border-slate-800 bg-slate-950 text-white focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              >
+                {isRegression ? (
+                  <>
+                    <option value="rmse">RMSE — Root Mean Squared Error (Minimize)</option>
+                    <option value="mae">MAE — Mean Absolute Error (Minimize)</option>
+                    <option value="r2">R² — Coefficient of Determination (Maximize)</option>
+                    <option value="adjusted_r2">Adjusted R² (Maximize)</option>
+                  </>
+                ) : (
+                  <>
+                    <option value="f1_macro">Macro-F1 (Maximize)</option>
+                    <option value="f1_weighted">Weighted-F1 (Maximize)</option>
+                    <option value="accuracy">Accuracy (Maximize)</option>
+                    <option value="roc_auc">ROC-AUC (Maximize)</option>
+                  </>
+                )}
+              </select>
+            </div>
+
             {/* Folds & Seed */}
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
@@ -333,12 +448,12 @@ export const ModelTraining = ({ projectId, taskType, targetColumn, onExperimentC
               {pollingActive ? (
                 <>
                   <RotateCw className="w-4 h-4 animate-spin" />
-                  <span>Cross-Validation in Progress...</span>
+                  <span>Evaluating Cross-Validation Folds...</span>
                 </>
               ) : (
                 <>
                   <Play className="w-4 h-4 fill-white" />
-                  <span>Start Model Training</span>
+                  <span>Start Model Training & Selection</span>
                 </>
               )}
             </button>
@@ -354,7 +469,10 @@ export const ModelTraining = ({ projectId, taskType, targetColumn, onExperimentC
                 {experimentsHistory.map((exp) => (
                   <button
                     key={exp.id}
-                    onClick={() => setActiveExperiment(exp)}
+                    onClick={() => {
+                      setActiveExperiment(exp);
+                      loadLeaderboardData(exp.id);
+                    }}
                     className={`w-full text-left p-2 rounded-lg border text-xs transition-all flex items-center justify-between ${
                       activeExperiment?.id === exp.id
                         ? 'bg-indigo-600/20 border-indigo-500/60 text-white font-semibold'
@@ -382,133 +500,297 @@ export const ModelTraining = ({ projectId, taskType, targetColumn, onExperimentC
           )}
         </div>
 
-        {/* Right 2 Columns: Live Experiment Results & Sanity Metric Cards */}
+        {/* Right 2 Columns: Official Leaderboard & Winner Callout */}
         <div className="lg:col-span-2 space-y-5">
-          {!activeExperiment ? (
+          {!leaderboard || !activeExperiment ? (
             <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-12 text-center space-y-3">
               <Layers className="w-12 h-12 mx-auto text-slate-600" />
-              <h3 className="text-sm font-bold text-white">No Training Runs Yet</h3>
+              <h3 className="text-sm font-bold text-white">No Model Leaderboard Available</h3>
               <p className="text-xs text-slate-400 max-w-sm mx-auto">
-                Configure algorithms and folds on the left, then click Start Model Training to execute cross-validation.
+                Configure algorithms and folds on the left, then launch training to populate the authoritative primary-metric leaderboard.
               </p>
             </div>
           ) : (
             <div className="space-y-5">
-              {/* Header Status Card */}
-              <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-1">
+              {/* Winner Callout Card */}
+              {winningModel && (
+                <div className="bg-gradient-to-r from-amber-500/10 via-indigo-500/10 to-emerald-500/10 border border-amber-500/30 rounded-2xl p-5 shadow-xl relative overflow-hidden">
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div className="space-y-1.5">
+                      <div className="flex items-center space-x-2">
+                        <span className="p-1.5 rounded-lg bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                          <Trophy className="w-4 h-4" />
+                        </span>
+                        <span className="text-xs font-bold uppercase tracking-wider text-amber-300">
+                          Selected Winner (Primary Metric: {leaderboard.selection_metric.toUpperCase()})
+                        </span>
+                      </div>
+                      <h3 className="text-lg font-extrabold text-white">
+                        {winningModel.algorithm_name}
+                      </h3>
+                      <div className="flex flex-wrap items-center gap-3 text-xs text-slate-300">
+                        <span>
+                          CV Mean {leaderboard.selection_metric.toUpperCase()}:{' '}
+                          <strong className="text-white font-mono">
+                            {winningModel.primary_metric_value !== null ? Number(winningModel.primary_metric_value).toFixed(5) : 'N/A'}
+                          </strong>
+                        </span>
+                        <span>•</span>
+                        <span>
+                          Fit: {renderFitBadge(winningModel.fit_diagnosis)}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="bg-slate-950/80 p-4 rounded-xl border border-slate-800 space-y-2 text-right">
+                      <div className="flex items-center justify-end space-x-1.5 text-xs text-slate-400">
+                        <Lock className="w-3.5 h-3.5 text-rose-400" />
+                        <span className="font-semibold text-white">Locked Test Evaluation</span>
+                      </div>
+
+                      {leaderboard.locked_test_consumed ? (
+                        <div className="space-y-1">
+                          <div className="text-lg font-extrabold text-emerald-400 font-mono">
+                            {winningModel.locked_test_score !== null
+                              ? Number(winningModel.locked_test_score).toFixed(5)
+                              : 'Evaluated'}
+                          </div>
+                          <div className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-full bg-rose-500/10 border border-rose-500/20 text-rose-300 text-[10px] font-bold">
+                            <Check className="w-3 h-3 text-emerald-400" />
+                            <span>Evaluated once, now consumed</span>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-xs text-amber-400 font-semibold">
+                          Pending final refit
+                        </div>
+                      )}
+
+                      {leaderboard.locked_test_consumed && (
+                        <div className="pt-1">
+                          <button
+                            onClick={handleDiagnosticRerun}
+                            disabled={rerunningDiagnostic}
+                            className="text-[10px] text-slate-400 hover:text-indigo-300 underline transition-colors cursor-pointer"
+                            title="Rerun locked test data for diagnostic/debugging only. Labeled as TEST_REUSED_DIAGNOSTIC."
+                          >
+                            {rerunningDiagnostic ? 'Running Diagnostic...' : 'Diagnostic Rerun (Non-authoritative)'}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Leaderboard Table Card */}
+              <div className="bg-slate-900/90 border border-slate-800 rounded-2xl shadow-xl overflow-hidden space-y-4 p-5">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-3">
+                  <div>
                     <div className="flex items-center space-x-2">
                       <h3 className="text-sm font-bold text-white">
-                        Experiment Run
+                        Authoritative Model Leaderboard
                       </h3>
-                      <span className="font-mono text-[11px] text-slate-500">
-                        ({activeExperiment.id.slice(0, 8)})
+                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-indigo-500/10 border border-indigo-500/20 text-indigo-400">
+                        Ranked strictly by {leaderboard.selection_metric.toUpperCase()} ({leaderboard.selection_direction})
                       </span>
                     </div>
-                    <p className="text-xs text-slate-400">
-                      Task: <strong className="text-white">{activeExperiment.task_type}</strong> • CV: <strong className="text-white">{activeExperiment.fold_count}-fold</strong> • Seed: <strong className="text-white font-mono">{activeExperiment.cv_seed ?? 'N/A'}</strong>
+                    <p className="text-[11px] text-slate-400 mt-0.5">
+                      Composite score shown for comparison only — never alters rank order.
                     </p>
                   </div>
 
-                  <span
-                    className={`inline-flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-bold ${
-                      activeExperiment.status === 'COMPLETED'
-                        ? 'bg-emerald-500/15 border border-emerald-500/30 text-emerald-400'
-                        : activeExperiment.status === 'RUNNING'
-                        ? 'bg-indigo-500/15 border border-indigo-500/30 text-indigo-400 animate-pulse'
-                        : 'bg-rose-500/15 border border-rose-500/30 text-rose-400'
-                    }`}
-                  >
-                    {activeExperiment.status === 'COMPLETED' && <CheckCircle2 className="w-3.5 h-3.5" />}
-                    {activeExperiment.status === 'RUNNING' && <RotateCw className="w-3.5 h-3.5 animate-spin" />}
-                    {activeExperiment.status === 'FAILED' && <XCircle className="w-3.5 h-3.5" />}
-                    <span>{activeExperiment.status}</span>
-                  </span>
-                </div>
-
-                {/* Day 6 / Day 7 Scope Clarification Box */}
-                <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 text-[11px] text-slate-400 space-y-1">
-                  <div className="flex items-center space-x-1 text-slate-300 font-semibold">
-                    <Info className="w-3.5 h-3.5 text-indigo-400" />
-                    <span>Preliminary Sanity Validation Metric</span>
+                  <div className="text-right text-[11px] text-slate-400 font-mono">
+                    {leaderboard.models.length} competing models
                   </div>
-                  <p>
-                    The score below ({isRegression ? 'R² Coefficient of Determination' : 'Accuracy Score'}) validates the fit $\to$ predict roundtrip across temporary CV folds. Full multi-metric evaluation (MAE/RMSE/F1/ROC-AUC/Confusion Matrix) and model selection will be established on Day 7.
-                  </p>
-                </div>
-              </div>
-
-              {/* Models Comparison Cards */}
-              <div className="space-y-3">
-                <div className="text-xs uppercase tracking-wider font-bold text-slate-400">
-                  Trained Algorithm Outcomes ({activeExperiment.trained_models?.length || 0})
                 </div>
 
-                {activeExperiment.status === 'RUNNING' && (!activeExperiment.trained_models || activeExperiment.trained_models.length === 0) ? (
-                  <div className="p-8 rounded-2xl bg-slate-900/60 border border-slate-800 text-center space-y-2">
-                    <RotateCw className="w-8 h-8 text-indigo-400 animate-spin mx-auto" />
-                    <p className="text-xs font-semibold text-white">Fitting ColumnTransformers, Feature Selectors, and Estimators...</p>
-                    <p className="text-[11px] text-slate-400">Iterating across {activeExperiment.fold_count} cross-validation folds.</p>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 gap-3">
-                    {activeExperiment.trained_models?.map((model) => {
-                      const isModelCompleted = model.status === 'COMPLETED';
-                      return (
-                        <div
-                          key={model.id}
-                          className="bg-slate-900/90 border border-slate-800 rounded-xl p-4 shadow-sm flex items-center justify-between hover:border-slate-700 transition-colors"
-                        >
-                          <div className="space-y-1">
-                            <div className="flex items-center space-x-2">
-                              <span className="font-bold text-sm text-white">
-                                {model.algorithm_name}
-                              </span>
-                              <span
-                                className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                                  isModelCompleted
-                                    ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                                    : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
-                                }`}
-                              >
-                                {model.status}
-                              </span>
-                            </div>
-                            <div className="text-[11px] text-slate-400 font-mono">
-                              Hyperparameters: {JSON.stringify(model.hyperparameters) === '{}' ? 'scikit-learn defaults' : JSON.stringify(model.hyperparameters)}
-                            </div>
-                            {model.error_message && (
-                              <p className="text-[11px] text-rose-400 mt-1">
-                                Error: {model.error_message}
-                              </p>
-                            )}
-                          </div>
-
-                          <div className="text-right pl-4">
-                            <div className="text-[10px] uppercase font-semibold text-slate-400 tracking-wider">
-                              Quick CV Score ({isRegression ? 'R²' : 'Accuracy'})
-                            </div>
-                            <div className="text-lg font-extrabold text-white font-mono">
-                              {model.quick_cv_score !== null && model.quick_cv_score !== undefined ? (
-                                <span className={model.quick_cv_score >= 0 ? 'text-indigo-400' : 'text-rose-400'}>
-                                  {Number(model.quick_cv_score).toFixed(5)}
+                <div className="overflow-x-auto rounded-xl border border-slate-800 bg-slate-950">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-slate-900 border-b border-slate-800 text-slate-400 uppercase tracking-wider font-semibold text-[10px]">
+                      <tr>
+                        <th className="px-4 py-3">Rank</th>
+                        <th className="px-4 py-3">Algorithm</th>
+                        <th className="px-4 py-3 bg-indigo-950/40 text-indigo-300 font-bold border-x border-slate-800">
+                          Primary: {leaderboard.selection_metric.toUpperCase()}
+                        </th>
+                        <th className="px-4 py-3">
+                          {isRegression ? 'Secondary: R²' : 'Secondary: ROC-AUC'}
+                        </th>
+                        <th className="px-4 py-3">Fit Diagnosis</th>
+                        <th className="px-4 py-3 text-slate-400">
+                          Composite Indicator
+                          <div className="text-[9px] lowercase font-normal text-slate-500">(not used for ranking)</div>
+                        </th>
+                        <th className="px-4 py-3 text-right">Details</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-800">
+                      {leaderboard.models.map((model, idx) => {
+                        const isWin = model.is_winner;
+                        return (
+                          <tr
+                            key={model.id}
+                            className={`transition-colors ${
+                              isWin
+                                ? 'bg-amber-500/5 hover:bg-amber-500/10'
+                                : 'hover:bg-slate-800/40'
+                            }`}
+                          >
+                            <td className="px-4 py-3 font-mono">
+                              {isWin ? (
+                                <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-500/20 text-amber-400 font-bold text-xs border border-amber-500/30">
+                                  1
                                 </span>
                               ) : (
-                                <span className="text-slate-500 text-xs italic">N/A</span>
+                                <span className="text-slate-500 font-semibold pl-1.5">{idx + 1}</span>
                               )}
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
+                            </td>
+
+                            <td className="px-4 py-3">
+                              <div className="font-bold text-white flex items-center space-x-1.5">
+                                <span>{model.algorithm_name}</span>
+                                {isWin && (
+                                  <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-amber-500/20 text-amber-300 uppercase">
+                                    Winner
+                                  </span>
+                                )}
+                              </div>
+                              <div className="text-[10px] text-slate-500 font-mono truncate max-w-[160px]">
+                                {model.status === 'FAILED' ? (
+                                  <span className="text-rose-400">Failed: {model.error_message}</span>
+                                ) : (
+                                  JSON.stringify(model.hyperparameters) === '{}' ? 'Default params' : JSON.stringify(model.hyperparameters)
+                                )}
+                              </div>
+                            </td>
+
+                            <td className="px-4 py-3 font-mono font-extrabold bg-indigo-950/30 border-x border-slate-800 text-indigo-300 text-sm">
+                              {model.primary_metric_value !== null && model.primary_metric_value !== undefined ? (
+                                Number(model.primary_metric_value).toFixed(5)
+                              ) : (
+                                <span className="text-slate-500 text-xs italic font-normal">N/A</span>
+                              )}
+                            </td>
+
+                            <td className="px-4 py-3 font-mono text-slate-300">
+                              {model.secondary_metric_value !== null && model.secondary_metric_value !== undefined ? (
+                                Number(model.secondary_metric_value).toFixed(5)
+                              ) : (
+                                <span className="text-slate-500 italic font-normal">N/A</span>
+                              )}
+                            </td>
+
+                            <td className="px-4 py-3">
+                              {renderFitBadge(model.fit_diagnosis)}
+                            </td>
+
+                            <td className="px-4 py-3">
+                              {model.model_selection_score !== null && model.model_selection_score !== undefined ? (
+                                <div className="space-y-1">
+                                  <div className="font-mono text-slate-300 text-xs font-semibold">
+                                    {Number(model.model_selection_score).toFixed(1)} / 100
+                                  </div>
+                                  <div className="w-24 bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                                    <div
+                                      className="bg-indigo-500 h-1.5 rounded-full"
+                                      style={{ width: `${Math.min(100, Math.max(0, model.model_selection_score))}%` }}
+                                    />
+                                  </div>
+                                </div>
+                              ) : (
+                                <span className="text-slate-500 italic">N/A</span>
+                              )}
+                            </td>
+
+                            <td className="px-4 py-3 text-right">
+                              <button
+                                onClick={() => handleOpenModelMetrics(model.id)}
+                                className="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition-colors inline-flex items-center space-x-1 cursor-pointer"
+                              >
+                                <Eye className="w-3.5 h-3.5" />
+                                <span>Metrics</span>
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           )}
         </div>
       </div>
+
+      {/* Model Metrics Modal */}
+      {modelModalOpen && selectedModelMetrics && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-3xl w-full max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
+            <div className="p-5 border-b border-slate-800 flex items-center justify-between">
+              <div>
+                <h3 className="text-base font-bold text-white">Full Metric Breakdown</h3>
+                <p className="text-xs text-slate-400">
+                  TRAIN, VALIDATION (per fold), CV_MEAN, and LOCKED_TEST records
+                </p>
+              </div>
+              <button
+                onClick={() => setModelModalOpen(false)}
+                className="p-1.5 text-slate-400 hover:text-white rounded-lg bg-slate-800"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="p-6 overflow-y-auto space-y-6">
+              {/* Metrics Table */}
+              <div className="overflow-x-auto rounded-xl border border-slate-800 bg-slate-950">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-slate-900 border-b border-slate-800 text-slate-400 uppercase tracking-wider font-semibold text-[10px]">
+                    <tr>
+                      <th className="px-4 py-2.5">Metric</th>
+                      <th className="px-4 py-2.5">Split</th>
+                      <th className="px-4 py-2.5">Fold</th>
+                      <th className="px-4 py-2.5 text-right">Value</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800 font-mono text-[11px]">
+                    {selectedModelMetrics.map((m) => (
+                      <tr key={m.id} className="hover:bg-slate-800/30">
+                        <td className="px-4 py-2 text-white font-semibold">{m.metric_name}</td>
+                        <td className="px-4 py-2">
+                          <span
+                            className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                              m.split === 'LOCKED_TEST'
+                                ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+                                : m.split === 'CV_MEAN'
+                                ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20'
+                                : m.split === 'TEST_REUSED_DIAGNOSTIC'
+                                ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                                : 'bg-slate-800 text-slate-400'
+                            }`}
+                          >
+                            {m.split}
+                          </span>
+                        </td>
+                        <td className="px-4 py-2 text-slate-400">
+                          {m.fold_index !== null ? `Fold ${m.fold_index + 1}` : 'Overall'}
+                        </td>
+                        <td className="px-4 py-2 text-right text-emerald-400 font-bold">
+                          {m.metric_value !== null ? Number(m.metric_value).toFixed(5) : (
+                            m.metric_json ? JSON.stringify(m.metric_json) : 'null'
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -5,9 +5,11 @@ from app.core.database import get_db
 from app.core.dependencies import require_permission
 from app.models.user import User
 from app.schemas.project import ProjectCreate, ProjectUpdate, ProjectResponse
+from app.schemas.model_metric import LeaderboardResponse
 from app.services.project_service import ProjectService
 
 router = APIRouter(prefix="/projects", tags=["Projects"])
+
 
 @router.post(
     "",
@@ -146,4 +148,138 @@ def update_project_task_type(
     db.commit()
     db.refresh(project_model)
     return ProjectResponse.model_validate(project_model)
+
+
+@router.get(
+    "/{id}/leaderboard",
+    response_model=LeaderboardResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Get leaderboard for project's latest experiment, sorted by primary selection metric (READ permission required)"
+)
+def get_project_leaderboard(
+    id: UUID,
+    experiment_id: UUID | None = Query(default=None),
+    current_user: User = Depends(require_permission("READ")),
+    db: Session = Depends(get_db),
+):
+    from fastapi import HTTPException
+    from app.repositories.experiment_repository import ExperimentRepository
+    from app.schemas.model_metric import LeaderboardResponse, LeaderboardEntryResponse, ModelMetricResponse
+
+    service = ProjectService(db)
+    project = service.get_project_by_id(id, current_user)
+    exp_repo = ExperimentRepository(db)
+
+    if experiment_id:
+        experiment = exp_repo.get_with_models(experiment_id)
+        if not experiment or experiment.project_id != project.id:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Experiment not found for this project"
+            )
+    else:
+        experiments = exp_repo.get_by_project(project.id)
+        if not experiments:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="No experiments found for this project"
+            )
+        experiment = experiments[0]
+
+    task_type = experiment.task_type or project.task_type or "REGRESSION"
+    selection_metric = experiment.selection_metric or ("rmse" if task_type == "REGRESSION" else "f1_macro")
+    selection_direction = experiment.selection_direction or ("MINIMIZE" if selection_metric in ["rmse", "mae", "mse"] else "MAXIMIZE")
+
+    # Secondary metric (R2 for regression, ROC-AUC or accuracy for classification)
+    secondary_metric_name = "r2" if task_type == "REGRESSION" else "roc_auc"
+
+    models_entries = []
+    for model in experiment.trained_models:
+        # Find CV_MEAN primary metric
+        primary_cv_metric = next(
+            (m for m in model.metrics if m.split == "CV_MEAN" and m.metric_name.lower().replace("-", "_") == selection_metric.lower().replace("-", "_")),
+            None
+        )
+        # Find CV_MEAN secondary metric
+        secondary_cv_metric = next(
+            (m for m in model.metrics if m.split == "CV_MEAN" and m.metric_name.lower().replace("-", "_") == secondary_metric_name.lower().replace("-", "_")),
+            None
+        )
+        # Find LOCKED_TEST primary metric
+        locked_test_metric = next(
+            (m for m in model.metrics if m.split == "LOCKED_TEST" and m.metric_name.lower().replace("-", "_") == selection_metric.lower().replace("-", "_")),
+            None
+        )
+
+        prim_val = float(primary_cv_metric.metric_value) if primary_cv_metric and primary_cv_metric.metric_value is not None else (
+            float(model.quick_cv_score) if model.quick_cv_score is not None else None
+        )
+        sec_val = float(secondary_cv_metric.metric_value) if secondary_cv_metric and secondary_cv_metric.metric_value is not None else None
+        lt_val = float(locked_test_metric.metric_value) if locked_test_metric and locked_test_metric.metric_value is not None else None
+
+        is_winner = (experiment.selected_model_id == model.id)
+
+        # Exclude TEST_REUSED_DIAGNOSTIC from authoritative leaderboard response per SRS §2.12
+        metrics_list = [
+            ModelMetricResponse(
+                id=m.id,
+                model_id=m.model_id,
+                metric_name=m.metric_name,
+                split=m.split,
+                metric_value=float(m.metric_value) if m.metric_value is not None else None,
+                metric_json=m.metric_json,
+                fold_index=m.fold_index,
+                created_at=m.created_at,
+            )
+            for m in model.metrics
+            if m.split != "TEST_REUSED_DIAGNOSTIC"
+        ]
+
+        models_entries.append({
+            "entry": LeaderboardEntryResponse(
+                id=model.id,
+                algorithm_name=model.algorithm_name,
+                hyperparameters=model.hyperparameters or {},
+                fit_diagnosis=model.fit_diagnosis,
+                model_selection_score=float(model.model_selection_score) if model.model_selection_score is not None else None,
+                primary_metric_name=selection_metric,
+                primary_metric_value=prim_val,
+                secondary_metric_name=secondary_metric_name,
+                secondary_metric_value=sec_val,
+                is_winner=is_winner,
+                locked_test_score=lt_val,
+                status=model.status,
+                error_message=model.error_message,
+                created_at=model.created_at,
+                metrics=metrics_list,
+            ),
+            "primary_sort_key": prim_val,
+            "status": model.status,
+        })
+
+    # Sort strictly by primary metric
+    def sort_key(item):
+        is_completed = item["status"] == "COMPLETED"
+        score = item["primary_sort_key"]
+        if not is_completed or score is None:
+            return (1, 0)
+        if selection_direction == "MINIMIZE":
+            return (0, score)
+        else:
+            return (0, -score)
+
+    sorted_models = [item["entry"] for item in sorted(models_entries, key=sort_key)]
+
+    return LeaderboardResponse(
+        project_id=project.id,
+        experiment_id=experiment.id,
+        task_type=task_type,
+        selection_metric=selection_metric,
+        selection_direction=selection_direction,
+        selected_model_id=experiment.selected_model_id,
+        locked_test_consumed=experiment.locked_test_consumed,
+        locked_test_consumed_at=experiment.locked_test_consumed_at,
+        models=sorted_models,
+    )
+
 

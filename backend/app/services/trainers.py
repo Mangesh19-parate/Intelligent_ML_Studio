@@ -101,9 +101,19 @@ class BaseModelTrainer(ABC):
         """Predicts using the fitted estimator."""
         return self.estimator.predict(X)
 
+    def predict_proba(self, X: Any) -> np.ndarray | None:
+        """Predicts class probabilities if supported by the estimator."""
+        if hasattr(self.estimator, "predict_proba"):
+            try:
+                return self.estimator.predict_proba(X)
+            except Exception:
+                return None
+        return None
+
     def get_estimator(self) -> Any:
         """Returns the underlying estimator instance."""
         return self.estimator
+
 
 
 class RegressionTrainer(BaseModelTrainer):

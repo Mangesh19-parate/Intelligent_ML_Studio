@@ -29,6 +29,7 @@ class DatasetSplit(Base):
     )
 
     dataset = relationship("Dataset", back_populates="splits")
+    profiling_report = relationship("ProfilingReport", back_populates="dataset_split", uselist=False, cascade="all, delete-orphan")
 
     def __repr__(self) -> str:
         return f"<DatasetSplit dataset_id={self.dataset_id} type={self.split_type} seed={self.split_seed}>"

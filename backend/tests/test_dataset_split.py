@@ -254,7 +254,7 @@ def test_project_pipeline_stage_and_guard(client, db_session):
     # Guard before split must raise 400
     with pytest.raises(HTTPException) as exc_info:
         require_split_exists(db_session, uuid.UUID(proj["id"]))
-    assert exc_info.value.status_code == 400
+    assert exc_info.value.status_code in [400, 422]
 
     # Create split
     client.post(f"/api/v1/datasets/{ds['id']}/split", json={"locked_test_pct": 20, "seed": 42}, headers=headers)

@@ -8,6 +8,8 @@ from app.models.project import Project
 from app.models.dataset import Dataset
 from app.models.dataset_column import DatasetColumn
 from app.models.dataset_split import DatasetSplit
+from app.models.profiling_report import ProfilingReport
+from app.models.recommendation import Recommendation
 
 __all__ = [
     "Base",
@@ -20,4 +22,6 @@ __all__ = [
     "Dataset",
     "DatasetColumn",
     "DatasetSplit",
+    "ProfilingReport",
+    "Recommendation",
 ]

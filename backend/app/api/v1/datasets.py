@@ -187,9 +187,66 @@ def get_development_preview(
     if not dataset:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Dataset not found")
 
-    project_service = ProjectService(db)
-    project_service.get_project_by_id(dataset.project_id, current_user)
-
     split_service = DatasetSplitService(db)
     preview = split_service.get_development_preview(dataset.id, limit=limit)
     return DatasetDevelopmentPreviewResponse.model_validate(preview)
+
+@router.post(
+    "/datasets/{id}/profile",
+    response_model=dict,
+    status_code=status.HTTP_200_OK,
+    summary="Trigger Data Profiling, DQI, Task-Type Detection, and Diagnostics on Development data"
+)
+def profile_dataset(
+    id: UUID,
+    current_user: User = Depends(require_permission("EDIT_DATA")),
+    db: Session = Depends(get_db),
+):
+    dataset_service = DatasetService(db)
+    dataset = dataset_service.dataset_repo.get_by_id(id)
+    if not dataset:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Dataset not found")
+
+    project_service = ProjectService(db)
+    project = project_service.get_project_by_id(dataset.project_id, current_user)
+
+    # Enforce outer split guard before profiling
+    from app.services.pipeline_guards import require_split_exists
+    from app.services.data_profiling_service import DataProfilingService
+
+    require_split_exists(db, project.id)
+
+    profiling_service = DataProfilingService(db)
+    report = profiling_service.generate_report(dataset.id)
+    return report
+
+@router.get(
+    "/datasets/{id}/profile",
+    response_model=dict,
+    status_code=status.HTTP_200_OK,
+    summary="Get stored Data Profiling report"
+)
+def get_dataset_profile(
+    id: UUID,
+    current_user: User = Depends(require_permission("READ")),
+    db: Session = Depends(get_db),
+):
+    dataset_service = DatasetService(db)
+    dataset = dataset_service.dataset_repo.get_by_id(id)
+    if not dataset:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Dataset not found")
+
+    project_service = ProjectService(db)
+    project_service.get_project_by_id(dataset.project_id, current_user)
+
+    from app.services.data_profiling_service import DataProfilingService
+    profiling_service = DataProfilingService(db)
+    report = profiling_service.get_report(dataset.id)
+    if not report:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No profiling report exists for this dataset yet."
+        )
+
+    return report
+

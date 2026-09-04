@@ -7,12 +7,21 @@ from app.schemas.auth import (
     TokenResponse,
     RefreshTokenRequest,
 )
-from app.schemas.project import ProjectCreate, ProjectUpdate, ProjectResponse
+from app.schemas.project import ProjectCreate, ProjectUpdate, ProjectResponse, TaskTypeUpdate
 from app.schemas.dataset import (
     DatasetColumnResponse,
     DatasetResponse,
     DatasetDetailResponse,
 )
+from app.schemas.profiling import (
+    DQIResponse,
+    DQISubScores,
+    DQIEffectiveWeights,
+    TaskTypeSuggestionResponse,
+    CorrelationMatrixResponse,
+    ProfilingReportResponse,
+)
+from app.schemas.recommendation import RecommendationResponse
 
 __all__ = [
     "PermissionResponse",
@@ -25,7 +34,15 @@ __all__ = [
     "ProjectCreate",
     "ProjectUpdate",
     "ProjectResponse",
+    "TaskTypeUpdate",
     "DatasetColumnResponse",
     "DatasetResponse",
     "DatasetDetailResponse",
+    "DQIResponse",
+    "DQISubScores",
+    "DQIEffectiveWeights",
+    "TaskTypeSuggestionResponse",
+    "CorrelationMatrixResponse",
+    "ProfilingReportResponse",
+    "RecommendationResponse",
 ]

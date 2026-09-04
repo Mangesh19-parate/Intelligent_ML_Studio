@@ -16,12 +16,16 @@ class ProjectUpdate(BaseModel):
     target_column: str | None = Field(default=None, max_length=150)
     pipeline_stage: str | None = None
 
+class TaskTypeUpdate(BaseModel):
+    task_type: Literal["REGRESSION", "CLASSIFICATION"]
+
 class ProjectResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: UUID
     owner_id: UUID
     project_name: str
     task_type: str
+    task_type_confidence: str | None = None
     target_column: str | None = None
     pipeline_stage: str
     data_quality_index: Decimal | None = None

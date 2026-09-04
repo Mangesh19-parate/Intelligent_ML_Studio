@@ -52,6 +52,6 @@ def require_split_exists(db: Session, project_id: UUID | str) -> None:
 
     if not split_exists:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="Project pipeline requires an established outer split. Please create a train/test split on the active dataset before proceeding."
         )

@@ -19,6 +19,7 @@ class Project(Base, TimestampMixin):
     target_column = Column(String(150), nullable=True)
     pipeline_stage = Column(String(40), nullable=False, default="DATA", server_default="DATA")
     data_quality_index = Column(Numeric(5, 2), nullable=True)
+    task_type_confidence = Column(String(20), nullable=True)
 
     __table_args__ = (
         CheckConstraint(
@@ -29,6 +30,7 @@ class Project(Base, TimestampMixin):
 
     owner = relationship("User", back_populates="projects")
     datasets = relationship("Dataset", back_populates="project", cascade="all, delete-orphan", order_by="desc(Dataset.version_number)")
+    recommendations = relationship("Recommendation", back_populates="project", cascade="all, delete-orphan")
 
     def __repr__(self) -> str:
         return f"<Project {self.project_name} ({self.task_type})>"

@@ -49,6 +49,8 @@ export const projectApi = {
   create: (projectName, targetColumn = null) =>
     apiClient.post('/projects', { project_name: projectName, target_column: targetColumn }),
   update: (id, payload) => apiClient.put(`/projects/${id}`, payload),
+  updateTaskType: (id, taskType) => apiClient.put(`/projects/${id}/task-type`, { task_type: taskType }),
+  getRecommendations: (id) => apiClient.get(`/projects/${id}/recommendations`),
   delete: (id) => apiClient.delete(`/projects/${id}`),
 };
 
@@ -64,6 +66,8 @@ export const datasetApi = {
   },
   listVersions: (projectId) => apiClient.get(`/projects/${projectId}/datasets`),
   getColumns: (datasetId) => apiClient.get(`/datasets/${datasetId}/columns`),
+  profile: (datasetId) => apiClient.post(`/datasets/${datasetId}/profile`),
+  getProfile: (datasetId) => apiClient.get(`/datasets/${datasetId}/profile`),
 };
 
 export const datasetSplitApi = {

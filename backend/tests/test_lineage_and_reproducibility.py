@@ -27,7 +27,7 @@ def regression_setup(db_session, tmp_path, create_test_user):
     """
     Creates a realistic Regression project with uploaded dataset, splits, and transformation configs.
     """
-    user = create_test_user("project_owner@test.com", "ML_ENGINEER")
+    user = create_test_user("engineer@test.com", "ML_ENGINEER")
 
     project = Project(
         id=uuid4(),

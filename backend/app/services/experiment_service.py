@@ -985,8 +985,6 @@ class ExperimentService:
         artifact_file = artifact_dir / f"{winning_model.algorithm_name}.joblib"
 
         fitted_pipeline = {
-            "experiment_id": str(experiment.id),
-            "project_id": str(project.id),
             "algorithm_name": winning_model.algorithm_name,
             "task_type": task_type,
             "target_column": target_col,
@@ -996,7 +994,6 @@ class ExperimentService:
             "selected_indices": selected_indices,
             "estimator": trainer.estimator if hasattr(trainer, "estimator") else trainer,
             "hyperparameters": winning_model.hyperparameters,
-            "fitted_at": datetime.now(timezone.utc).isoformat(),
         }
         joblib.dump(fitted_pipeline, artifact_file)
 

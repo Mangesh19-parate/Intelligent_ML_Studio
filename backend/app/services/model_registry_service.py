@@ -98,7 +98,18 @@ class ModelRegistryService:
         schema: dict[str, str] = {}
         for feat in selected_features:
             feat_str = str(feat)
-            schema[feat_str] = col_type_map.get(feat_str, "NUMERIC")
+            if feat_str in col_type_map:
+                schema[feat_str] = col_type_map[feat_str]
+            else:
+                # Check if this is a one-hot encoded or transformed column derived from an original dataset column
+                matched = False
+                for orig_col, orig_type in col_type_map.items():
+                    if feat_str.startswith(f"{orig_col}_"):
+                        schema[orig_col] = orig_type
+                        matched = True
+                        break
+                if not matched:
+                    schema[feat_str] = "NUMERIC"
 
         return schema
 

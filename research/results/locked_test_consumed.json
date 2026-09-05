@@ -1,0 +1,66 @@
+{
+  "california_housing": {
+    "RANK_AGGREGATION": {
+      "consumed": true,
+      "timestamp": "2026-09-05T10:13:07.962831+00:00",
+      "metric_name": "RMSE",
+      "locked_test_metric_value": 0.5130418112674392,
+      "selected_features": [
+        "MedInc",
+        "Latitude",
+        "Longitude",
+        "AveRooms"
+      ],
+      "dev_samples": 16512,
+      "test_samples": 4128
+    },
+    "RANK_AGGREGATION_STABILITY": {
+      "consumed": true,
+      "timestamp": "2026-09-05T10:13:14.334968+00:00",
+      "metric_name": "RMSE",
+      "locked_test_metric_value": 0.5130418112674392,
+      "selected_features": [
+        "MedInc",
+        "Latitude",
+        "Longitude",
+        "AveRooms"
+      ],
+      "dev_samples": 16512,
+      "test_samples": 4128
+    }
+  },
+  "bike_sharing": {
+    "RANK_AGGREGATION": {
+      "consumed": true,
+      "timestamp": "2026-09-05T10:13:19.482266+00:00",
+      "metric_name": "RMSE",
+      "locked_test_metric_value": 89.12394607856054,
+      "selected_features": [
+        "atemp",
+        "hr",
+        "yr",
+        "temp",
+        "hum",
+        "season"
+      ],
+      "dev_samples": 13903,
+      "test_samples": 3476
+    },
+    "RANK_AGGREGATION_STABILITY": {
+      "consumed": true,
+      "timestamp": "2026-09-05T10:13:24.315409+00:00",
+      "metric_name": "RMSE",
+      "locked_test_metric_value": 89.125214049814,
+      "selected_features": [
+        "hr",
+        "atemp",
+        "yr",
+        "temp",
+        "hum",
+        "season"
+      ],
+      "dev_samples": 13903,
+      "test_samples": 3476
+    }
+  }
+}

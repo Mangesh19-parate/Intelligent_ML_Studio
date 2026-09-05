@@ -46,6 +46,8 @@ class ExperimentRunner:
         n_splits: int = 5,
         n_repeats: int = 2,
         seed: int = 1000,
+        outer_seed: int | None = None,
+        start_repeat_idx: int = 0,
         k_features: int | float | None = None,
         alpha: float = 0.5,
         reference_model: str = "RandomForest",
@@ -56,6 +58,8 @@ class ExperimentRunner:
         self.n_splits = n_splits
         self.n_repeats = n_repeats
         self.seed = seed
+        self.outer_seed = outer_seed if outer_seed is not None else seed
+        self.start_repeat_idx = start_repeat_idx
         self.k_features = k_features
         self.alpha = float(alpha)
         self.reference_model = reference_model
@@ -111,7 +115,8 @@ class ExperimentRunner:
         k = _resolve_k(self.k_features, p)
 
         # 2. Create Outer Split (Development vs Locked Test)
-        split_result = create_split(X, y, task_type, locked_test_pct=20, seed=self.seed)
+        outer_seed = self.outer_seed if self.outer_seed is not None else self.seed
+        split_result = create_split(X, y, task_type, locked_test_pct=20, seed=outer_seed)
         (X_dev, y_dev), _ = partition_data(X, y, split_result)
 
         fold_records: list[dict[str, Any]] = []
@@ -119,7 +124,8 @@ class ExperimentRunner:
         is_stability_method = norm_method in ["rank_aggregation_stability", "rank_aggregation_plus_stability"]
 
         # 3. Repeated K-Fold Cross-Validation on Development partition
-        for run_idx in range(self.n_repeats):
+        for rep_offset in range(self.n_repeats):
+            run_idx = self.start_repeat_idx + rep_offset
             run_seed = self.seed + run_idx
 
             if task_type == "CLASSIFICATION":
@@ -272,3 +278,44 @@ class ExperimentRunner:
             self.results_store.save_batch(fold_records)
 
         return fold_records
+
+
+class ResearchExperimentRunner(ExperimentRunner):
+    """
+    Research Experiment Runner for ML Studio Research Track (SRS §9).
+    Exposes run_single() for executing individual repeats / experimental runs.
+    """
+
+    @classmethod
+    def run_single(
+        cls,
+        dataset_name: str,
+        method_name: str,
+        repeat_index: int = 0,
+        n_splits: int = 5,
+        base_seed: int = 1000,
+        outer_seed: int = 1000,
+        k_features: int | float | None = None,
+        alpha: float = 0.5,
+        reference_model: str = "RandomForest",
+        results_store: ResultsStore | None = None,
+        save_results: bool = True,
+    ) -> list[dict[str, Any]]:
+        """
+        Executes a single repeat (all n_splits folds) for a (dataset, method, repeat_index).
+        """
+        runner = cls(
+            dataset_name=dataset_name,
+            method_name=method_name,
+            n_splits=n_splits,
+            n_repeats=1,
+            seed=base_seed,
+            outer_seed=outer_seed,
+            start_repeat_idx=repeat_index,
+            k_features=k_features,
+            alpha=alpha,
+            reference_model=reference_model,
+            results_store=results_store,
+        )
+        return runner.run(save_results=save_results)
+

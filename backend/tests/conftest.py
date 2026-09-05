@@ -76,3 +76,11 @@ def create_test_user(db_session):
         db_session.refresh(user)
         return user
     return _create
+
+@pytest.fixture
+def auth_headers():
+    from app.core.security import create_access_token
+    def _headers(user: User):
+        token = create_access_token(user.id)
+        return {"Authorization": f"Bearer {token}"}
+    return _headers

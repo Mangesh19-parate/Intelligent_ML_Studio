@@ -1,5 +1,6 @@
 from uuid import UUID
-from fastapi import APIRouter, Depends, HTTPException, status, Body
+from fastapi import APIRouter, Depends, HTTPException, status, Body, Query
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -11,10 +12,19 @@ from app.schemas.explainability import (
     GlobalExplainabilityResponse,
     LocalExplainabilityResponse,
 )
+from app.schemas.deployment import (
+    DeploymentGateResponse,
+    DeploymentGateApproveResponse,
+    DeploymentResponse,
+)
 from app.repositories.experiment_repository import ExperimentRepository
 from app.services.explainability_service import ExplainabilityService
+from app.services.model_registry_service import ModelRegistryService
+from app.services.deployment_gate_service import DeploymentGateService
+from app.services.deployment_service import DeploymentService
 
 router = APIRouter(prefix="/models", tags=["Models & Evaluation"])
+
 
 @router.get(
     "/{id}/metrics",
@@ -86,7 +96,88 @@ def get_local_explainability(
 ):
     """
     Computes local SHAP explanation (contributions and base value) for an instance.
-    Precursor to Day 10 deployment /predict/.../explain.
     """
     service = ExplainabilityService(db)
     return service.local_shap_explanation(model_id=id, input_row=input_row)
+
+
+@router.get(
+    "/{id}/download",
+    status_code=status.HTTP_200_OK,
+    summary="Download trained model artifact serialized in pkl or joblib format (EXPORT permission required)",
+)
+def download_model(
+    id: UUID,
+    format: str = Query("joblib", pattern="^(joblib|pkl|pickle)$", description="Serialization format: pkl or joblib"),
+    current_user: User = Depends(require_permission("EXPORT")),
+    db: Session = Depends(get_db),
+):
+    """
+    Loads the fitted pipeline artifact, re-verifies cryptographic SHA-256 integrity,
+    and returns a downloadable file stream in the requested format.
+    """
+    registry = ModelRegistryService(db)
+    buffer, filename, media_type = registry.download(model_id=id, format=format)
+    return StreamingResponse(
+        buffer,
+        media_type=media_type,
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@router.get(
+    "/{id}/deployment-gate",
+    response_model=DeploymentGateResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Check or retrieve latest deployment gate verification status (READ permission required)",
+)
+def get_deployment_gate(
+    id: UUID,
+    current_user: User = Depends(require_permission("READ")),
+    db: Session = Depends(get_db),
+):
+    """
+    Evaluates or retrieves the 6-condition pre-deployment verification gate.
+    """
+    gate_service = DeploymentGateService(db)
+    return gate_service.get_latest_gate(model_id=id)
+
+
+@router.post(
+    "/{id}/deployment-gate/approve",
+    response_model=DeploymentGateApproveResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Approve deployment gate for a model (DEPLOY permission required)",
+)
+def approve_deployment_gate(
+    id: UUID,
+    current_user: User = Depends(require_permission("DEPLOY")),
+    db: Session = Depends(get_db),
+):
+    """
+    Re-evaluates gate checks fresh and sets user_approved = true.
+    """
+    gate_service = DeploymentGateService(db)
+    gate = gate_service.approve(model_id=id, approved_by_user_id=current_user.id)
+    return DeploymentGateApproveResponse(
+        message="Model deployment gate approved successfully.",
+        gate=gate,
+    )
+
+
+@router.post(
+    "/{id}/deploy",
+    response_model=DeploymentResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Deploy a verified model into production (DEPLOY permission required)",
+)
+def deploy_model(
+    id: UUID,
+    current_user: User = Depends(require_permission("DEPLOY")),
+    db: Session = Depends(get_db),
+):
+    """
+    Provisions a LIVE deployment endpoint after verifying all 6 gate conditions.
+    """
+    deploy_service = DeploymentService(db)
+    return deploy_service.deploy(model_id=id, user_id=current_user.id)

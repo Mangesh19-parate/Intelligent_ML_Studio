@@ -107,7 +107,24 @@ export const modelApi = {
     apiClient.get(`/models/${modelId}/explainability?background_sample_size=${backgroundSampleSize}`),
   getLocalExplainability: (modelId, inputRow) =>
     apiClient.post(`/models/${modelId}/explainability/local`, inputRow),
+  getDeploymentGate: (modelId) => apiClient.get(`/models/${modelId}/deployment-gate`),
+  approveDeploymentGate: (modelId) => apiClient.post(`/models/${modelId}/deployment-gate/approve`),
+  deploy: (modelId) => apiClient.post(`/models/${modelId}/deploy`),
+  download: (modelId, format = 'joblib') =>
+    apiClient.get(`/models/${modelId}/download?format=${format}`, { responseType: 'blob' }),
+};
+
+export const deploymentApi = {
+  get: (deploymentId) => apiClient.get(`/deployments/${deploymentId}`),
+  updateStatus: (deploymentId, status) => apiClient.put(`/deployments/${deploymentId}/status`, { status }),
+  getLogs: (deploymentId, limit = 50) => apiClient.get(`/deployments/${deploymentId}/logs?limit=${limit}`),
+};
+
+export const predictApi = {
+  predict: (deploymentId, payload) => apiClient.post(`/predict/${deploymentId}`, payload),
+  predictExplain: (deploymentId, payload) => apiClient.post(`/predict/${deploymentId}/explain`, payload),
 };
 
 export default apiClient;
+
 

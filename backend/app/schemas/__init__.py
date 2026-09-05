@@ -40,6 +40,15 @@ from app.schemas.explainability import (
     GlobalExplainabilityResponse,
     LocalExplainabilityResponse,
 )
+from app.schemas.deployment import (
+    DeploymentGateResponse,
+    DeploymentGateApproveResponse,
+    DeploymentResponse,
+    DeploymentStatusUpdateRequest,
+    PredictionLogResponse,
+    PredictResponse,
+    PredictExplainResponse,
+)
 
 __all__ = [
     "PermissionResponse",
@@ -75,4 +84,11 @@ __all__ = [
     "ExperimentCreateResponse",
     "GlobalExplainabilityResponse",
     "LocalExplainabilityResponse",
+    "DeploymentGateResponse",
+    "DeploymentGateApproveResponse",
+    "DeploymentResponse",
+    "DeploymentStatusUpdateRequest",
+    "PredictionLogResponse",
+    "PredictResponse",
+    "PredictExplainResponse",
 ]

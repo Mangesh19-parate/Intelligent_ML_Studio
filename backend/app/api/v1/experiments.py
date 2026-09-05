@@ -65,6 +65,17 @@ def create_experiment(
 
     cv_seed = payload.seed if payload.seed is not None else secrets.randbelow(1_000_000)
 
+    if payload.deployment_threshold:
+        dep_threshold = {
+            "metric": payload.deployment_threshold.metric,
+            "min_value": payload.deployment_threshold.min_value,
+        }
+    else:
+        dep_threshold = {
+            "metric": eff_metric,
+            "min_value": None,
+        }
+
     # Create Experiment shell record in RUNNING status
     experiment = exp_repo.create_experiment(
         project_id=project.id,
@@ -74,6 +85,7 @@ def create_experiment(
         selection_metric=eff_metric,
         selection_direction=eff_direction,
         status="RUNNING",
+        deployment_threshold_frozen_at_creation=True,
     )
 
     # Kick off background execution
@@ -86,6 +98,7 @@ def create_experiment(
         seed=cv_seed,
         selection_metric=eff_metric,
         selection_direction=eff_direction,
+        deployment_threshold=dep_threshold,
     )
 
     return ExperimentCreateResponse(

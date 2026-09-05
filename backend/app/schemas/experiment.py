@@ -4,6 +4,10 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field
 from app.schemas.model_metric import ModelMetricResponse
 
+class DeploymentThresholdConfig(BaseModel):
+    metric: str = Field(..., description="Target metric name (e.g. RMSE, macro_f1)")
+    min_value: float | None = Field(default=None, description="Minimum acceptable performance value on Locked Test")
+
 class ExperimentCreateRequest(BaseModel):
     algorithms: list[str] = Field(
         ...,
@@ -27,6 +31,10 @@ class ExperimentCreateRequest(BaseModel):
     selection_direction: str | None = Field(
         default=None,
         description="Direction for primary metric: MAXIMIZE or MINIMIZE",
+    )
+    deployment_threshold: DeploymentThresholdConfig | None = Field(
+        default=None,
+        description="Optional frozen performance threshold evaluated at deployment gate",
     )
 
 class TrainedModelResponse(BaseModel):
@@ -59,6 +67,7 @@ class ExperimentResponse(BaseModel):
     selected_model_id: UUID | None = None
     locked_test_consumed: bool = False
     locked_test_consumed_at: datetime | None = None
+    deployment_threshold_frozen_at_creation: bool = False
     created_at: datetime
     completed_at: datetime | None = None
     trained_models: list[TrainedModelResponse] = []

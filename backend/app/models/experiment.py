@@ -63,6 +63,12 @@ class Experiment(Base):
         ForeignKey("feature_selection_snapshots.id", ondelete="SET NULL", use_alter=True, name="fk_experiments_fs_snapshot_id"),
         nullable=True
     )
+    deployment_threshold_frozen_at_creation = Column(
+        Boolean,
+        nullable=False,
+        default=True,
+        server_default="false"
+    )
     
     created_at = Column(
         DateTime(timezone=True),

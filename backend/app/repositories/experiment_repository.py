@@ -32,6 +32,7 @@ class ExperimentRepository(BaseRepository[Experiment]):
         pandas_version: str | None = None,
         model_library_versions: dict | None = None,
         environment_capture_method: str | None = None,
+        deployment_threshold_frozen_at_creation: bool = True,
     ) -> Experiment:
         if isinstance(project_id, str):
             try:
@@ -55,6 +56,7 @@ class ExperimentRepository(BaseRepository[Experiment]):
             pandas_version=pandas_version,
             model_library_versions=model_library_versions,
             environment_capture_method=environment_capture_method,
+            deployment_threshold_frozen_at_creation=deployment_threshold_frozen_at_creation,
         )
         self.db.add(exp)
         self.db.commit()

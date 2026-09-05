@@ -90,6 +90,18 @@ class TrainedModel(Base):
         uselist=False,
         cascade="all, delete-orphan"
     )
+    deployment_gates = relationship(
+        "DeploymentGate",
+        back_populates="model",
+        cascade="all, delete-orphan",
+        order_by="DeploymentGate.evaluated_at.desc()"
+    )
+    deployments = relationship(
+        "Deployment",
+        back_populates="model",
+        cascade="all, delete-orphan",
+        order_by="Deployment.deployed_at.desc()"
+    )
 
     def __repr__(self) -> str:
         return f"<TrainedModel id={self.id} algorithm={self.algorithm_name} score={self.quick_cv_score} fit={self.fit_diagnosis} checksum={self.artifact_checksum}>"

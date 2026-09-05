@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { experimentApi, modelApi } from '../api/client';
 import { LineageViewer } from './LineageViewer';
 import { ExplainabilityViewer } from './ExplainabilityViewer';
+import DeploymentGateModal from './DeploymentGateModal';
 import {
   Cpu,
   Play,
@@ -100,6 +101,8 @@ export const ModelTraining = ({ projectId, taskType, targetColumn, onExperimentC
   const [lineageExperimentId, setLineageExperimentId] = useState(null);
   const [explainModalOpen, setExplainModalOpen] = useState(false);
   const [selectedExplainModel, setSelectedExplainModel] = useState(null);
+  const [deploymentModalOpen, setDeploymentModalOpen] = useState(false);
+  const [selectedDeploymentModel, setSelectedDeploymentModel] = useState(null);
   const [rerunningDiagnostic, setRerunningDiagnostic] = useState(false);
 
   const pollingTimerRef = useRef(null);
@@ -753,6 +756,27 @@ export const ModelTraining = ({ projectId, taskType, targetColumn, onExperimentC
                                   <BrainCircuit className="w-3.5 h-3.5" />
                                   <span>Explain</span>
                                 </button>
+
+                                <button
+                                  onClick={() => {
+                                    setSelectedDeploymentModel(model);
+                                    setDeploymentModalOpen(true);
+                                  }}
+                                  disabled={!isWin && !model.artifact_path}
+                                  title={
+                                    !isWin && !model.artifact_path
+                                      ? 'Deployment is only available for the winning model with a persisted artifact'
+                                      : 'Evaluate pre-deployment gate conditions and manage production deployment'
+                                  }
+                                  className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-colors inline-flex items-center space-x-1 ${
+                                    isWin || model.artifact_path
+                                      ? 'bg-emerald-600/30 hover:bg-emerald-600/50 text-emerald-200 border border-emerald-500/40 cursor-pointer'
+                                      : 'bg-slate-900/50 text-slate-600 border border-slate-800/40 cursor-not-allowed opacity-50'
+                                  }`}
+                                >
+                                  <ShieldCheck className="w-3.5 h-3.5" />
+                                  <span>Deploy & Gate</span>
+                                </button>
                               </div>
                             </td>
                           </tr>
@@ -857,6 +881,21 @@ export const ModelTraining = ({ projectId, taskType, targetColumn, onExperimentC
             }}
           />
         </div>
+      )}
+
+      {/* Model Deployment & Gate Modal */}
+      {deploymentModalOpen && selectedDeploymentModel && (
+        <DeploymentGateModal
+          model={selectedDeploymentModel}
+          isOpen={deploymentModalOpen}
+          onClose={() => {
+            setDeploymentModalOpen(false);
+            setSelectedDeploymentModel(null);
+          }}
+          onDeploymentSuccess={(dep) => {
+            setSuccessMsg(`Model successfully deployed into production at ${dep.endpoint_path}`);
+          }}
+        />
       )}
     </div>
   );

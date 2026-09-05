@@ -173,6 +173,7 @@ class ExperimentService:
         selection_direction: str | None = None,
         experiment_id: UUID | str | None = None,
         auto_finalize: bool = True,
+        deployment_threshold: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """
         Executes the cross-validation training experiment across requested algorithms.
@@ -335,10 +336,11 @@ class ExperimentService:
                 "tie_break": "closest_to_0.5",
             },
             "deployment_threshold": {
-                "metric": eff_metric,
-                "min_value": None,
+                "metric": (deployment_threshold.get("metric") or eff_metric) if deployment_threshold else eff_metric,
+                "min_value": deployment_threshold.get("min_value") if deployment_threshold else None,
             },
         }
+        experiment.deployment_threshold_frozen_at_creation = True
         self.db.add(experiment)
         self.db.commit()
         self.db.refresh(experiment)
@@ -1425,6 +1427,7 @@ class ExperimentService:
         threshold: float = 0.0,
         selection_metric: str | None = None,
         selection_direction: str | None = None,
+        deployment_threshold: dict[str, Any] | None = None,
     ) -> None:
         """
         Background task runner for executing an experiment with an isolated database session.
@@ -1442,6 +1445,7 @@ class ExperimentService:
                 selection_direction=selection_direction,
                 experiment_id=experiment_id,
                 auto_finalize=True,
+                deployment_threshold=deployment_threshold,
             )
         except Exception as e:
             logger.exception(f"Background experiment {experiment_id} error: {str(e)}")

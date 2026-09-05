@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useSearchParams } from 'react-router-dom';
 import { projectApi, datasetApi, datasetSplitApi } from '../api/client';
 import { DataQualityCard } from '../components/DataQualityCard';
 import { TaskTypeSelector } from '../components/TaskTypeSelector';
@@ -39,6 +39,8 @@ import {
 
 export const ProjectDetail = () => {
   const { id } = useParams();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const urlTab = searchParams.get('tab');
   const [project, setProject] = useState(null);
   const [datasets, setDatasets] = useState([]);
   const [selectedDataset, setSelectedDataset] = useState(null);
@@ -50,7 +52,13 @@ export const ProjectDetail = () => {
   const [profilingReport, setProfilingReport] = useState(null);
   const [recommendations, setRecommendations] = useState([]);
   const [profilingRunning, setProfilingRunning] = useState(false);
-  const [activeTab, setActiveTab] = useState('PROFILING'); // 'PROFILING' | 'SPLIT' | 'SCHEMA'
+  const [activeTab, setActiveTab] = useState(urlTab || 'PROFILING');
+
+  useEffect(() => {
+    if (urlTab) {
+      setActiveTab(urlTab);
+    }
+  }, [urlTab]);
 
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);

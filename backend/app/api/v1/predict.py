@@ -25,6 +25,11 @@ def predict(
     - Rejects if deployment status is not LIVE.
     - Validates feature schema and records audit log.
     - Returns base prediction and class probabilities (if classification).
+    
+    ARCHITECTURAL NOTE (Day 11 / SRS §2.14 & §2.16):
+    No API-key or separate external-consumer auth layer is being added — deployment status LIVE
+    remains the only gate, per the SRS's explicit deferral of rate limiting/API-key throttling
+    as out of scope for this prototype. Do not add auth machinery today.
     """
     service = PredictionService(db)
     response, _ = service.predict(deployment_id=deployment_id, payload=payload)

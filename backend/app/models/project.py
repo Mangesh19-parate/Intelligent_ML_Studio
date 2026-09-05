@@ -17,6 +17,10 @@ class Project(Base, TimestampMixin):
         server_default="UNDETERMINED"
     )
     target_column = Column(String(150), nullable=True)
+    # ARCHITECTURAL NOTE (Day 11):
+    # pipeline_stage is retained for legacy/backward-compatibility schema consistency.
+    # Writes to this column are best-effort. All display reads MUST go through
+    # `WorkspaceAnalyticsService.derive_pipeline_stage(project_id, db)` for live DB-derived state.
     pipeline_stage = Column(String(40), nullable=False, default="DATA", server_default="DATA")
     data_quality_index = Column(Numeric(5, 2), nullable=True)
     task_type_confidence = Column(String(20), nullable=True)

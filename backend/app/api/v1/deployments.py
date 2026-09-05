@@ -78,3 +78,29 @@ def get_deployment_logs(
         .all()
     )
     return logs
+
+
+@router.get(
+    "/{id}/monitoring",
+    status_code=status.HTTP_200_OK,
+    summary="Get aggregated deployment monitoring dashboard metrics (READ permission required)",
+)
+def get_deployment_monitoring(
+    id: UUID,
+    lookback_hours: int = Query(24, ge=1, le=720),
+    log_limit: int = Query(50, ge=1, le=200),
+    current_user: User = Depends(require_permission("READ")),
+    db: Session = Depends(get_db),
+):
+    """
+    Returns volume-over-time, latency summary (base vs explained), error rate with validation/server breakdown,
+    and recent inference logs.
+    """
+    from app.services.monitoring_service import MonitoringService
+    service = MonitoringService(db)
+    return service.get_monitoring_dashboard(
+        deployment_id=id,
+        lookback_hours=lookback_hours,
+        log_limit=log_limit,
+    )
+

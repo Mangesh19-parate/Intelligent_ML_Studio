@@ -158,8 +158,13 @@ def test_acceptance_check_a_and_b_regression_training_and_shared_selection(db_se
     trans_service = TransformationService(db_session)
     trans_service.set_encoding_strategy(project.id, "category_col", "one_hot")
 
-    # Record disk snapshot before training to verify zero .joblib files
+    # Record disk snapshot before training to verify zero new .joblib files
     repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+    initial_joblib_files = set()
+    for root, _, files in os.walk(repo_root):
+        for f in files:
+            if f.endswith(".joblib"):
+                initial_joblib_files.add(os.path.join(root, f))
 
     exp_service = ExperimentService(db_session)
     result = exp_service.run_experiment(
@@ -192,13 +197,13 @@ def test_acceptance_check_a_and_b_regression_training_and_shared_selection(db_se
         # On synthetic linear regression data, R2 should be strongly positive (> 0.5)
         assert score > 0.5, f"Expected R2 > 0.5 for {alg_name}, got {score}"
 
-    # 2. Confirm NO .joblib file was written anywhere on disk
-    joblib_files = []
+    # 2. Confirm NO new .joblib file was written anywhere on disk
+    new_joblib_files = []
     for root, _, files in os.walk(repo_root):
         for f in files:
-            if f.endswith(".joblib"):
-                joblib_files.append(os.path.join(root, f))
-    assert len(joblib_files) == 0, f"Found unexpected .joblib files: {joblib_files}"
+            if f.endswith(".joblib") and os.path.join(root, f) not in initial_joblib_files:
+                new_joblib_files.append(os.path.join(root, f))
+    assert len(new_joblib_files) == 0, f"Found unexpected new .joblib files: {new_joblib_files}"
 
     # Check (b) Assertion:
     # Feature selection ran exactly ONCE per fold -> count == 5 (not 5 * 3 = 15)

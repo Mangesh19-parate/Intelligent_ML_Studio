@@ -12,16 +12,21 @@ class ProjectService:
         self.project_repo = ProjectRepository(db)
 
     def list_projects(self, current_user: User, skip: int = 0, limit: int = 100) -> list[Project]:
+        from app.services.workspace_analytics_service import derive_pipeline_stage
         user_permissions = {p.permission_key for p in current_user.role.permissions} if current_user.role and current_user.role.permissions else set()
         
         # If user has MANAGE_USERS permission, allow viewing all projects
         if "MANAGE_USERS" in user_permissions:
-            return self.project_repo.get_all_ordered(skip=skip, limit=limit)
+            projects = self.project_repo.get_all_ordered(skip=skip, limit=limit)
+        else:
+            projects = self.project_repo.get_by_owner(owner_id=current_user.id, skip=skip, limit=limit)
         
-        # Otherwise, only return projects owned by the user
-        return self.project_repo.get_by_owner(owner_id=current_user.id, skip=skip, limit=limit)
+        for p in projects:
+            p.pipeline_stage = derive_pipeline_stage(p.id, self.db)
+        return projects
 
     def get_project_by_id(self, project_id: UUID | str, current_user: User) -> Project:
+        from app.services.workspace_analytics_service import derive_pipeline_stage
         project = self.project_repo.get_by_id(project_id)
         if not project:
             raise HTTPException(
@@ -36,6 +41,7 @@ class ProjectService:
                 detail="You do not have access to this project"
             )
 
+        project.pipeline_stage = derive_pipeline_stage(project.id, self.db)
         return project
 
     def create_project(self, payload: ProjectCreate, current_user: User) -> Project:

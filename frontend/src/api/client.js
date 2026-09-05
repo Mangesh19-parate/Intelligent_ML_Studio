@@ -43,9 +43,14 @@ export const authApi = {
   getMe: () => apiClient.get('/auth/me'),
 };
 
+export const workspaceApi = {
+  getSummary: () => apiClient.get('/workspace/summary'),
+};
+
 export const projectApi = {
   list: (skip = 0, limit = 100) => apiClient.get(`/projects?skip=${skip}&limit=${limit}`),
   get: (id) => apiClient.get(`/projects/${id}`),
+  getSnapshot: (id) => apiClient.get(`/projects/${id}/snapshot`),
   create: (projectName, targetColumn = null) =>
     apiClient.post('/projects', { project_name: projectName, target_column: targetColumn }),
   update: (id, payload) => apiClient.put(`/projects/${id}`, payload),
@@ -116,6 +121,8 @@ export const modelApi = {
 
 export const deploymentApi = {
   get: (deploymentId) => apiClient.get(`/deployments/${deploymentId}`),
+  getMonitoring: (deploymentId, lookbackHours = 24) =>
+    apiClient.get(`/deployments/${deploymentId}/monitoring?lookback_hours=${lookbackHours}`),
   updateStatus: (deploymentId, status) => apiClient.put(`/deployments/${deploymentId}/status`, { status }),
   getLogs: (deploymentId, limit = 50) => apiClient.get(`/deployments/${deploymentId}/logs?limit=${limit}`),
 };
@@ -126,5 +133,6 @@ export const predictApi = {
 };
 
 export default apiClient;
+
 
 

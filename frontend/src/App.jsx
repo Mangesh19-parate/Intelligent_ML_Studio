@@ -1,10 +1,11 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import { Navbar } from './components/Navbar';
+import { AppLayout } from './components/AppLayout';
 import { Login } from './pages/Login';
 import { Dashboard } from './pages/Dashboard';
 import { ProjectDetail } from './pages/ProjectDetail';
+import { DeploymentMonitoring } from './pages/DeploymentMonitoring';
 
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
@@ -21,12 +22,7 @@ const ProtectedRoute = ({ children }) => {
     return <Navigate to="/login" replace />;
   }
 
-  return (
-    <>
-      <Navbar />
-      <main>{children}</main>
-    </>
-  );
+  return <AppLayout>{children}</AppLayout>;
 };
 
 export default function App() {
@@ -35,8 +31,17 @@ export default function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<Login />} />
+          
           <Route
             path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <Dashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/projects"
             element={
               <ProtectedRoute>
                 <Dashboard />
@@ -51,6 +56,23 @@ export default function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/deployments/:id/monitoring"
+            element={
+              <ProtectedRoute>
+                <DeploymentMonitoring />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/monitoring"
+            element={
+              <ProtectedRoute>
+                <DeploymentMonitoring />
+              </ProtectedRoute>
+            }
+          />
+
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </BrowserRouter>

@@ -283,3 +283,19 @@ def get_project_leaderboard(
     )
 
 
+@router.get(
+    "/{id}/snapshot",
+    status_code=status.HTTP_200_OK,
+    summary="Get single project analytics snapshot with derived stage, winner summary, and deployment stats (READ permission required)"
+)
+def get_project_snapshot(
+    id: UUID,
+    current_user: User = Depends(require_permission("READ")),
+    db: Session = Depends(get_db),
+):
+    from app.services.workspace_analytics_service import WorkspaceAnalyticsService
+    analytics_service = WorkspaceAnalyticsService(db)
+    return analytics_service.get_project_snapshot(id, current_user)
+
+
+

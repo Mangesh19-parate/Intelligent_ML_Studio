@@ -18,6 +18,7 @@ from app.models.feature_selection_snapshot import FeatureSelectionSnapshot
 from app.models.feature_importance_score import FeatureImportanceScore
 from app.models.trained_model import TrainedModel
 from app.models.model_metric import ModelMetric
+from app.models.explainability_summary import ExplainabilitySummary
 
 __all__ = [
     "Base",
@@ -40,5 +41,6 @@ __all__ = [
     "FeatureImportanceScore",
     "TrainedModel",
     "ModelMetric",
+    "ExplainabilitySummary",
 ]
 

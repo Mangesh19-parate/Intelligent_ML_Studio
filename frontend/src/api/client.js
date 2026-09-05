@@ -103,6 +103,10 @@ export const modelApi = {
   getLeaderboard: (projectId, experimentId = null) =>
     apiClient.get(`/projects/${projectId}/leaderboard${experimentId ? `?experiment_id=${experimentId}` : ''}`),
   getMetrics: (modelId) => apiClient.get(`/models/${modelId}/metrics`),
+  getExplainability: (modelId, backgroundSampleSize = 200) =>
+    apiClient.get(`/models/${modelId}/explainability?background_sample_size=${backgroundSampleSize}`),
+  getLocalExplainability: (modelId, inputRow) =>
+    apiClient.post(`/models/${modelId}/explainability/local`, inputRow),
 };
 
 export default apiClient;

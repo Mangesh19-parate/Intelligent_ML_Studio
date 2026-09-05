@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { experimentApi, modelApi } from '../api/client';
 import { LineageViewer } from './LineageViewer';
+import { ExplainabilityViewer } from './ExplainabilityViewer';
 import {
   Cpu,
   Play,
@@ -24,6 +25,7 @@ import {
   AlertCircle,
   HelpCircle,
   FileCode,
+  BrainCircuit,
 } from 'lucide-react';
 
 const REGRESSION_ALGORITHMS = [
@@ -96,6 +98,8 @@ export const ModelTraining = ({ projectId, taskType, targetColumn, onExperimentC
   const [modelModalOpen, setModelModalOpen] = useState(false);
   const [lineageModalOpen, setLineageModalOpen] = useState(false);
   const [lineageExperimentId, setLineageExperimentId] = useState(null);
+  const [explainModalOpen, setExplainModalOpen] = useState(false);
+  const [selectedExplainModel, setSelectedExplainModel] = useState(null);
   const [rerunningDiagnostic, setRerunningDiagnostic] = useState(false);
 
   const pollingTimerRef = useRef(null);
@@ -721,13 +725,35 @@ export const ModelTraining = ({ projectId, taskType, targetColumn, onExperimentC
                             </td>
 
                             <td className="px-4 py-3 text-right">
-                              <button
-                                onClick={() => handleOpenModelMetrics(model.id)}
-                                className="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition-colors inline-flex items-center space-x-1 cursor-pointer"
-                              >
-                                <Eye className="w-3.5 h-3.5" />
-                                <span>Metrics</span>
-                              </button>
+                              <div className="flex items-center justify-end space-x-1.5">
+                                <button
+                                  onClick={() => handleOpenModelMetrics(model.id)}
+                                  className="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition-colors inline-flex items-center space-x-1 cursor-pointer"
+                                >
+                                  <Eye className="w-3.5 h-3.5" />
+                                  <span>Metrics</span>
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    setSelectedExplainModel(model);
+                                    setExplainModalOpen(true);
+                                  }}
+                                  disabled={!isWin && !model.artifact_path}
+                                  title={
+                                    !isWin && !model.artifact_path
+                                      ? 'This model has no persisted artifact — explainability is only available for the winning model of a completed experiment'
+                                      : 'Inspect SHAP feature attributions and global/local explanations'
+                                  }
+                                  className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-colors inline-flex items-center space-x-1 ${
+                                    isWin || model.artifact_path
+                                      ? 'bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-200 border border-indigo-500/40 cursor-pointer'
+                                      : 'bg-slate-900/50 text-slate-600 border border-slate-800/40 cursor-not-allowed opacity-50'
+                                  }`}
+                                >
+                                  <BrainCircuit className="w-3.5 h-3.5" />
+                                  <span>Explain</span>
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         );
@@ -815,6 +841,22 @@ export const ModelTraining = ({ projectId, taskType, targetColumn, onExperimentC
           experimentId={lineageExperimentId}
           onClose={() => setLineageModalOpen(false)}
         />
+      )}
+
+      {/* Model Explainability Modal */}
+      {explainModalOpen && selectedExplainModel && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <ExplainabilityViewer
+            modelId={selectedExplainModel.id}
+            algorithmName={selectedExplainModel.algorithm_name}
+            isWinner={selectedExplainModel.is_winner || activeExperiment?.selected_model_id === selectedExplainModel.id}
+            hasArtifact={Boolean(selectedExplainModel.artifact_path)}
+            onClose={() => {
+              setExplainModalOpen(false);
+              setSelectedExplainModel(null);
+            }}
+          />
+        </div>
       )}
     </div>
   );

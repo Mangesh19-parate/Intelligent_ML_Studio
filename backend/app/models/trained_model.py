@@ -84,6 +84,12 @@ class TrainedModel(Base):
         cascade="all, delete-orphan",
         order_by="ModelMetric.created_at"
     )
+    explainability_summary = relationship(
+        "ExplainabilitySummary",
+        back_populates="model",
+        uselist=False,
+        cascade="all, delete-orphan"
+    )
 
     def __repr__(self) -> str:
         return f"<TrainedModel id={self.id} algorithm={self.algorithm_name} score={self.quick_cv_score} fit={self.fit_diagnosis} checksum={self.artifact_checksum}>"

@@ -36,6 +36,10 @@ from app.schemas.experiment import (
     ExperimentResponse,
     ExperimentCreateResponse,
 )
+from app.schemas.explainability import (
+    GlobalExplainabilityResponse,
+    LocalExplainabilityResponse,
+)
 
 __all__ = [
     "PermissionResponse",
@@ -69,4 +73,6 @@ __all__ = [
     "TrainedModelResponse",
     "ExperimentResponse",
     "ExperimentCreateResponse",
+    "GlobalExplainabilityResponse",
+    "LocalExplainabilityResponse",
 ]

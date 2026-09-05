@@ -2,14 +2,14 @@
 Feature Selectors and Extensions for ML Studio Research Track (SRS §9).
 
 Implements the 8-method feature selection comparison matrix:
-1. No selection (baseline - all features retained with score 1.0)
-2. Correlation (baseline selector - Day 5 reuse)
-3. Lasso (baseline selector - Day 5 reuse)
-4. Random Forest importance (baseline selector - Day 5 reuse)
-5. Permutation (baseline selector - Day 5 reuse)
+1. NO_SELECTION (baseline - all features retained with score 1.0)
+2. CORRELATION (baseline selector - Day 5 reuse)
+3. LASSO (baseline selector - Day 5 reuse)
+4. RANDOM_FOREST (baseline selector - Day 5 reuse)
+5. PERMUTATION (baseline selector - Day 5 reuse)
 6. RFE (NEW baseline selector - recursive feature elimination)
-7. Rank aggregation (proposed ensemble Method A - Day 5 reuse)
-8. Rank aggregation + stability (proposed extension Method B - SRS §9)
+7. RANK_AGGREGATION (proposed ensemble Method A - Day 5 reuse)
+8. RANK_AGGREGATION_STABILITY (proposed extension Method B - SRS §9)
 """
 
 from dataclasses import dataclass
@@ -20,6 +20,7 @@ import numpy as np
 import pandas as pd
 from sklearn.feature_selection import RFE
 from sklearn.linear_model import LinearRegression, LogisticRegression
+from sklearn.preprocessing import StandardScaler
 
 # Ensure backend package can be imported without DB dependency
 BACKEND_PATH = Path(__file__).resolve().parent.parent / "backend"
@@ -129,8 +130,6 @@ def permutation_importance_score(
     return raw, ranks, rank_scores
 
 
-from sklearn.preprocessing import StandardScaler
-
 def rfe_importance(
     X: pd.DataFrame | np.ndarray,
     y: pd.Series | np.ndarray,
@@ -212,7 +211,6 @@ METHOD_MAP = {
     "permutation": permutation_importance_score,
     "rfe": rfe_importance,
     "rank_aggregation": rank_aggregation_ensemble,
-    # "rank_aggregation_stability" is handled in stability module
 }
 
 
@@ -251,15 +249,13 @@ def select_features(
         # Method B: Rank aggregation + stability
         ens_score, _, _ = rank_aggregation_ensemble(X, y, task_type, seed=seed)
         if stability_vector is None:
-            # Fallback if stability vector not provided: default to ensemble score
             stability_vector = np.ones(p, dtype=np.float64)
-        
+
         final_scores = alpha * ens_score + (1.0 - alpha) * stability_vector
         ranks, rank_scores = FeatureSelectionService.calculate_technique_rank_scores(final_scores)
         raw = final_scores
 
         k = _resolve_k(k_features, p)
-        # Select top-k features by rank_scores (highest score first)
         sorted_indices = np.argsort(-rank_scores, kind="stable")
         selected = [feature_names[i] for i in sorted_indices[:k]]
     elif norm_method in METHOD_MAP:

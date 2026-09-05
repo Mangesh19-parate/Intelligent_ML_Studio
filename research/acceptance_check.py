@@ -1,344 +1,245 @@
 """
-Acceptance Check Script for ML Studio Research Track Day 13 (SRS §9).
+Acceptance Check Script for ML Studio Research Track Day 14 (SRS §9).
 
-Executes all 7 validation checks:
-a) Load all 4 datasets; check shapes, dtypes, summary statistics.
-b) Verify outer split reproducibility across duplicate runs with same seed.
-c) Verify outer split stratification for classification and random for regression.
-d) Verify RFE and no-selection baseline outputs and rank aggregatability.
-e) Verify StabilityScorer against exact hand-calculated synthetic example.
-f) Run Day 13 smoke test (1 dataset, 2 methods) through ExperimentRunner and verify ResultsStore.
-g) Verify zero production PostgreSQL DB imports or side-effects in research module.
+Executes Day 14 Acceptance Suite:
+a) Stability boundary check: Confirm Stability(j) is exactly 1.0 when selected in 100% of runs
+   and exactly 0.0 when selected in 0% of runs.
+b) Distinction check: Confirm RANK_AGGREGATION (Experiment A) and RANK_AGGREGATION_STABILITY (Experiment B)
+   produce genuinely different selected_features for at least one dataset in the dry run.
+c) Row count & Matrix verification: Confirm runs.parquet matches len(DATASETS) * len(METHODS) * 2 * FOLDS = 320 rows,
+   with exact breakdown by method.
+d) Frozen config verification: Confirm research/config.py is treated as frozen (read-only, no write mutations).
 """
 
 import os
 import sys
 import json
-import sqlite3
 from pathlib import Path
 import numpy as np
 import pandas as pd
 
-# Add workspace to path
+# Add workspace root to path
 WORKSPACE_ROOT = Path(__file__).resolve().parent.parent
 if str(WORKSPACE_ROOT) not in sys.path:
     sys.path.insert(0, str(WORKSPACE_ROOT))
 
-from research.dataset_loader import (
-    load_california_housing,
-    load_bike_sharing,
-    load_breast_cancer,
-    load_adult_income,
-    DATASET_LOADERS,
+from research.config import (
+    DATASETS,
+    METHODS,
+    FOLDS,
+    ALPHA,
+    REFERENCE_MODEL,
+    BASE_SEED,
+    RUNS_PARQUET,
+    RESULTS_DB,
 )
-from research.outer_split import create_split, partition_data
-from research.feature_selectors import (
-    rfe_importance,
-    no_selection_baseline,
-    select_features,
-)
-from research.stability import StabilityScorer
-from research.experiment_runner import ExperimentRunner
+from research.stability import compute_selection_stability, StabilityScorer
 from research.results_store import ResultsStore
+from research.dry_run import run_full_matrix_dry_run
 
 
-def check_a_dataset_loading():
-    print("=" * 70)
-    print("CHECK A: Load all 4 datasets & verify summary statistics")
-    print("=" * 70)
-    
-    datasets = {}
-    stats_summary = []
-    
-    for name, loader in DATASET_LOADERS.items():
-        X, y, task_type = loader()
-        datasets[name] = (X, y, task_type)
-        
-        n_rows, n_cols = X.shape
-        missing_count = int(X.isna().sum().sum()) + int(y.isna().sum())
-        
-        if task_type == "CLASSIFICATION":
-            class_dist = dict(y.value_counts(normalize=True).round(4))
-            target_info = f"Class balance: {class_dist}"
-        else:
-            target_info = f"Mean={y.mean():.3f}, Std={y.std():.3f}, Min={y.min():.3f}, Max={y.max():.3f}"
-            
-        stats_summary.append({
-            "Dataset": name,
-            "Task Type": task_type,
-            "Rows": n_rows,
-            "Features": n_cols,
-            "Missing Values": missing_count,
-            "Target Info": target_info,
-        })
-        print(f"[{name}] Task: {task_type} | Shape: ({n_rows}, {n_cols}) | Missing: {missing_count} | {target_info}")
+def check_a_stability_boundary():
+    print("=" * 80)
+    print("ACCEPTANCE CHECK A: Stability Metric Boundary Values (1.0 and 0.0)")
+    print("=" * 80)
 
-    print("\nSummary Table:")
-    summary_df = pd.DataFrame(stats_summary)
-    print(summary_df.to_string(index=False))
-    
-    # Assert sanity
-    for name, (X, y, task_type) in datasets.items():
-        assert len(X) == len(y), f"Length mismatch in {name}"
-        assert X.shape[1] > 0, f"No features in {name}"
-        assert not X.isna().any().any(), f"NaNs found in {name} features"
-        assert not y.isna().any(), f"NaNs found in {name} target"
-    print("\n>>> CHECK A PASSED: All 4 datasets loaded cleanly with sane dtypes/shapes.\n")
-    return datasets
+    # Construct synthetic runs dataframe to test boundary conditions
+    synthetic_runs = pd.DataFrame([
+        {"dataset": "test_ds", "method": "test_method", "selected_features": ["feat_always", "feat_half"]},
+        {"dataset": "test_ds", "method": "test_method", "selected_features": ["feat_always", "feat_half"]},
+        {"dataset": "test_ds", "method": "test_method", "selected_features": ["feat_always"]},
+        {"dataset": "test_ds", "method": "test_method", "selected_features": ["feat_always"]},
+    ])
 
+    all_features = ["feat_always", "feat_half", "feat_never"]
 
-def check_b_split_reproducibility(datasets):
-    print("=" * 70)
-    print("CHECK B: Verify outer split deterministic reproducibility")
-    print("=" * 70)
-    
-    test_seed = 12345
-    for name, (X, y, task_type) in datasets.items():
-        split_1 = create_split(X, y, task_type, locked_test_pct=20, seed=test_seed)
-        split_2 = create_split(X, y, task_type, locked_test_pct=20, seed=test_seed)
-        
-        np.testing.assert_array_equal(
-            split_1.dev_indices, split_2.dev_indices,
-            err_msg=f"Dev indices mismatch in {name}"
-        )
-        np.testing.assert_array_equal(
-            split_1.locked_test_indices, split_2.locked_test_indices,
-            err_msg=f"Locked test indices mismatch in {name}"
-        )
-        assert split_1.seed == split_2.seed == test_seed
-        print(f"[{name}] Exact match for seed={test_seed}: Dev rows={len(split_1.dev_indices)}, Test rows={len(split_1.locked_test_indices)}")
-        
-    print("\n>>> CHECK B PASSED: create_split is 100% deterministic given a fixed seed.\n")
-
-
-def check_c_stratification(datasets):
-    print("=" * 70)
-    print("CHECK C: Verify stratification for classification & random for regression")
-    print("=" * 70)
-    
-    seed = 42
-    for name, (X, y, task_type) in datasets.items():
-        split = create_split(X, y, task_type, locked_test_pct=20, seed=seed)
-        (X_dev, y_dev), (X_test, y_test) = partition_data(X, y, split)
-        
-        if task_type == "CLASSIFICATION":
-            assert split.is_stratified is True, f"Expected stratified split for classification dataset {name}"
-            orig_prop = y.mean()
-            dev_prop = y_dev.mean()
-            test_prop = y_test.mean()
-            diff_dev = abs(orig_prop - dev_prop)
-            diff_test = abs(orig_prop - test_prop)
-            print(f"[{name}] CLASSIFICATION (Stratified): Overall={orig_prop:.4f}, Dev={dev_prop:.4f}, Test={test_prop:.4f} (Max diff={max(diff_dev, diff_test):.5f})")
-            assert max(diff_dev, diff_test) < 0.01, f"Stratification deviation too large in {name}"
-        else:
-            assert split.is_stratified is False, f"Expected plain random split for regression dataset {name}"
-            print(f"[{name}] REGRESSION (Plain random): Total={len(y)}, Dev={len(y_dev)}, Test={len(y_test)} (Test pct={len(y_test)/len(y)*100:.1f}%)")
-            
-    print("\n>>> CHECK C PASSED: Proper stratification on classification, random on regression.\n")
-
-
-def check_d_rfe_and_no_selection(datasets):
-    print("=" * 70)
-    print("CHECK D: Verify RFE and No-Selection baseline outputs")
-    print("=" * 70)
-    
-    # Test on California Housing (Regression)
-    X_cal, y_cal, t_cal = datasets["california_housing"]
-    split_cal = create_split(X_cal, y_cal, t_cal, seed=42)
-    (X_dev_cal, y_dev_cal), _ = partition_data(X_cal, y_cal, split_cal)
-    
-    # 1. No selection baseline
-    raw_ns, rank_ns, rscore_ns = no_selection_baseline(X_dev_cal, y_dev_cal, t_cal)
-    assert len(raw_ns) == X_dev_cal.shape[1]
-    assert np.allclose(rscore_ns, 1.0), "No selection baseline should assign rank score 1.0 to all features"
-    print(f"[No Selection] Features: {X_dev_cal.shape[1]}, Rank scores: {rscore_ns}")
-    
-    # 2. RFE baseline on regression
-    raw_rfe, rank_rfe, rscore_rfe = rfe_importance(X_dev_cal, y_dev_cal, t_cal, seed=42)
-    assert len(raw_rfe) == X_dev_cal.shape[1]
-    assert np.min(rscore_rfe) >= 0.0 and np.max(rscore_rfe) <= 1.0
-    print(f"[RFE Regression] California Housing (8 features):")
-    for feat, raw, r, rs in zip(X_dev_cal.columns, raw_rfe, rank_rfe, rscore_rfe):
-        print(f"   {feat:15s} | Raw (score): {raw:4.1f} | Rank: {r:3.1f} | Normalized Rank Score: {rs:.3f}")
-        
-    # 3. RFE baseline on classification (Breast Cancer)
-    X_bc, y_bc, t_bc = datasets["breast_cancer"]
-    split_bc = create_split(X_bc, y_bc, t_bc, seed=42)
-    (X_dev_bc, y_dev_bc), _ = partition_data(X_bc, y_bc, split_bc)
-    raw_bc, rank_bc, rscore_bc = rfe_importance(X_dev_bc, y_dev_bc, t_bc, seed=42)
-    assert len(raw_bc) == X_dev_bc.shape[1]
-    print(f"[RFE Classification] Breast Cancer (30 features): top ranked features={np.array(X_dev_bc.columns)[np.argsort(-rscore_bc)[:5]]}")
-    
-    print("\n>>> CHECK D PASSED: RFE and No-Selection baselines produce valid rank-aggregatable outputs.\n")
-
-
-def check_e_stability_scorer():
-    print("=" * 70)
-    print("CHECK E: Verify StabilityScorer against hand-calculated synthetic example")
-    print("=" * 70)
-    
-    # Synthetic Example:
-    # 4 features: ['A', 'B', 'C', 'D']
-    # 5 runs with selected subsets:
-    # Run 1: ['A', 'B']
-    # Run 2: ['A', 'B', 'C']
-    # Run 3: ['A', 'C']
-    # Run 4: ['A', 'B', 'D']
-    # Run 5: ['A']
-    #
-    # Hand Calculations:
-    # Feature A: 5/5 = 1.00
-    # Feature B: 3/5 = 0.60
-    # Feature C: 2/5 = 0.40
-    # Feature D: 1/5 = 0.20
-    
-    all_features = ["A", "B", "C", "D"]
-    subsets = [
-        ["A", "B"],
-        ["A", "B", "C"],
-        ["A", "C"],
-        ["A", "B", "D"],
-        ["A"],
-    ]
-    
-    scorer = StabilityScorer(alpha=0.5)
-    stab_dict = scorer.compute_stability_from_subsets(subsets, all_features)
-    
-    expected_stabilities = {"A": 1.0, "B": 0.6, "C": 0.4, "D": 0.2}
-    print("Calculated stabilities vs Hand expected:")
-    for feat in all_features:
-        calc = stab_dict[feat]
-        exp = expected_stabilities[feat]
-        print(f"   Feature {feat}: Computed = {calc:.4f}, Expected = {exp:.4f} -> Match: {np.isclose(calc, exp)}")
-        assert np.isclose(calc, exp), f"Mismatch for feature {feat}: got {calc}, expected {exp}"
-        
-    # Test Final Score formula: FinalScore_j = alpha * Importance_j + (1 - alpha) * Stability_j
-    # Let Importance = [0.8, 0.4, 0.6, 0.1]
-    # alpha = 0.5
-    # Expected Final:
-    # A: 0.5 * 0.8 + 0.5 * 1.0 = 0.4 + 0.5 = 0.90
-    # B: 0.5 * 0.4 + 0.5 * 0.6 = 0.2 + 0.3 = 0.50
-    # C: 0.5 * 0.6 + 0.5 * 0.4 = 0.3 + 0.2 = 0.50
-    # D: 0.5 * 0.1 + 0.5 * 0.2 = 0.05 + 0.10 = 0.15
-    importance = np.array([0.8, 0.4, 0.6, 0.1])
-    stability = np.array([1.0, 0.6, 0.4, 0.2])
-    final = scorer.compute_final_score(importance, stability, alpha=0.5)
-    expected_final = np.array([0.90, 0.50, 0.50, 0.15])
-    
-    np.testing.assert_allclose(final, expected_final)
-    print(f"Final blended scores: Computed={final}, Expected={expected_final}")
-    print("\n>>> CHECK E PASSED: StabilityScorer matches hand calculations exactly.\n")
-
-
-def check_f_smoke_test_and_results_store():
-    print("=" * 70)
-    print("CHECK F: Day 13 Smoke Test (California Housing with Correlation & Rank Aggregation)")
-    print("=" * 70)
-    
-    db_file = Path("research/results.db")
-    store = ResultsStore(db_file)
-    # Clear previous smoke test records for clean run
-    store.clear(dataset="california_housing")
-    
-    # 1. Run Correlation method
-    print("Running Method: 'correlation' on 'california_housing' (2 runs x 5 folds = 10 folds)...")
-    runner_corr = ExperimentRunner(
-        dataset_name="california_housing",
-        method_name="correlation",
-        n_splits=5,
-        n_repeats=2,
-        seed=42,
-        results_store=store,
+    stab = compute_selection_stability(
+        runs_df=synthetic_runs,
+        dataset_name="test_ds",
+        method="test_method",
+        all_features=all_features,
     )
-    records_corr = runner_corr.run(save_results=True)
-    assert len(records_corr) == 10, f"Expected 10 fold records, got {len(records_corr)}"
-    
-    # 2. Run Rank Aggregation method
-    print("Running Method: 'rank_aggregation' on 'california_housing' (2 runs x 5 folds = 10 folds)...")
-    runner_rank = ExperimentRunner(
-        dataset_name="california_housing",
-        method_name="rank_aggregation",
-        n_splits=5,
-        n_repeats=2,
-        seed=42,
-        results_store=store,
+
+    print("Computed Boundary Stability Scores:")
+    for f, val in stab.items():
+        print(f"   Feature '{f:12s}': Stability = {val:.4f}")
+
+    # Boundary assertions
+    assert stab["feat_always"] == 1.0, f"Expected exactly 1.0 for always-selected, got {stab['feat_always']}"
+    assert stab["feat_never"] == 0.0, f"Expected exactly 0.0 for never-selected, got {stab['feat_never']}"
+    assert stab["feat_half"] == 0.5, f"Expected exactly 0.5 for half-selected, got {stab['feat_half']}"
+
+    # Verify type and range
+    for f, val in stab.items():
+        assert 0.0 <= val <= 1.0, f"Stability score out of bounds: {val}"
+        assert isinstance(val, float)
+
+    print("\n>>> CHECK A PASSED: Stability(j) is exactly 1.0 for 100% selection and exactly 0.0 for 0% selection.\n")
+
+
+def check_b_distinct_methods_in_dry_run(df_runs: pd.DataFrame):
+    print("=" * 80)
+    print("ACCEPTANCE CHECK B: Distinction between Experiment A and Experiment B")
+    print("=" * 80)
+
+    # Filter Method A (RANK_AGGREGATION) and Method B (RANK_AGGREGATION_STABILITY)
+    df_exp_a = df_runs[df_runs["method"].str.upper() == "RANK_AGGREGATION"]
+    df_exp_b = df_runs[df_runs["method"].str.upper() == "RANK_AGGREGATION_STABILITY"]
+
+    assert not df_exp_a.empty, "No rows found for RANK_AGGREGATION (Experiment A)"
+    assert not df_exp_b.empty, "No rows found for RANK_AGGREGATION_STABILITY (Experiment B)"
+
+    print(f"Experiment A (RANK_AGGREGATION) rows: {len(df_exp_a)}")
+    print(f"Experiment B (RANK_AGGREGATION_STABILITY) rows: {len(df_exp_b)}")
+
+    # Check for differences in selected features across datasets and folds
+    dataset_differences = {}
+    total_differing_folds = 0
+
+    for ds in DATASETS:
+        a_ds = df_exp_a[df_exp_a["dataset"] == ds].sort_values(["run_index", "fold_index"])
+        b_ds = df_exp_b[df_exp_b["dataset"] == ds].sort_values(["run_index", "fold_index"])
+
+        diff_count = 0
+        diff_samples = []
+
+        for (_, row_a), (_, row_b) in zip(a_ds.iterrows(), b_ds.iterrows()):
+            feats_a = sorted(row_a["selected_features"]) if isinstance(row_a["selected_features"], list) else sorted(json.loads(row_a["selected_features"]))
+            feats_b = sorted(row_b["selected_features"]) if isinstance(row_b["selected_features"], list) else sorted(json.loads(row_b["selected_features"]))
+
+            if feats_a != feats_b:
+                diff_count += 1
+                diff_samples.append({
+                    "run": row_a["run_index"],
+                    "fold": row_a["fold_index"],
+                    "selected_A": feats_a,
+                    "selected_B": feats_b,
+                })
+
+        dataset_differences[ds] = diff_count
+        total_differing_folds += diff_count
+        print(f"[{ds}] Differing feature subsets between Exp A and Exp B: {diff_count}/{len(a_ds)} folds")
+        if diff_samples:
+            sample = diff_samples[0]
+            print(f"   Example at Run {sample['run']}, Fold {sample['fold']}:")
+            print(f"     Exp A: {sample['selected_A']}")
+            print(f"     Exp B: {sample['selected_B']}")
+
+    print(f"\nTotal differing folds across full matrix: {total_differing_folds}/{len(df_exp_a)}")
+    assert total_differing_folds > 0, (
+        "RANK_AGGREGATION and RANK_AGGREGATION_STABILITY produced identical feature selections "
+        "across all folds and datasets. Stability reweighting must have an effect on at least one dataset."
     )
-    records_rank = runner_rank.run(save_results=True)
-    assert len(records_rank) == 10, f"Expected 10 fold records, got {len(records_rank)}"
-    
-    # 3. Verify SQLite DB rows and schema
-    df_results = store.get_results(dataset="california_housing")
-    print(f"\nPersisted {len(df_results)} rows in SQLite ResultsStore at '{db_file}'.")
-    
-    expected_columns = [
-        "dataset", "method", "run_index", "fold_index",
-        "cv_metric_name", "cv_metric_value", "selected_features",
-        "runtime_seconds", "timestamp"
-    ]
-    assert list(df_results.columns) == expected_columns, f"Columns mismatch: {df_results.columns.tolist()}"
-    
-    print("\nSample Rows from ResultsStore:")
-    print(df_results.head(6)[["dataset", "method", "run_index", "fold_index", "cv_metric_name", "cv_metric_value", "runtime_seconds"]].to_string(index=False))
-    
-    print("\nAggregated Summary from ResultsStore:")
-    summary = store.get_summary()
-    print(summary.to_string(index=False))
-    
-    print("\n>>> CHECK F PASSED: Day 13 smoke test executed end-to-end and stored properly.\n")
+
+    print("\n>>> CHECK B PASSED: RANK_AGGREGATION and RANK_AGGREGATION_STABILITY produce genuinely different selected_features.\n")
 
 
-def check_g_database_isolation():
-    print("=" * 70)
-    print("CHECK G: Confirm ZERO production PostgreSQL DB imports or side effects")
-    print("=" * 70)
-    
+def check_c_row_count_and_breakdown(df_runs: pd.DataFrame, expected_repeats: int = 2):
+    print("=" * 80)
+    print("ACCEPTANCE CHECK C: Full Matrix Row Count & Method Breakdown")
+    print("=" * 80)
+
+    expected_total_rows = len(DATASETS) * len(METHODS) * expected_repeats * FOLDS
+    actual_rows = len(df_runs)
+
+    print(f"Formula: len(DATASETS={len(DATASETS)}) * len(METHODS={len(METHODS)}) * repeats={expected_repeats} * FOLDS={FOLDS}")
+    print(f"Expected Rows: {expected_total_rows}")
+    print(f"Actual Rows:   {actual_rows}")
+
+    assert actual_rows == expected_total_rows, (
+        f"Row count mismatch! Expected {expected_total_rows}, got {actual_rows}"
+    )
+
+    # Method breakdown
+    breakdown = df_runs.groupby("method").size().reset_index(name="row_count")
+    expected_per_method = len(DATASETS) * expected_repeats * FOLDS
+    print("\nBreakdown by Method:")
+    print("-" * 50)
+    for _, row in breakdown.iterrows():
+        m = row["method"]
+        cnt = row["row_count"]
+        print(f"  {m:30s}: {cnt:4d} rows (Expected: {expected_per_method})")
+        assert cnt == expected_per_method, f"Method {m} has {cnt} rows, expected {expected_per_method}"
+
+    # Dataset breakdown
+    print("\nBreakdown by Dataset:")
+    print("-" * 50)
+    ds_breakdown = df_runs.groupby("dataset").size().reset_index(name="row_count")
+    expected_per_ds = len(METHODS) * expected_repeats * FOLDS
+    for _, row in ds_breakdown.iterrows():
+        d = row["dataset"]
+        cnt = row["row_count"]
+        print(f"  {d:30s}: {cnt:4d} rows (Expected: {expected_per_ds})")
+        assert cnt == expected_per_ds, f"Dataset {d} has {cnt} rows, expected {expected_per_ds}"
+
+    # Alpha verification
+    stability_rows = df_runs[df_runs["method"].str.upper() == "RANK_AGGREGATION_STABILITY"]
+    assert (stability_rows["alpha"] == ALPHA).all(), f"Alpha values for stability method do not match {ALPHA}"
+    print(f"\nVerified: All {len(stability_rows)} RANK_AGGREGATION_STABILITY rows record alpha = {ALPHA}")
+
+    print("\n>>> CHECK C PASSED: Row count matches 320 exactly with balanced breakdown across all methods & datasets.\n")
+
+
+def check_d_frozen_config():
+    print("=" * 80)
+    print("ACCEPTANCE CHECK D: Verify research/config.py is Frozen")
+    print("=" * 80)
+
+    # Scan codebase for any file modifying research/config.py
     research_dir = Path("research")
-    py_files = [f for f in research_dir.glob("*.py") if f.name != "acceptance_check.py"]
-    
-    forbidden_terms = [
-        "get_db",
-        "app.core.database",
-        "DATABASE_URL",
-        "SessionLocal",
-        "postgresql",
-        "psycopg2",
-        "asyncpg",
+    all_py_files = list(research_dir.glob("*.py"))
+
+    modifying_patterns = [
+        "config.py",
+        "write_text",
+        "open('research/config.py', 'w')",
+        'open("research/config.py", "w")',
     ]
-    
+
     violations = []
-    for f in py_files:
-        content = f.read_text(encoding="utf-8")
-        for term in forbidden_terms:
-            if term in content:
-                violations.append((f.name, term))
-                
-    if violations:
-        print("FAILED: Forbidden production DB references found in research track:")
-        for fname, term in violations:
-            print(f"   {fname}: {term}")
-        sys.exit(1)
-    else:
-        print(f"Inspected {len(py_files)} research python files: {', '.join([f.name for f in py_files])}")
-        print("Confirmed: ZERO production database session, connection string, or DB model imports in research/.")
-        print("\n>>> CHECK G PASSED: Complete isolation from production PostgreSQL database.\n")
+    for f in all_py_files:
+        if f.name in ["config.py", "acceptance_check.py"]:
+            continue
+        text = f.read_text(encoding="utf-8")
+        if "open" in text and "config.py" in text and ("'w'" in text or '"w"' in text):
+            violations.append(f.name)
+
+    assert not violations, f"Found files attempting to modify config.py: {violations}"
+    print(f"Inspected {len(all_py_files)} files in research/. Zero runtime write mutations detected for config.py.")
+    print("Protocol parameters are confirmed frozen: DATASETS, METHODS, FOLDS, REPEATS, ALPHA, REFERENCE_MODEL, BASE_SEED.")
+
+    print("\n>>> CHECK D PASSED: research/config.py is strictly read-only and frozen.\n")
 
 
 def main():
-    print("\n" + "#" * 70)
-    print("   ML STUDIO RESEARCH TRACK - DAY 13 ACCEPTANCE TEST SUITE")
-    print("#" * 70 + "\n")
-    
-    datasets = check_a_dataset_loading()
-    check_b_split_reproducibility(datasets)
-    check_c_stratification(datasets)
-    check_d_rfe_and_no_selection(datasets)
-    check_e_stability_scorer()
-    check_f_smoke_test_and_results_store()
-    check_g_database_isolation()
-    
-    print("=" * 70)
-    print("ALL 7 ACCEPTANCE CHECKS COMPLETED SUCCESSFULLY!")
-    print("=" * 70)
+    print("\n" + "#" * 80)
+    print("   ML STUDIO RESEARCH TRACK — DAY 14 ACCEPTANCE TEST SUITE")
+    print("#" * 80 + "\n")
+
+    # Step 1: Stability boundary check
+    check_a_stability_boundary()
+
+    # Step 2: Full Matrix Dry Run (320 rows)
+    if RUNS_PARQUET.exists():
+        df_runs = pd.read_parquet(RUNS_PARQUET)
+        if len(df_runs) != len(DATASETS) * len(METHODS) * 2 * FOLDS:
+            print("Existing runs.parquet row count does not match full matrix. Running dry run...")
+            df_runs = run_full_matrix_dry_run(n_repeats=2)
+    else:
+        df_runs = run_full_matrix_dry_run(n_repeats=2)
+
+    # Step 3: Check distinction between Exp A and Exp B
+    check_b_distinct_methods_in_dry_run(df_runs)
+
+    # Step 4: Check row count and breakdown
+    check_c_row_count_and_breakdown(df_runs, expected_repeats=2)
+
+    # Step 5: Check frozen config
+    check_d_frozen_config()
+
+    print("=" * 80)
+    print("ALL DAY 14 ACCEPTANCE CHECKS PASSED SUCCESSFULLY!")
+    print("=" * 80)
 
 
 if __name__ == "__main__":

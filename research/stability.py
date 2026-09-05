@@ -1,19 +1,102 @@
 """
-Stability Scorer for ML Studio Research Track (SRS §9).
+Stability Scorer and Selection Stability Metric for ML Studio Research Track (SRS §9).
 
-Implements the stability formula specified for Method B (Rank Aggregation + Stability):
+Implements the stability formula specified for Method B (Rank Aggregation + Stability)
+and post-experiment evaluation (SRS §9.2):
     Stability(feature j) = (number of runs where j is selected) / (total runs)
-    FinalScore_j = alpha * Importance_j + (1 - alpha) * Stability_j
+    FinalScore_j = alpha * EnsembleScore_j + (1 - alpha) * Stability_j
 
 METHODOLOGICAL DISCIPLINE (SRS §9):
-Stability is computed strictly via REPEATED CROSS-VALIDATION on the Development partition
+Stability is computed strictly via repeated Cross-Validation on the Development partition
 only. The Locked Test partition NEVER enters this computation.
 """
 
+import json
 from typing import Sequence
 import numpy as np
 import pandas as pd
 from sklearn.model_selection import KFold, StratifiedKFold
+
+
+def compute_selection_stability(
+    runs_df: pd.DataFrame,
+    dataset_name: str,
+    method: str,
+    all_features: Sequence[str] | None = None,
+) -> dict[str, float]:
+    """
+    Computes feature selection stability for a given (dataset, method) pair from runs_df.
+
+    Implements exact formula from SRS §9.2:
+        Stability(feature j) = (number of runs where j is selected) / (total runs)
+
+    Reads from runs_df's `selected_features` column across all fold/run rows
+    for the specified (dataset_name, method) pair.
+    Locked Test plays no role in this computation at all, by construction
+    (the data source never included it).
+
+    Args:
+        runs_df: DataFrame containing experiment run rows (e.g., loaded from runs.parquet).
+                 Must contain columns ['dataset', 'method', 'selected_features'].
+        dataset_name: Name of dataset to filter on (case-insensitive).
+        method: Name of feature selection method to filter on (case-insensitive).
+        all_features: Optional sequence of all feature names for the dataset.
+                      If not provided, inferred from the union of selected features.
+
+    Returns:
+        dict[str, float]: Mapping from feature name to stability fraction in [0.0, 1.0].
+    """
+    if runs_df is None or runs_df.empty:
+        if all_features:
+            return {f: 0.0 for f in all_features}
+        return {}
+
+    norm_dataset = dataset_name.lower().strip().replace("-", "_").replace(" ", "_")
+    norm_method = method.lower().strip().replace("-", "_").replace(" ", "_")
+
+    # Filter matching rows
+    df_datasets = runs_df["dataset"].astype(str).str.lower().str.strip().str.replace("-", "_").str.replace(" ", "_")
+    df_methods = runs_df["method"].astype(str).str.lower().str.strip().str.replace("-", "_").str.replace(" ", "_")
+    mask = (df_datasets == norm_dataset) & (df_methods == norm_method)
+    subset_df = runs_df[mask]
+
+    total_runs = len(subset_df)
+    if total_runs == 0:
+        if all_features:
+            return {f: 0.0 for f in all_features}
+        return {}
+
+    # Parse selected features per row
+    parsed_subsets: list[list[str]] = []
+    discovered_features: set[str] = set()
+
+    for val in subset_df["selected_features"]:
+        if isinstance(val, (list, tuple, set)):
+            feats = list(val)
+        elif isinstance(val, str):
+            val_trimmed = val.strip()
+            if val_trimmed.startswith("[") and val_trimmed.endswith("]"):
+                try:
+                    feats = json.loads(val_trimmed)
+                except Exception:
+                    feats = [s.strip(" '\"") for s in val_trimmed[1:-1].split(",") if s.strip()]
+            else:
+                feats = [val_trimmed]
+        else:
+            feats = []
+        parsed_subsets.append(feats)
+        discovered_features.update(feats)
+
+    target_features = list(all_features) if all_features is not None else sorted(discovered_features)
+
+    counts = {f: 0 for f in target_features}
+    for feat_list in parsed_subsets:
+        feat_set = set(feat_list)
+        for f in target_features:
+            if f in feat_set:
+                counts[f] += 1
+
+    return {f: counts[f] / float(total_runs) for f in target_features}
 
 
 class StabilityScorer:

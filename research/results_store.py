@@ -13,9 +13,11 @@ SCHEMA:
 - cv_metric_value (REAL)
 - selected_features (TEXT, JSON array)
 - runtime_seconds (REAL)
+- alpha (REAL)
 - timestamp (TEXT, ISO 8601)
 """
 
+from contextlib import contextmanager
 from datetime import datetime, timezone
 import json
 from pathlib import Path
@@ -25,8 +27,6 @@ import pandas as pd
 
 DEFAULT_DB_PATH = Path(__file__).parent / "results.db"
 
-
-from contextlib import contextmanager
 
 class ResultsStore:
     """
@@ -61,10 +61,18 @@ class ResultsStore:
                     cv_metric_value REAL NOT NULL,
                     selected_features TEXT NOT NULL,
                     runtime_seconds REAL NOT NULL,
+                    alpha REAL,
                     timestamp TEXT NOT NULL
                 );
                 """
             )
+            # Add alpha column if migrating from earlier schema
+            cursor = conn.cursor()
+            cursor.execute("PRAGMA table_info(experiment_results)")
+            columns = [col[1] for col in cursor.fetchall()]
+            if "alpha" not in columns:
+                conn.execute("ALTER TABLE experiment_results ADD COLUMN alpha REAL")
+
             conn.execute(
                 """
                 CREATE INDEX IF NOT EXISTS idx_dataset_method
@@ -83,6 +91,7 @@ class ResultsStore:
         cv_metric_value: float,
         selected_features: list[str] | str,
         runtime_seconds: float,
+        alpha: float | None = None,
         timestamp: str | None = None,
     ) -> int:
         """
@@ -102,8 +111,8 @@ class ResultsStore:
                 INSERT INTO experiment_results (
                     dataset, method, run_index, fold_index,
                     cv_metric_name, cv_metric_value,
-                    selected_features, runtime_seconds, timestamp
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    selected_features, runtime_seconds, alpha, timestamp
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     dataset,
@@ -114,6 +123,7 @@ class ResultsStore:
                     float(cv_metric_value),
                     features_json,
                     float(runtime_seconds),
+                    float(alpha) if alpha is not None else None,
                     ts,
                 ),
             )
@@ -136,6 +146,10 @@ class ResultsStore:
             else:
                 features_json = str(feats)
 
+            alpha_val = r.get("alpha")
+            if alpha_val is not None:
+                alpha_val = float(alpha_val)
+
             rows.append(
                 (
                     r["dataset"],
@@ -146,6 +160,7 @@ class ResultsStore:
                     float(r["cv_metric_value"]),
                     features_json,
                     float(r["runtime_seconds"]),
+                    alpha_val,
                     r.get("timestamp", now_iso),
                 )
             )
@@ -156,8 +171,8 @@ class ResultsStore:
                 INSERT INTO experiment_results (
                     dataset, method, run_index, fold_index,
                     cv_metric_name, cv_metric_value,
-                    selected_features, runtime_seconds, timestamp
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    selected_features, runtime_seconds, alpha, timestamp
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 rows,
             )
@@ -170,7 +185,7 @@ class ResultsStore:
         """
         Fetches experiment results as a pandas DataFrame.
         """
-        query = "SELECT dataset, method, run_index, fold_index, cv_metric_name, cv_metric_value, selected_features, runtime_seconds, timestamp FROM experiment_results"
+        query = "SELECT dataset, method, run_index, fold_index, cv_metric_name, cv_metric_value, selected_features, runtime_seconds, alpha, timestamp FROM experiment_results"
         params = []
         conditions = []
 

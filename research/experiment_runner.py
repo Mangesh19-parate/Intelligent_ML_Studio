@@ -90,13 +90,6 @@ class ExperimentRunner:
             return "RMSE", rmse
         else:
             y_true_arr = np.asarray(y_true)
-            if y_proba is not None and len(np.unique(y_true_arr)) == 2:
-                try:
-                    pos_proba = y_proba[:, 1] if y_proba.ndim == 2 else y_proba
-                    auc = float(roc_auc_score(y_true_arr, pos_proba))
-                    return "ROC_AUC", auc
-                except Exception:
-                    pass
             f1 = float(f1_score(y_true_arr, y_pred, average="macro"))
             return "F1_MACRO", f1
 

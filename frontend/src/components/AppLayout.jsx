@@ -4,16 +4,18 @@ import { useAuth } from '../context/AuthContext';
 import {
   Layers,
   LayoutDashboard,
-  FolderGit2,
-  Activity,
+  Database,
+  BarChart3,
+  SlidersHorizontal,
+  Workflow,
+  Stethoscope,
+  Cpu,
+  Rocket,
+  ShieldAlert,
   ShieldCheck,
   Moon,
   Sun,
   LogOut,
-  ChevronRight,
-  Cpu,
-  Sparkles,
-  Lock,
 } from 'lucide-react';
 
 export const AppLayout = ({ children }) => {
@@ -30,16 +32,23 @@ export const AppLayout = ({ children }) => {
     user?.permissions ||
     (user?.role?.permissions ? user.role.permissions.map((p) => (typeof p === 'string' ? p : p.permission_key)) : [])
   );
-  const roleName = user?.role?.role_name || user?.role || 'VIEWER';
-  const isAdmin = roleName === 'ADMIN' || userPerms.has('MANAGE_USERS');
-  const canEditData = isAdmin || userPerms.has('EDIT_DATA');
-  const canTrain = isAdmin || userPerms.has('TRAIN');
-  const canDeploy = isAdmin || userPerms.has('DEPLOY');
-  const canRead = isAdmin || userPerms.has('READ') || true;
+  const roleName = user?.role?.role_name || (typeof user?.role === 'string' ? user?.role : 'VIEWER');
+  const isAdmin = roleName === 'ADMIN';
+
+  const STAGES = [
+    { id: 'workspace', name: '1. Workspace', path: '/dashboard', icon: LayoutDashboard },
+    { id: 'data', name: '2. Data', path: '/data', icon: Database },
+    { id: 'analysis', name: '3. Data Analysis', path: '/data-analysis', icon: BarChart3 },
+    { id: 'transformations', name: '4. Feature Transformation', path: '/transformations', icon: SlidersHorizontal },
+    { id: 'features', name: '5. Feature Engineering', path: '/feature-engineering', icon: Workflow },
+    { id: 'diagnostics', name: '6. Diagnostics', path: '/diagnostics', icon: Stethoscope },
+    { id: 'ml', name: '7. Machine Learning', path: '/machine-learning', icon: Cpu },
+    { id: 'production', name: '8. Production', path: '/production', icon: Rocket },
+  ];
 
   return (
     <div className="min-h-screen bg-[var(--color-bg)] text-text flex flex-col transition-colors">
-      {/* Top Navbar */}
+      {/* Top Main Navbar */}
       <header className="sticky top-0 z-40 w-full border-b border-[var(--color-border)] bg-[var(--color-surface)]/90 backdrop-blur-md transition-colors">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center space-x-6">
@@ -52,57 +61,23 @@ export const AppLayout = ({ children }) => {
                   ML Studio
                 </span>
                 <span className="text-[10px] uppercase tracking-wider font-semibold text-[var(--color-text-muted)] -mt-1">
-                  Leakage-Safe Platform
+                  8-Stage Leakage-Safe Workbench
                 </span>
               </div>
             </Link>
-
-            {/* Main Navigation Links (Permission Gated) */}
-            <nav className="hidden md:flex items-center space-x-1 pl-4 border-l border-[var(--color-border)]">
-              {canRead && (
-                <NavLink
-                  to="/dashboard"
-                  className={({ isActive }) =>
-                    `px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-1.5 transition-colors ${
-                      isActive && !location.pathname.includes('/monitoring')
-                        ? 'bg-[var(--color-accent)]/15 text-[var(--color-accent)] font-bold'
-                        : 'text-[var(--color-text-muted)] hover:text-text hover:bg-[var(--color-surface-hover)]'
-                    }`
-                  }
-                >
-                  <LayoutDashboard className="w-3.5 h-3.5" />
-                  <span>Workspace</span>
-                </NavLink>
-              )}
-
-              {/* Monitoring tab is visible if user has READ */}
-              {canRead && (
-                <NavLink
-                  to="/monitoring"
-                  className={({ isActive }) =>
-                    `px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-1.5 transition-colors ${
-                      isActive || location.pathname.includes('/monitoring')
-                        ? 'bg-[var(--color-accent)]/15 text-[var(--color-accent)] font-bold'
-                        : 'text-[var(--color-text-muted)] hover:text-text hover:bg-[var(--color-surface-hover)]'
-                    }`
-                  }
-                >
-                  <Activity className="w-3.5 h-3.5" />
-                  <span>Deployment Monitoring</span>
-                </NavLink>
-              )}
-            </nav>
           </div>
 
-          {/* User Controls */}
+          {/* User Controls & Role State */}
           {user && (
             <div className="flex items-center space-x-4">
-              <div className="hidden sm:flex items-center space-x-2 px-3 py-1 rounded-full bg-[var(--color-bg)] border border-[var(--color-border)] text-xs">
-                <ShieldCheck className="w-3.5 h-3.5 text-[var(--color-accent)]" />
-                <span className="font-semibold">{roleName}</span>
-                <span className="text-[var(--color-text-muted)]">
-                  ({userPerms.size} perms)
-                </span>
+              <div className={`hidden sm:flex items-center space-x-2 px-3 py-1 rounded-full border text-xs font-semibold ${
+                isAdmin 
+                  ? 'bg-rose-500/10 border-rose-500/30 text-rose-500' 
+                  : 'bg-[var(--color-bg)] border-[var(--color-border)] text-text'
+              }`}>
+                {isAdmin ? <ShieldAlert className="w-3.5 h-3.5 text-rose-500" /> : <ShieldCheck className="w-3.5 h-3.5 text-[var(--color-accent)]" />}
+                <span>{roleName}</span>
+                <span className="text-[var(--color-text-muted)]">({userPerms.size} perms)</span>
               </div>
 
               <button
@@ -129,6 +104,51 @@ export const AppLayout = ({ children }) => {
             </div>
           )}
         </div>
+
+        {/* 8-Stage Navigation Bar + Conditional Admin Section */}
+        <div className="border-t border-[var(--color-border)]/60 bg-[var(--color-surface)]/50 px-4 sm:px-6 lg:px-8">
+          <div className="max-w-7xl mx-auto flex items-center justify-between overflow-x-auto py-2">
+            <div className="flex items-center space-x-1 sm:space-x-2 shrink-0">
+              {STAGES.map((stage) => {
+                const Icon = stage.icon;
+                const isActive = location.pathname === stage.path || (stage.path === '/dashboard' && location.pathname === '/');
+                return (
+                  <NavLink
+                    key={stage.id}
+                    to={stage.path}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-1.5 transition-all whitespace-nowrap ${
+                      isActive
+                        ? 'bg-[var(--color-accent)] text-white shadow-sm font-bold'
+                        : 'text-[var(--color-text-muted)] hover:text-text hover:bg-[var(--color-surface-hover)]'
+                    }`}
+                  >
+                    <Icon className="w-3.5 h-3.5" />
+                    <span>{stage.name}</span>
+                  </NavLink>
+                );
+              })}
+            </div>
+
+            {/* Admin Section: STRICTLY VISIBLE ONLY TO ADMIN */}
+            {isAdmin && (
+              <div className="pl-4 border-l border-[var(--color-border)] shrink-0">
+                <NavLink
+                  to="/admin"
+                  className={({ isActive }) =>
+                    `px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-1.5 transition-all ${
+                      isActive
+                        ? 'bg-rose-600 text-white font-bold shadow-sm'
+                        : 'text-rose-500 hover:bg-rose-500/10 font-bold'
+                    }`
+                  }
+                >
+                  <ShieldAlert className="w-3.5 h-3.5" />
+                  <span>Admin Console</span>
+                </NavLink>
+              </div>
+            )}
+          </div>
+        </div>
       </header>
 
       {/* Main Content Viewport */}
@@ -139,8 +159,8 @@ export const AppLayout = ({ children }) => {
       {/* Footer */}
       <footer className="border-t border-[var(--color-border)] bg-[var(--color-surface)]/50 py-4 text-center text-xs text-[var(--color-text-muted)]">
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
-          <span>ML Studio Enterprise &bull; Strict Leakage-Controlled Tabular Platform</span>
-          <span className="font-mono text-[11px]">Role: {roleName} &bull; Day 11 Platform Release</span>
+          <span>ML Studio &bull; 8-Stage Leakage-Controlled Tabular ML Workbench</span>
+          <span className="font-mono text-[11px]">Role: {roleName} {isAdmin && '&bull; (Admin Privileges Active)'}</span>
         </div>
       </footer>
     </div>

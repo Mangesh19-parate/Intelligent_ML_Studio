@@ -40,11 +40,15 @@ app.add_middleware(
 
 app.include_router(api_v1_router)
 
+from datetime import datetime, timezone
+
 @app.get("/health", tags=["Health"])
 @app.get("/api/v1/health", tags=["Health"])
 def health_check():
     return {
         "status": "healthy",
         "service": settings.PROJECT_NAME,
+        "api_version": "v1",
         "code_version": get_code_version(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
     }

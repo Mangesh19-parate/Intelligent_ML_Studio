@@ -35,6 +35,18 @@ class DatasetRepository(BaseRepository[Dataset]):
             .all()
         )
 
+    def get_by_project_and_hash(self, project_id: PyUUID | str, content_hash: str) -> Dataset | None:
+        if isinstance(project_id, str):
+            try:
+                project_id = PyUUID(project_id)
+            except Exception:
+                pass
+        return (
+            self.db.query(Dataset)
+            .filter(Dataset.project_id == project_id, Dataset.content_hash == content_hash)
+            .first()
+        )
+
     def get_columns_by_dataset(self, dataset_id: PyUUID | str) -> list[DatasetColumn]:
         if isinstance(dataset_id, str):
             try:

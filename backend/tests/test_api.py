@@ -206,10 +206,11 @@ def test_dataset_upload_and_structural_schema_inference(client, create_test_user
     for f_key in forbidden_keys:
         assert f_key not in dataset_data, f"Forbidden key '{f_key}' found in dataset payload violates Day 1 invariant!"
 
-    # Test Version Increment on second upload
+    # Test Version Increment on second upload with new content
+    csv_content_v2 = csv_content + b"5,500000.00,Downtown,2023-05-01,True\n"
     upload_v2_resp = client.post(
         f"/api/v1/projects/{project_id}/datasets",
-        files={"file": ("housing_v2.csv", io.BytesIO(csv_content), "text/csv")},
+        files={"file": ("housing_v2.csv", io.BytesIO(csv_content_v2), "text/csv")},
         headers=headers
     )
     assert upload_v2_resp.status_code == 201

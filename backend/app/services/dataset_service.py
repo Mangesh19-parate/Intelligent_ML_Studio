@@ -170,6 +170,14 @@ class DatasetService:
         # 4. Compute content hash (SHA-256) across raw uploaded bytes (Architecture Contract §4)
         content_hash = hashlib.sha256(content).hexdigest()
 
+        # Enforce UNIQUE(project_id, dataset_content_hash) per SRS v9 §2.1
+        existing_dataset = self.dataset_repo.get_by_project_and_hash(project.id, content_hash)
+        if existing_dataset:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"A dataset with identical content already exists in this project (version {existing_dataset.version_number})."
+            )
+
         # 5. Save raw file via StorageService
         saved_file_path = self.storage.save_file(
             project_id=project.id,
@@ -190,6 +198,13 @@ class DatasetService:
             uploaded_by=uploaded_by_id,
         )
         created_dataset = self.dataset_repo.create(dataset)
+
+        # 7. Wire ProjectState DATA_UPLOADED
+        if project.pipeline_stage in ["DATA", "DATA_UPLOADED"]:
+            project.pipeline_stage = "DATA_UPLOADED"
+            self.db.add(project)
+            self.db.commit()
+
         return created_dataset
 
     def detect_structural_schema(self, dataset_id: UUID | str) -> list[DatasetColumn]:

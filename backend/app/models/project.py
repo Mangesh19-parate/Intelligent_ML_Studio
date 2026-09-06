@@ -1,8 +1,24 @@
 import uuid
 from sqlalchemy import Column, String, ForeignKey, CheckConstraint, Numeric, Uuid
 from sqlalchemy.orm import relationship
+from enum import Enum
 from app.core.database import Base
 from app.models.base import TimestampMixin
+
+class ProjectState(str, Enum):
+    DATA_UPLOADED = "DATA_UPLOADED"
+    DATA = "DATA"  # Canonical alias
+    SPLIT_LOCKED = "SPLIT_LOCKED"
+    SPLIT = "SPLIT"  # Canonical alias
+    PROFILED = "PROFILED"
+    TRANSFORMED = "TRANSFORMED"
+    FEATURE_SELECTED = "FEATURE_SELECTED"
+    TRAINING = "TRAINING"
+    TRAINED = "TRAINED"
+    EVALUATED = "EVALUATED"
+    GATE_PASSED = "GATE_PASSED"
+    DEPLOYED = "DEPLOYED"
+    ARCHIVED = "ARCHIVED"
 
 class Project(Base, TimestampMixin):
     __tablename__ = "projects"

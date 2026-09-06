@@ -297,7 +297,7 @@ class TransformationService:
         }
 
     def _update_pipeline_stage_if_needed(self, project: Project) -> None:
-        if project.pipeline_stage in ["DATA", "SPLIT", "PROFILED"]:
+        if project.pipeline_stage in ["DATA", "DATA_UPLOADED", "SPLIT", "SPLIT_LOCKED", "PROFILED"]:
             project.pipeline_stage = "TRANSFORMED"
             self.db.add(project)
             self.db.commit()

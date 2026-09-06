@@ -589,7 +589,7 @@ class FeatureSelectionService:
 
             # 7. Finalize Experiment & Update Project Stage
             self.exp_repo.update_status(experiment.id, "COMPLETED")
-            if project.pipeline_stage in ["DATA", "SPLIT", "PROFILED", "TRANSFORMED"]:
+            if project.pipeline_stage in ["DATA", "DATA_UPLOADED", "SPLIT", "SPLIT_LOCKED", "PROFILED", "TRANSFORMED"]:
                 project.pipeline_stage = "FEATURE_SELECTED"
                 self.db.add(project)
                 self.db.commit()

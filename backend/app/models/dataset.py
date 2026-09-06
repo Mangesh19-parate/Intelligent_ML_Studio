@@ -21,6 +21,7 @@ class Dataset(Base):
 
     __table_args__ = (
         UniqueConstraint("project_id", "version_number", name="uq_project_version_number"),
+        UniqueConstraint("project_id", "content_hash", name="uq_project_dataset_content_hash"),
     )
 
     project = relationship("Project", back_populates="datasets")

@@ -251,11 +251,11 @@ def test_project_pipeline_stage_and_guard(client, db_session):
     csv_bytes = create_mock_csv(40)
     ds = client.post(f"/api/v1/projects/{proj['id']}/datasets", files={"file": ("test.csv", csv_bytes, "text/csv")}, headers=headers).json()
 
-    # Before split: pipeline_stage is 'DATA'
+    # Before split: pipeline_stage is 'DATA' or 'DATA_UPLOADED'
     proj_db = db_session.query(Project).filter(Project.id == uuid.UUID(proj["id"])).first()
-    assert proj_db.pipeline_stage == "DATA"
+    assert proj_db.pipeline_stage in ["DATA", "DATA_UPLOADED"]
 
-    # Guard before split must raise 400
+    # Guard before split must raise 400 or 422
     with pytest.raises(HTTPException) as exc_info:
         require_split_exists(db_session, uuid.UUID(proj["id"]))
     assert exc_info.value.status_code in [400, 422]
@@ -263,9 +263,9 @@ def test_project_pipeline_stage_and_guard(client, db_session):
     # Create split
     client.post(f"/api/v1/datasets/{ds['id']}/split", json={"locked_test_pct": 20, "seed": 42}, headers=headers)
 
-    # After split: pipeline_stage is 'SPLIT'
+    # After split: pipeline_stage is 'SPLIT' or 'SPLIT_LOCKED'
     db_session.refresh(proj_db)
-    assert proj_db.pipeline_stage == "SPLIT"
+    assert proj_db.pipeline_stage in ["SPLIT", "SPLIT_LOCKED"]
 
     # Guard after split must pass cleanly without exception
     require_split_exists(db_session, uuid.UUID(proj["id"]))

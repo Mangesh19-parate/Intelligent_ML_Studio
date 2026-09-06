@@ -125,12 +125,21 @@ class DatasetSplitService:
         )
 
         df = self._load_full_dataframe(dataset)
-        total_rows = len(df)
-        if "row_uid" in df.columns:
-            row_items = df["row_uid"].to_numpy()
-        else:
-            row_items = np.arange(total_rows)
+        # Ensure row_uid identity is present (SRS v9 §4, Architecture Contract §4)
+        if "row_uid" not in df.columns:
+            import uuid as py_uuid
+            if dataset.content_hash:
+                namespace = py_uuid.NAMESPACE_DNS
+                df["row_uid"] = [
+                    str(py_uuid.uuid5(namespace, f"{dataset.content_hash}_row_{i}"))
+                    for i in range(len(df))
+                ]
+            else:
+                df["row_uid"] = [str(py_uuid.uuid4()) for _ in range(len(df))]
 
+        # dataset_splits membership keyed strictly by row_uid (UUID string), never positional integer
+        row_items = df["row_uid"].astype(str).to_numpy()
+        total_rows = len(df)
         test_size = locked_test_pct / 100.0
 
         if target_column_record and target_column_record.column_name in df.columns:
@@ -183,9 +192,9 @@ class DatasetSplitService:
                 random_state=effective_seed
             )
 
-        # 5. Persist partitions (row_uid strings or positional indices)
-        dev_indices_list = dev_idx.tolist()
-        test_indices_list = test_idx.tolist()
+        # 5. Persist partitions strictly keyed by row_uid strings (SRS v9 §2.2, §4)
+        dev_indices_list = [str(x) for x in dev_idx.tolist()]
+        test_indices_list = [str(x) for x in test_idx.tolist()]
         now = datetime.now(timezone.utc)
 
         dev_split = DatasetSplit(
@@ -205,10 +214,10 @@ class DatasetSplitService:
 
         self.split_repo.create_splits([dev_split, test_split])
 
-        # 6. Update project pipeline stage to 'SPLIT'
+        # 6. Wire ProjectState transition DATA_UPLOADED -> SPLIT_LOCKED (Architecture Contract §10.1)
         project = self.project_repo.get_by_id(dataset.project_id)
         if project:
-            project.pipeline_stage = "SPLIT"
+            project.pipeline_stage = "SPLIT_LOCKED"
             self.db.add(project)
             self.db.commit()
 

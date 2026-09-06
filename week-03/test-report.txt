@@ -1,0 +1,166 @@
+﻿============================= test session starts =============================
+platform win32 -- Python 3.13.14, pytest-8.3.5, pluggy-1.6.0 -- C:\Users\HP\AppData\Local\Programs\Python\Python313\python.exe
+cachedir: .pytest_cache
+rootdir: D:\Python\Data sets by campusx\Mangesh\backend
+plugins: anyio-4.14.2, cov-7.1.0, flask-1.3.0
+collecting ... collected 134 items
+
+tests/test_api.py::test_code_version_utility PASSED                      [  0%]
+tests/test_api.py::test_auth_register_and_login PASSED                   [  1%]
+tests/test_api.py::test_permission_based_rbac_enforcement PASSED         [  2%]
+tests/test_api.py::test_project_crud_and_invariants PASSED               [  2%]
+tests/test_api.py::test_dataset_upload_and_structural_schema_inference PASSED [  3%]
+tests/test_auth_signup_flow.py::test_signup_successful PASSED            [  4%]
+tests/test_auth_signup_flow.py::test_signup_rejects_role_field_with_400 PASSED [  5%]
+tests/test_auth_signup_flow.py::test_signup_rejects_role_name_field_with_400 PASSED [  5%]
+tests/test_auth_signup_flow.py::test_signup_duplicate_email_rejected PASSED [  6%]
+tests/test_auth_signup_flow.py::test_login_successful_and_jwt_verification PASSED [  7%]
+tests/test_auth_signup_flow.py::test_login_invalid_credentials PASSED    [  8%]
+tests/test_bootstrap_admin_and_permissions.py::test_bootstrap_admin_creation_and_refusal PASSED [  8%]
+tests/test_bootstrap_admin_and_permissions.py::test_require_permission_role_default_denial PASSED [  9%]
+tests/test_bootstrap_admin_and_permissions.py::test_require_permission_override_grant PASSED [ 10%]
+tests/test_bootstrap_admin_and_permissions.py::test_require_permission_override_revoke PASSED [ 11%]
+tests/test_contract.py::test_algorithm_set_composition PASSED            [ 11%]
+tests/test_contract.py::test_feature_selection_defaults PASSED           [ 12%]
+tests/test_contract.py::test_hash_and_versioning_policy PASSED           [ 13%]
+tests/test_contract.py::test_reproducibility_tolerances PASSED           [ 14%]
+tests/test_contract.py::test_metrics_definition PASSED                   [ 14%]
+tests/test_contract.py::test_error_response_schema PASSED                [ 15%]
+tests/test_contract.py::test_cursor_pagination_schema PASSED             [ 16%]
+tests/test_dataset_split.py::test_adversarial_locked_test_leakage_barrier PASSED [ 17%]
+tests/test_dataset_split.py::test_split_reproducibility PASSED           [ 17%]
+tests/test_dataset_split.py::test_double_split_rejection PASSED          [ 18%]
+tests/test_dataset_split.py::test_content_hash_integrity_and_backfill PASSED [ 19%]
+tests/test_dataset_split.py::test_project_pipeline_stage_and_guard PASSED [ 20%]
+tests/test_day11_dashboard_and_monitoring.py::test_acceptance_check_a_walkthrough_all_derived_stages PASSED [ 20%]
+tests/test_day11_dashboard_and_monitoring.py::test_acceptance_check_b_workspace_analytics_user_scoping PASSED [ 21%]
+tests/test_day11_dashboard_and_monitoring.py::test_acceptance_check_c_error_rate_separation PASSED [ 22%]
+tests/test_day11_dashboard_and_monitoring.py::test_acceptance_check_d_latency_summary_decoupled_profiles PASSED [ 23%]
+tests/test_day11_dashboard_and_monitoring.py::test_acceptance_check_e_viewer_role_permission_gating PASSED [ 23%]
+tests/test_day11_dashboard_and_monitoring.py::test_acceptance_check_f_no_activity_logs_or_experiment_timeline PASSED [ 24%]
+tests/test_day11_dashboard_and_monitoring.py::test_acceptance_check_g_standing_leakage_check_no_new_locked_test_calls PASSED [ 25%]
+tests/test_day12_audits.py::test_project_wide_leakage_audit PASSED       [ 26%]
+tests/test_day12_audits.py::test_project_wide_reproducibility_audit PASSED [ 26%]
+tests/test_day12_audits.py::test_api_contract_audit_matrix PASSED        [ 27%]
+tests/test_day1_storage_and_upload.py::test_local_storage_service_unit PASSED [ 28%]
+tests/test_day1_storage_and_upload.py::test_storage_service_singleton PASSED [ 29%]
+tests/test_day1_storage_and_upload.py::test_dataset_upload_csv PASSED    [ 29%]
+tests/test_day1_storage_and_upload.py::test_dataset_upload_version_increment PASSED [ 30%]
+tests/test_day1_storage_and_upload.py::test_dataset_upload_excel_and_json PASSED [ 31%]
+tests/test_day1_storage_and_upload.py::test_dataset_upload_errors_and_rbac PASSED [ 32%]
+tests/test_day2_structural_validation_and_row_uid.py::test_structural_schema_detection_and_invariants PASSED [ 32%]
+tests/test_day2_structural_validation_and_row_uid.py::test_immutable_row_uid_assignment_and_persistence PASSED [ 33%]
+tests/test_day2_structural_validation_and_row_uid.py::test_split_references_row_uid PASSED [ 34%]
+tests/test_day3_outer_split_and_content_hash.py::test_sha256_content_hash_computed_and_stored PASSED [ 35%]
+tests/test_day3_outer_split_and_content_hash.py::test_duplicate_dataset_same_project_rejected PASSED [ 35%]
+tests/test_day3_outer_split_and_content_hash.py::test_duplicate_dataset_different_project_allowed PASSED [ 36%]
+tests/test_day3_outer_split_and_content_hash.py::test_outer_split_membership_keyed_by_row_uid PASSED [ 37%]
+tests/test_day3_outer_split_and_content_hash.py::test_outer_split_immutability PASSED [ 38%]
+tests/test_day3_outer_split_and_content_hash.py::test_project_state_transitions_data_uploaded_to_split_locked PASSED [ 38%]
+tests/test_day3_outer_split_and_content_hash.py::test_get_development_data_retrieves_strictly_development_partition PASSED [ 39%]
+tests/test_day4_leakage_and_reordering.py::test_locked_test_indices PASSED [ 40%]
+tests/test_day4_leakage_and_reordering.py::test_split_membership_survives_underlying_data_reordering PASSED [ 41%]
+tests/test_demo_accounts.py::test_demo_accounts_non_admin_roles PASSED   [ 41%]
+tests/test_demo_accounts.py::test_demo_accounts_permission_differences PASSED [ 42%]
+tests/test_demo_accounts.py::test_only_approver_has_deploy_endpoint_access PASSED [ 43%]
+tests/test_deployments_and_gates.py::test_check_a_pre_fix_experiment_unverifiable PASSED [ 44%]
+tests/test_deployments_and_gates.py::test_check_b_new_experiment_with_threshold_passes_gate PASSED [ 44%]
+tests/test_deployments_and_gates.py::test_check_c_d_e_f_g_h_full_roundtrip_and_edge_cases PASSED [ 45%]
+tests/test_deployments_and_gates.py::test_model_download_joblib_and_pkl PASSED [ 46%]
+tests/test_evaluation_and_locked_test.py::test_acceptance_check_h_adjusted_r2_formula PASSED [ 47%]
+tests/test_evaluation_and_locked_test.py::test_acceptance_check_a_d_e_single_locked_test_and_full_dev_refit PASSED [ 47%]
+tests/test_evaluation_and_locked_test.py::test_acceptance_check_b_finalize_twice_rejected PASSED [ 48%]
+tests/test_evaluation_and_locked_test.py::test_acceptance_check_c_diagnostic_rerun_and_leaderboard_isolation PASSED [ 49%]
+tests/test_evaluation_and_locked_test.py::test_acceptance_check_f_overfit_and_underfit_diagnostics PASSED [ 50%]
+tests/test_evaluation_and_locked_test.py::test_acceptance_check_g_model_selection_score_never_changes_sort_order PASSED [ 50%]
+tests/test_explainability.py::test_acceptance_check_a_global_shap_summary_and_caching PASSED [ 51%]
+tests/test_explainability.py::test_acceptance_check_b_non_winning_model_returns_422 PASSED [ 52%]
+tests/test_explainability.py::test_acceptance_check_c_select_explainer_classes PASSED [ 52%]
+tests/test_explainability.py::test_acceptance_check_d_additivity_sanity_check PASSED [ 53%]
+tests/test_explainability.py::test_acceptance_check_e_leakage_check_zero_locked_test_overlap PASSED [ 54%]
+tests/test_explainability.py::test_acceptance_check_f_tampered_artifact_rejection PASSED [ 55%]
+tests/test_feature_selection.py::test_rank_aggregation_single_feature PASSED [ 55%]
+tests/test_feature_selection.py::test_rank_aggregation_ties_average_ranking PASSED [ 56%]
+tests/test_feature_selection.py::test_rank_aggregation_fold_with_skipped_technique PASSED [ 57%]
+tests/test_feature_selection.py::test_four_selectors_classification PASSED [ 58%]
+tests/test_feature_selection.py::test_four_selectors_regression PASSED   [ 58%]
+tests/test_feature_selection.py::test_cv_feature_selection_classification_end_to_end PASSED [ 59%]
+tests/test_feature_selection.py::test_cv_feature_selection_regression_end_to_end PASSED [ 60%]
+tests/test_feature_selection.py::test_feature_selection_threshold_updates PASSED [ 61%]
+tests/test_feature_selection.py::test_api_feature_selection_endpoints PASSED [ 61%]
+tests/test_feature_selection.py::test_api_feature_selection_viewer_cannot_run PASSED [ 62%]
+tests/test_feature_selection.py::test_cv_feature_selection_multiclass_and_zero_variance PASSED [ 63%]
+tests/test_health_and_code_version.py::test_health_endpoints PASSED      [ 64%]
+tests/test_lineage_and_reproducibility.py::test_acceptance_check_a_live_capture_and_real_versions PASSED [ 64%]
+tests/test_lineage_and_reproducibility.py::test_acceptance_check_b_artifact_checksum_and_tamper_detection PASSED [ 65%]
+tests/test_lineage_and_reproducibility.py::test_acceptance_check_c_transformation_snapshot_immutability PASSED [ 66%]
+tests/test_lineage_and_reproducibility.py::test_acceptance_check_d_feature_selection_snapshot_matches_full_dev_refit PASSED [ 67%]
+tests/test_lineage_and_reproducibility.py::test_acceptance_check_e_experiment_config_immutability PASSED [ 67%]
+tests/test_lineage_and_reproducibility.py::test_acceptance_check_f_backfill_script_marks_approximate PASSED [ 68%]
+tests/test_lineage_and_reproducibility.py::test_acceptance_check_g_no_new_locked_test_calls PASSED [ 69%]
+tests/test_lineage_and_reproducibility.py::test_lineage_api_endpoint PASSED [ 70%]
+tests/test_model_training.py::test_trainer_pipeline_unfit_freshness PASSED [ 70%]
+tests/test_model_training.py::test_acceptance_check_a_and_b_regression_training_and_shared_selection PASSED [ 71%]
+tests/test_model_training.py::test_acceptance_check_c_zero_leakage PASSED [ 72%]
+tests/test_model_training.py::test_acceptance_check_d_single_algorithm_failure_isolation PASSED [ 73%]
+tests/test_model_training.py::test_acceptance_check_e_determinism_across_runs PASSED [ 73%]
+tests/test_model_training.py::test_acceptance_check_f_task_type_mismatch_422 PASSED [ 74%]
+tests/test_model_training.py::test_api_experiments_endpoints_and_rbac PASSED [ 75%]
+tests/test_no_role_name_authorization.py::test_static_scan_no_role_name_authorization PASSED [ 76%]
+tests/test_profiling.py::test_acceptance_a_adversarial_locked_test_isolation PASSED [ 76%]
+tests/test_profiling.py::test_acceptance_b_missing_split_guard PASSED    [ 77%]
+tests/test_profiling.py::test_acceptance_c_dqi_no_numeric_columns_renormalization PASSED [ 78%]
+tests/test_profiling.py::test_dqi_subscores_handcrafted_calculations PASSED [ 79%]
+tests/test_profiling.py::test_dqi_custom_weights_and_empty_edge_cases PASSED [ 79%]
+tests/test_profiling.py::test_acceptance_d_task_type_detection_synthetic_targets PASSED [ 80%]
+tests/test_profiling.py::test_diagnostics_five_field_recommendations PASSED [ 81%]
+tests/test_profiling.py::test_profiling_api_endpoints_full_lifecycle PASSED [ 82%]
+tests/test_profiling.py::test_api_dqi_renormalization_no_numeric_columns PASSED [ 82%]
+tests/test_profiling.py::test_profiling_state_guard_and_development_partition_storage PASSED [ 83%]
+tests/test_profiling.py::test_api_task_type_detection_ambiguity_blocks_auto_selection PASSED [ 84%]
+tests/test_profiling.py::test_recommendations_schema_and_computed_evidence_rules PASSED [ 85%]
+tests/test_state_machines.py::test_project_state_members PASSED          [ 85%]
+tests/test_state_machines.py::test_experiment_state_members PASSED       [ 86%]
+tests/test_state_machines.py::test_model_state_members PASSED            [ 87%]
+tests/test_state_machines.py::test_deployment_state_members PASSED       [ 88%]
+tests/test_state_machines.py::test_experiment_happy_path_progression PASSED [ 88%]
+tests/test_state_machines.py::test_experiment_training_failure_and_retry PASSED [ 89%]
+tests/test_state_machines.py::test_experiment_artifact_write_failure_and_retry PASSED [ 90%]
+tests/test_state_machines.py::test_experiment_registered_is_terminal PASSED [ 91%]
+tests/test_state_machines.py::test_model_happy_path_and_invalid_artifacts PASSED [ 91%]
+tests/test_state_machines.py::test_deployment_gate_and_lifecycle PASSED  [ 92%]
+tests/test_state_machines.py::test_cross_machine_transitions_prohibited PASSED [ 93%]
+tests/test_transformations.py::test_acceptance_check_a_unfit_attributes PASSED [ 94%]
+tests/test_transformations.py::test_acceptance_check_b_repeated_calls_isolation PASSED [ 94%]
+tests/test_transformations.py::test_acceptance_check_c_median_imputation_removes_nulls PASSED [ 95%]
+tests/test_transformations.py::test_acceptance_check_d_locked_test_isolation_row_index_diff PASSED [ 96%]
+tests/test_transformations.py::test_acceptance_check_e_structural_mismatch_returns_422 PASSED [ 97%]
+tests/test_transformations.py::test_acceptance_check_f_preview_never_persists_learned_state PASSED [ 97%]
+tests/test_transformations.py::test_get_transformations_endpoint_defaults PASSED [ 98%]
+tests/test_transformations.py::test_pipeline_stage_updated_to_transformed PASSED [ 99%]
+tests/test_transformations.py::test_outlier_capper_transformer PASSED    [100%]
+
+============================== warnings summary ===============================
+tests/test_api.py: 2 warnings
+tests/test_dataset_split.py: 18 warnings
+tests/test_day11_dashboard_and_monitoring.py: 1 warning
+tests/test_day1_storage_and_upload.py: 2 warnings
+tests/test_day2_structural_validation_and_row_uid.py: 5 warnings
+tests/test_day3_outer_split_and_content_hash.py: 16 warnings
+tests/test_day4_leakage_and_reordering.py: 3 warnings
+tests/test_feature_selection.py: 4 warnings
+tests/test_model_training.py: 5 warnings
+tests/test_profiling.py: 23 warnings
+tests/test_transformations.py: 16 warnings
+  D:\Python\Data sets by campusx\Mangesh\backend\app\services\dataset_service.py:99: UserWarning: Could not infer format, so each element will be parsed individually, falling back to `dateutil`. To ensure parsing is consistent and as-expected, please specify a format.
+    converted = pd.to_datetime(sample, errors="raise")
+
+tests/test_day11_dashboard_and_monitoring.py: 4 warnings
+tests/test_day12_audits.py: 2 warnings
+tests/test_day4_leakage_and_reordering.py: 8 warnings
+tests/test_profiling.py: 53 warnings
+  D:\Python\Data sets by campusx\Mangesh\backend\app\services\data_profiling_service.py:84: UserWarning: Could not infer format, so each element will be parsed individually, falling back to `dateutil`. To ensure parsing is consistent and as-expected, please specify a format.
+    pd.to_datetime(sample, errors="raise")
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+================ 134 passed, 162 warnings in 206.71s (0:03:26) ================

@@ -108,12 +108,12 @@ class DiagnosticsService:
 
         # 4. Check Outlier Prevalence
         outlier_score = sub_scores.get("outlier_prevalence")
-        if outlier_score is not None and outlier_score < 95.0:
+        if outlier_score is not None and outlier_score < 100.0:
             for col_name, stats in column_stats.items():
                 if stats.get("type") == "numeric":
                     outlier_cnt = stats.get("outlier_count", 0)
                     outlier_pct = stats.get("outlier_pct", 0.0)
-                    if outlier_pct > 3.0:
+                    if outlier_cnt > 0:
                         q25 = stats.get("q25")
                         q75 = stats.get("q75")
                         recommendations_to_add.append(

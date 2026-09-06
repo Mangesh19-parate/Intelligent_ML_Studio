@@ -7,6 +7,7 @@ import { Dashboard } from './pages/Dashboard';
 import { ProjectDetail } from './pages/ProjectDetail';
 import { DeploymentMonitoring } from './pages/DeploymentMonitoring';
 import DataStage from './pages/DataStage';
+import { DataAnalysisStage } from './pages/DataAnalysisStage';
 import {
   AnalysisStage,
   TransformationStage,
@@ -96,7 +97,7 @@ export default function App() {
             path="/data-analysis"
             element={
               <ProtectedRoute>
-                <AnalysisStage />
+                <DataAnalysisStage />
               </ProtectedRoute>
             }
           />

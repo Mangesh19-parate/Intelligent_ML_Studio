@@ -252,8 +252,11 @@ class DataProfilingService:
         }
 
     def compute_duplicate_count(self, df: pd.DataFrame) -> int:
-        """Computes exact duplicate row count across all columns."""
-        return int(df.duplicated().sum())
+        """Computes exact duplicate row count across all feature columns (excluding row_uid)."""
+        feature_cols = [c for c in df.columns if c != "row_uid"]
+        if not feature_cols:
+            return 0
+        return int(df.duplicated(subset=feature_cols).sum())
 
     def compute_data_quality_index(self, df: pd.DataFrame, custom_weights: dict | None = None) -> dict:
         """

@@ -1,5 +1,6 @@
 """
-Config package initializing core configurations and the frozen architecture contract.
+Config package initializing core configurations, frozen architecture contract,
+and decoupled entity state machines.
 """
 
 from .contract import (
@@ -13,6 +14,7 @@ from .contract import (
     PAGINATION_DEFAULTS,
     HTTP_STATUS_CONVENTIONS,
     METRICS,
+    PRIMARY_METRIC_DEFAULTS,
     ARTIFACT_NAMING_PATTERNS,
     STORAGE_DIRECTORIES,
     REPRODUCIBILITY_TOLERANCE,
@@ -31,6 +33,21 @@ from .contract import (
     CursorPaginationParams,
 )
 
+from .state_machines import (
+    ProjectState,
+    PROJECT_VALID_TRANSITIONS,
+    ExperimentState,
+    EXPERIMENT_VALID_TRANSITIONS,
+    ModelState,
+    MODEL_VALID_TRANSITIONS,
+    DeploymentState,
+    DEPLOYMENT_VALID_TRANSITIONS,
+    InvalidStateTransitionError,
+    can_transition,
+    validate_transition,
+    get_valid_transitions,
+)
+
 __all__ = [
     "ALGORITHM_SET",
     "FEATURE_SELECTION_DEFAULTS",
@@ -42,6 +59,7 @@ __all__ = [
     "PAGINATION_DEFAULTS",
     "HTTP_STATUS_CONVENTIONS",
     "METRICS",
+    "PRIMARY_METRIC_DEFAULTS",
     "ARTIFACT_NAMING_PATTERNS",
     "STORAGE_DIRECTORIES",
     "REPRODUCIBILITY_TOLERANCE",
@@ -58,4 +76,17 @@ __all__ = [
     "ErrorResponse",
     "CursorPaginationResponse",
     "CursorPaginationParams",
+    # State Machines
+    "ProjectState",
+    "PROJECT_VALID_TRANSITIONS",
+    "ExperimentState",
+    "EXPERIMENT_VALID_TRANSITIONS",
+    "ModelState",
+    "MODEL_VALID_TRANSITIONS",
+    "DeploymentState",
+    "DEPLOYMENT_VALID_TRANSITIONS",
+    "InvalidStateTransitionError",
+    "can_transition",
+    "validate_transition",
+    "get_valid_transitions",
 ]

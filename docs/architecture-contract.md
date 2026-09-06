@@ -205,3 +205,116 @@ Numerical floating-point non-determinism across platforms and library micro-vers
 9. `numpy_version`: NumPy package version.
 10. `pandas_version`: Pandas package version.
 11. `model_library_versions`: JSONB map of all associated ML dependency versions.
+
+---
+
+## 10. Entity State Machines (§2, §4)
+
+The system enforces four completely independent, non-overlapping entity state machines across distinct database tables. Status tracking is strictly decoupled—there is never a single shared status column.
+
+```mermaid
+classDiagram
+    class ProjectState {
+        DATA
+        SPLIT
+        PROFILED
+        TRANSFORMED
+        FEATURE_SELECTED
+        TRAINING
+        TRAINED
+        EVALUATED
+        GATE_PASSED
+        DEPLOYED
+        ARCHIVED
+    }
+    class ExperimentState {
+        CREATED
+        CONFIGURED
+        TRAINING
+        EVALUATED
+        TEST_CONSUMED
+        REGISTERED
+        TRAINING_FAILED
+        ARTIFACT_WRITE_FAILED
+    }
+    class ModelState {
+        TRAINED
+        ARTIFACT_VERIFIED
+        DEPLOYABLE
+        ARTIFACT_INVALID
+    }
+    class DeploymentState {
+        CREATED
+        GATE_PENDING
+        GATE_PASSED
+        GATE_BLOCKED
+        APPROVED
+        DEPLOYED
+        PAUSED
+        RETIRED
+    }
+```
+
+### 10.1 Project State Machine (`projects.pipeline_stage`)
+Governs the macro-level progression of an end-to-end workbench workspace:
+
+$$\text{DATA} \rightarrow \text{SPLIT} \rightarrow \text{PROFILED} \rightarrow \text{TRANSFORMED} \rightarrow \text{FEATURE\_SELECTED} \rightarrow \text{TRAINING} \rightarrow \text{TRAINED} \rightarrow \text{EVALUATED} \rightarrow \text{GATE\_PASSED} \rightarrow \text{DEPLOYED}$$
+*(Any stage can transition to `ARCHIVED`; `ARCHIVED` can reactivate to `DATA`).*
+
+### 10.2 Experiment State Machine (`experiments.status`)
+Governs the execution lifecycle, Locked Test consumption, and registry promotion of an experiment run:
+
+```mermaid
+stateDiagram-v2
+    [*] --> CREATED
+    CREATED --> CONFIGURED
+    CONFIGURED --> TRAINING
+    TRAINING --> EVALUATED
+    TRAINING --> TRAINING_FAILED
+    TRAINING_FAILED --> TRAINING: retry
+    TRAINING_FAILED --> CONFIGURED: reconfigure
+    EVALUATED --> TEST_CONSUMED
+    EVALUATED --> ARTIFACT_WRITE_FAILED
+    TEST_CONSUMED --> REGISTERED
+    TEST_CONSUMED --> ARTIFACT_WRITE_FAILED
+    ARTIFACT_WRITE_FAILED --> EVALUATED: retry
+    ARTIFACT_WRITE_FAILED --> TEST_CONSUMED: retry
+    ARTIFACT_WRITE_FAILED --> REGISTERED: retry
+    REGISTERED --> [*]
+```
+
+### 10.3 Model State Machine (`trained_models.status`)
+Governs binary artifact verification against SHA-256 checksums and deployment eligibility:
+
+```mermaid
+stateDiagram-v2
+    [*] --> TRAINED
+    TRAINED --> ARTIFACT_VERIFIED
+    TRAINED --> ARTIFACT_INVALID
+    ARTIFACT_VERIFIED --> DEPLOYABLE
+    ARTIFACT_VERIFIED --> ARTIFACT_INVALID
+    ARTIFACT_INVALID --> TRAINED: re-package / retry
+    DEPLOYABLE --> [*]
+```
+
+### 10.4 Deployment State Machine (`deployments.status`)
+Governs real-time prediction serving endpoints, multi-condition gate evaluation, stakeholder approvals, and decommissioning:
+
+```mermaid
+stateDiagram-v2
+    [*] --> CREATED
+    CREATED --> GATE_PENDING
+    GATE_PENDING --> GATE_PASSED
+    GATE_PENDING --> GATE_BLOCKED
+    GATE_BLOCKED --> GATE_PENDING: retry gate check
+    GATE_BLOCKED --> RETIRED: reject
+    GATE_PASSED --> APPROVED
+    GATE_PASSED --> GATE_BLOCKED: criteria regressed
+    APPROVED --> DEPLOYED
+    APPROVED --> RETIRED
+    DEPLOYED --> PAUSED
+    DEPLOYED --> RETIRED
+    PAUSED --> DEPLOYED: resume
+    PAUSED --> RETIRED: decommission
+    RETIRED --> [*]
+```

@@ -6,8 +6,8 @@ import { Login } from './pages/Login';
 import { Dashboard } from './pages/Dashboard';
 import { ProjectDetail } from './pages/ProjectDetail';
 import { DeploymentMonitoring } from './pages/DeploymentMonitoring';
+import DataStage from './pages/DataStage';
 import {
-  DataStage,
   AnalysisStage,
   TransformationStage,
   FeatureEngineeringStage,

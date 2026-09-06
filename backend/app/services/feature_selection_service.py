@@ -535,19 +535,27 @@ class FeatureSelectionService:
                     }
 
                 # Technique D: Permutation Importance
-                try:
-                    perm_scores = self.compute_permutation_scores(X_train_trans, y_fit, task_type, seed=seed + fold_idx)
+                n_eval_cells = X_train_trans.shape[0] * X_train_trans.shape[1]
+                if n_eval_cells > 500_000 or X_train_trans.shape[1] > 100:
                     technique_results["Permutation"] = {
-                        "status": "APPLIED",
-                        "raw_scores": perm_scores,
-                        "status_reason": None,
-                    }
-                except Exception as e:
-                    technique_results["Permutation"] = {
-                        "status": "FAILED",
+                        "status": "SKIPPED",
                         "raw_scores": None,
-                        "status_reason": f"Permutation importance failed: {str(e)}",
+                        "status_reason": f"Permutation Importance blocked: dataset size ({n_eval_cells:,} evaluation cells, {X_train_trans.shape[1]} features) exceeds the 500,000 evaluation cells policy cap computation budget.",
                     }
+                else:
+                    try:
+                        perm_scores = self.compute_permutation_scores(X_train_trans, y_fit, task_type, seed=seed + fold_idx)
+                        technique_results["Permutation"] = {
+                            "status": "APPLIED",
+                            "raw_scores": perm_scores,
+                            "status_reason": None,
+                        }
+                    except Exception as e:
+                        technique_results["Permutation"] = {
+                            "status": "FAILED",
+                            "raw_scores": None,
+                            "status_reason": f"Permutation importance failed: {str(e)}",
+                        }
 
                 # Aggregate fold ranks according to SRS §2.7
                 technique_scores_payload, fold_ensemble = self.aggregate_technique_scores_for_fold(

@@ -166,16 +166,39 @@ export const TransformationsTable = ({ projectId, isTargetColumn, onTransformati
           </button>
         </div>
 
-        {/* Architectural Guarantee Box */}
-        <div className="p-3.5 rounded-xl bg-indigo-500/5 border border-indigo-500/15 flex items-start space-x-3 text-xs text-slate-300">
-          <ShieldCheck className="w-4 h-4 text-indigo-400 shrink-0 mt-0.5" />
-          <div className="space-y-1">
-            <p className="font-semibold text-white">
-              Leakage-Controlled Architectural Guarantee (SRS §2.6 / §4.2):
-            </p>
-            <p className="text-slate-400 text-[11px] leading-relaxed">
-              No transformer is fit on the entire Development partition. Strategies are stored as declared recipes in <code className="text-indigo-300 font-mono">transformation_configs</code>. The pipeline is instantiated and fit on each training CV fold independently during model training.
-            </p>
+        {/* Architectural Guarantee & Policy Cap Box */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div className="md:col-span-2 p-3.5 rounded-xl bg-indigo-500/5 border border-indigo-500/15 flex items-start space-x-3 text-xs text-slate-300">
+            <ShieldCheck className="w-4 h-4 text-indigo-400 shrink-0 mt-0.5" />
+            <div className="space-y-1">
+              <p className="font-semibold text-white">
+                Leakage-Controlled Architectural Guarantee (SRS §2.6 / §4.2):
+              </p>
+              <p className="text-slate-400 text-[11px] leading-relaxed">
+                No transformer is fit on the entire Development partition. Strategies are stored as declared recipes in <code className="text-indigo-300 font-mono">transformation_configs</code>. The pipeline is instantiated and fit on each training CV fold independently during model training.
+              </p>
+            </div>
+          </div>
+
+          <div className="p-3.5 rounded-xl bg-slate-950/80 border border-slate-800 flex flex-col justify-between text-xs">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-semibold text-slate-300">Feature Dimension Policy Cap</span>
+              <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                Max 250
+              </span>
+            </div>
+            <div className="mt-2 space-y-1">
+              <div className="flex justify-between text-[10px] text-slate-400">
+                <span>Configured Columns</span>
+                <span className="font-mono text-white">{configs.length} / 250</span>
+              </div>
+              <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                <div
+                  className="bg-indigo-500 h-full rounded-full transition-all duration-300"
+                  style={{ width: `${Math.min(100, (configs.length / 250) * 100)}%` }}
+                />
+              </div>
+            </div>
           </div>
         </div>
 

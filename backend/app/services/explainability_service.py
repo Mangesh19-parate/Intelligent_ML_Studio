@@ -249,6 +249,13 @@ class ExplainabilityService:
             seed=42,
         )
 
+        # 3b. Size Guardrail Check (Day 5 Policy Cap: 250 features)
+        if X_background.shape[1] > 250:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"SHAP Explainability blocked: feature dimension ({X_background.shape[1]} features) exceeds the maximum policy cap of 250 features (risk of memory budget breach)."
+            )
+
         # 4. Instantiate explainer
         explainer, explainer_type = self._select_explainer(
             algorithm_name=model.algorithm_name,

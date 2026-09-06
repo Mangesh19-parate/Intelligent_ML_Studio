@@ -219,12 +219,26 @@ class TransformationService:
         self._update_pipeline_stage_if_needed(project)
         return config
 
+    def _check_feature_dimension_guardrail(
+        self, dataset_id: UUID | str, column_name: str, encoding_strategy: str | None
+    ) -> None:
+        if encoding_strategy == "one_hot":
+            dev_df = self.split_service.get_development_data(dataset_id)
+            if column_name in dev_df.columns:
+                n_unique = int(dev_df[column_name].nunique(dropna=True))
+                if n_unique > 250:
+                    raise HTTPException(
+                        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                        detail=f"Encoding strategy 'one_hot' on column '{column_name}' with {n_unique} unique categories exceeds the maximum encoded feature policy cap of 250 features. Please use 'ordinal' encoding or prune high-cardinality categories."
+                    )
+
     def set_encoding_strategy(
         self, project_id: UUID | str, column_name: str, strategy: str
     ) -> TransformationConfig:
         project, latest_dataset = self._get_project_and_latest_dataset(project_id)
         col = self._get_column_metadata(latest_dataset.id, column_name)
         self.validate_strategy_for_dtype(col.data_type, encoding_strategy=strategy)
+        self._check_feature_dimension_guardrail(latest_dataset.id, column_name, strategy)
 
         config = self.trans_repo.upsert_config(
             project.id, column_name, {"encoding_strategy": strategy}
@@ -272,6 +286,10 @@ class TransformationService:
             scaling_strategy=payload.scaling_strategy,
             outlier_strategy=payload.outlier_strategy,
         )
+        if payload.encoding_strategy:
+            self._check_feature_dimension_guardrail(
+                latest_dataset.id, column_name, payload.encoding_strategy
+            )
 
         update_dict = {
             k: v
@@ -392,14 +410,19 @@ class TransformationService:
         return ColumnTransformer(transformers=transformers, remainder="passthrough")
 
     def preview_transformation(
-        self, project_id: UUID | str, column_name: str, sample_size: int = 50
+        self,
+        project_id: UUID | str,
+        column_name: str,
+        sample_size: int = 200,
+        preview_seed: int = 42,
     ) -> dict:
         """
         Temporary UI preview for transformation feedback.
         
-        ARCHITECTURAL INVARIANT (SRS §2.6):
+        ARCHITECTURAL INVARIANT (SRS §2.6, §4.2):
         - Pulls data EXCLUSIVELY via `DatasetSplitService.get_development_data()`.
-        - Fits and transforms ONLY this temporary preview slice.
+        - Takes a deterministic sample of Development partition rows (default 200 rows with fixed preview_seed).
+        - Structurally isolated: Fits and transforms ONLY this temporary preview slice.
         - DISCARDS the fitted state immediately — nothing is persisted in the database
           or stored in artifacts.
         """
@@ -415,8 +438,11 @@ class TransformationService:
                 detail=f"Column '{column_name}' does not exist in Development partition."
             )
 
-        # Slice temporary preview sample
-        sample_df = dev_df[[column_name]].head(sample_size).copy()
+        # Slice deterministic temporary preview sample
+        if len(dev_df) > sample_size:
+            sample_df = dev_df[[column_name]].sample(n=sample_size, random_state=preview_seed).copy()
+        else:
+            sample_df = dev_df[[column_name]].copy()
         raw_values = sample_df[column_name].tolist()
 
         # Build single-column pipeline
@@ -466,6 +492,7 @@ class TransformationService:
         return {
             "column": column_name,
             "sample_size": len(raw_values),
+            "preview_seed": preview_seed,
             "data_type": col_meta.data_type,
             "applied_strategies": {
                 "missing_value_strategy": cfg.missing_value_strategy if cfg else "none",

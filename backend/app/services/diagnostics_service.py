@@ -61,7 +61,8 @@ class DiagnosticsService:
                         risk_str = "Median imputation may attenuate feature variance if missingness is high."
                         conf_str = "HIGH" if missing_pct > 20 else "MEDIUM"
                     else:
-                        evidence_str = f"Distribution is approximately symmetric (skewness={skew:.2f if skew is not None else 0.0}) across {total_rows} development rows."
+                        skew_val = skew if skew is not None else 0.0
+                        evidence_str = f"Distribution is approximately symmetric (skewness={skew_val:.2f}) across {total_rows} development rows."
                         action_str = f"Apply mean or KNN imputation for `{col_name}` during Day 4 transformation."
                         risk_str = "Mean imputation reduces variance and underestimates uncertainty."
                         conf_str = "HIGH" if missing_pct > 20 else "MEDIUM"

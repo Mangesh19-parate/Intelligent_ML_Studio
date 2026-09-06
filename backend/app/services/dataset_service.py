@@ -164,6 +164,29 @@ class DatasetService:
         user_columns = [c for c in df.columns if c != "row_uid"]
         column_count = len(user_columns)
 
+        # Size Guardrail Check (Day 5/6 Policy Caps)
+        MAX_UPLOAD_SIZE_BYTES = 50 * 1024 * 1024  # 50 MB
+        MAX_UPLOAD_ROWS = 100_000
+        MAX_UPLOAD_COLS = 100
+
+        if len(content) > MAX_UPLOAD_SIZE_BYTES:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"Upload size ({len(content)/(1024*1024):.1f} MB) exceeds maximum allowed file size policy cap of 50 MB."
+            )
+
+        if row_count > MAX_UPLOAD_ROWS:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"Dataset row count ({row_count:,} rows) exceeds maximum allowed upload policy cap of {MAX_UPLOAD_ROWS:,} rows."
+            )
+
+        if column_count > MAX_UPLOAD_COLS:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"Dataset column count ({column_count} columns) exceeds maximum allowed upload policy cap of {MAX_UPLOAD_COLS} columns."
+            )
+
         # 3. Determine next version number for project
         next_version = self.dataset_repo.get_next_version_number(project.id)
 

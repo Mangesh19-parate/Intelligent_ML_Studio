@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 from uuid import UUID
 from fastapi import status
+from sklearn.pipeline import Pipeline
 from sklearn.utils.validation import check_is_fitted
 from sklearn.exceptions import NotFittedError
 
@@ -408,3 +409,88 @@ def test_outlier_capper_transformer():
     res_p = capper_p.transform(data)
     assert res_p[0, 0] > -100.0
     assert res_p[-1, 0] < 100.0
+
+
+def test_day2_preview_contract_deterministic_and_isolated(client, setup_project_with_split):
+    """
+    Day 2 Preview Contract:
+    1. Development-only data used.
+    2. Deterministic 200-row sample with fixed preview_seed.
+    3. Structural isolation from build_pipeline().
+    """
+    project_id = setup_project_with_split["project_id"]
+    headers = setup_project_with_split["headers"]
+
+    # Configure strategy
+    client.put(
+        f"/api/v1/projects/{project_id}/transformations/age",
+        json={"missing_value_strategy": "median", "scaling_strategy": "standard"},
+        headers=headers,
+    )
+
+    # Call preview with default 200 sample size and preview_seed=42
+    resp1 = client.post(
+        f"/api/v1/projects/{project_id}/transformations/preview",
+        json={"column": "age", "sample_size": 200, "preview_seed": 42},
+        headers=headers,
+    )
+    assert resp1.status_code == 200
+    data1 = resp1.json()
+    assert data1["preview_seed"] == 42
+    assert len(data1["before_values"]) > 0
+
+    # Call preview again with same parameters -> must return identical values in identical order
+    resp2 = client.post(
+        f"/api/v1/projects/{project_id}/transformations/preview",
+        json={"column": "age", "sample_size": 200, "preview_seed": 42},
+        headers=headers,
+    )
+    assert resp2.status_code == 200
+    data2 = resp2.json()
+    assert data1["before_values"] == data2["before_values"]
+    assert data1["after_values"] == data2["after_values"]
+
+
+def test_transformer_fit_scope(db_session, setup_project_with_split):
+    """
+    Day 3: Pipeline skeleton + fit-scope test.
+    Confirms construction of the ColumnTransformer and nested Pipeline steps
+    does not implicitly fit any underlying transformers (imputers, scalers, encoders, cappers).
+    """
+    project_id = setup_project_with_split["project_id"]
+    trans_service = TransformationService(db_session)
+
+    # Set up various strategies across columns
+    trans_service.set_missing_value_strategy(project_id, "age", "mean")
+    trans_service.set_outlier_strategy(project_id, "age", "zscore")
+    trans_service.set_scaling_strategy(project_id, "age", "standard")
+
+    trans_service.set_missing_value_strategy(project_id, "city", "mode")
+    trans_service.set_encoding_strategy(project_id, "city", "one_hot")
+
+    trans_service.set_scaling_strategy(project_id, "income", "robust")
+
+    # Build pipeline skeleton
+    col_transformer = trans_service.build_pipeline(project_id)
+
+    # Assert ColumnTransformer is unfit
+    assert not hasattr(col_transformer, "transformers_"), "ColumnTransformer must not have 'transformers_' attribute"
+    assert not hasattr(col_transformer, "n_features_in_"), "ColumnTransformer must not have 'n_features_in_' attribute"
+
+    # Traverse each column pipeline skeleton and verify every step is unfit
+    for trans_name, pipeline_step, cols in col_transformer.transformers:
+        assert isinstance(pipeline_step, Pipeline), f"Expected Pipeline for {trans_name}, got {type(pipeline_step)}"
+        for step_name, step_estimator in pipeline_step.steps:
+            # Common scikit-learn fitted attributes
+            fitted_attrs = [
+                "statistics_", "mean_", "var_", "scale_", "min_", "data_min_", "data_max_",
+                "categories_", "n_features_in_", "feature_names_in_", "classes_",
+                "lower_bounds_", "upper_bounds_", "center_"
+            ]
+            for attr in fitted_attrs:
+                assert not hasattr(step_estimator, attr), (
+                    f"Transformer step '{step_name}' ({step_estimator.__class__.__name__}) in {trans_name} "
+                    f"has fitted attribute '{attr}' upon construction!"
+                )
+
+

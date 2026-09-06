@@ -41,11 +41,13 @@ class TransformationConfigResponse(BaseModel):
 
 class TransformationPreviewRequest(BaseModel):
     column: str = Field(..., description="Name of column to preview transformation for")
-    sample_size: int = Field(default=50, ge=5, le=500, description="Sample size of Development rows to preview")
+    sample_size: int = Field(default=200, ge=5, le=1000, description="Sample size of Development rows to preview")
+    preview_seed: int = Field(default=42, description="Random seed for deterministic sample extraction")
 
 class TransformationPreviewResponse(BaseModel):
     column: str
     sample_size: int
+    preview_seed: int = 42
     data_type: str
     applied_strategies: dict
     before_values: list

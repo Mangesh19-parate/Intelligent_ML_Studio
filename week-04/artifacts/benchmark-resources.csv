@@ -1,0 +1,10 @@
+dataset_name,dataset_type,n_rows,raw_features,encoded_feature_count,algorithm,actual_cv_time_s,peak_ram_mb,artifact_size_mb,shap_memory_mb,shap_time_s,timestamp
+Synthetic Small,SYNTHETIC,500,10,19,LinearRegression,0.3071,0.44,0.0026,0.0,0.0,2026-09-06T14:15:14.675070+00:00
+Synthetic Small,SYNTHETIC,500,10,19,Ridge,0.294,0.45,0.0024,0.0,0.0,2026-09-06T14:15:14.986142+00:00
+Synthetic Small,SYNTHETIC,500,10,19,RandomForestRegressor,1.5309,0.83,0.2504,1.15,0.1062,2026-09-06T14:15:16.734491+00:00
+Synthetic Medium,SYNTHETIC,5000,25,53,LinearRegression,1.7249,6.87,0.0039,0.0,0.0,2026-09-06T14:15:18.543797+00:00
+Synthetic Medium,SYNTHETIC,5000,25,53,Ridge,1.4914,6.81,0.0035,0.0,0.0,2026-09-06T14:15:20.081934+00:00
+Synthetic Medium,SYNTHETIC,5000,25,53,RandomForestRegressor,3.6554,6.87,2.3724,10.82,0.2118,2026-09-06T14:15:24.465405+00:00
+California Housing,REAL_STRESS,20640,8,8,LinearRegression,0.2168,8.25,0.002,0.0,0.0,2026-09-06T14:15:24.718885+00:00
+California Housing,REAL_STRESS,20640,8,8,Ridge,0.2352,8.13,0.002,0.0,0.0,2026-09-06T14:15:24.981745+00:00
+California Housing,REAL_STRESS,20640,8,8,RandomForestRegressor,3.07,17.18,7.9232,42.41,0.2345,2026-09-06T14:15:29.211937+00:00

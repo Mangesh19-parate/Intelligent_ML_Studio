@@ -1,0 +1,128 @@
+{
+  "timestamp": "2026-09-06T14:27:48.701037+00:00",
+  "dataset_id": "17570ef1-cc40-4a5a-a0c3-1780c4fea46f",
+  "content_hash": "7d0c3bf43b7d43fdffddd69163664c8f7bdb9fba97f03f0e84b98a3a3007a2ad",
+  "total_rows": 1000,
+  "development_rows": 800,
+  "locked_test_rows": 200,
+  "split_seed": 42,
+  "stratified": true,
+  "audit": {
+    "get_development_data_calls": 9,
+    "get_locked_test_data_calls": 0,
+    "accessed_rows_count": 800,
+    "accessed_test_rows_count": 0,
+    "preview_test_overlap_count": 0
+  },
+  "previews": {
+    "customer_age": {
+      "sample_size": 200,
+      "preview_seed": 42,
+      "before_sample_count": 200,
+      "after_sample_count": 200,
+      "sample_before_head": [
+        43.4,
+        36.6,
+        41.1
+      ],
+      "sample_after_head": [
+        0.4625804903134044,
+        -0.13827584757953593,
+        0.2593496701437336
+      ]
+    },
+    "account_balance": {
+      "sample_size": 200,
+      "preview_seed": 42,
+      "before_sample_count": 200,
+      "after_sample_count": 200,
+      "sample_before_head": [
+        2172.22,
+        5511.9,
+        1419.98
+      ],
+      "sample_after_head": [
+        -0.2748653643062724,
+        0.24880927087000249,
+        -0.39281948193580607
+      ]
+    },
+    "monthly_charges": {
+      "sample_size": 200,
+      "preview_seed": 42,
+      "before_sample_count": 200,
+      "after_sample_count": 200,
+      "sample_before_head": [
+        50.1,
+        80.67,
+        87.3
+      ],
+      "sample_after_head": [
+        0.3025733815842381,
+        0.6098713309207882,
+        0.6765178930438279
+      ]
+    },
+    "contract_type": {
+      "sample_size": 200,
+      "preview_seed": 42,
+      "before_sample_count": 200,
+      "after_sample_count": 200,
+      "sample_before_head": [
+        "one-year",
+        "one-year",
+        "two-year"
+      ],
+      "sample_after_head": [
+        [
+          0.0,
+          1.0,
+          0.0
+        ],
+        [
+          0.0,
+          1.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          1.0
+        ]
+      ]
+    },
+    "payment_method": {
+      "sample_size": 200,
+      "preview_seed": 42,
+      "before_sample_count": 200,
+      "after_sample_count": 200,
+      "sample_before_head": [
+        "bank_transfer",
+        "bank_transfer",
+        "mailed_check"
+      ],
+      "sample_after_head": [
+        [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ]
+    }
+  },
+  "pipeline_unfitted": true,
+  "all_invariants_passed": true
+}

@@ -57,4 +57,6 @@ def preview_transformation(
     db: Session = Depends(get_db),
 ):
     service = TransformationService(db)
-    return service.preview_transformation(id, payload.column, sample_size=payload.sample_size)
+    return service.preview_transformation(
+        id, payload.column, sample_size=payload.sample_size, preview_seed=payload.preview_seed
+    )

@@ -99,3 +99,18 @@ def protected_demo(
         "user_id": str(current_user.id),
         "email": current_user.email,
     }
+
+@router.get(
+    "/deploy-demo",
+    status_code=status.HTTP_200_OK,
+    summary="Protected demonstration route requiring DEPLOY permission"
+)
+def deploy_demo(
+    current_user: User = Depends(require_permission("DEPLOY"))
+):
+    return {
+        "status": "success",
+        "message": "Permission DEPLOY verified.",
+        "user_id": str(current_user.id),
+        "email": current_user.email,
+    }

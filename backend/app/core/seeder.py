@@ -33,6 +33,63 @@ DEFAULT_ROLE_PERMISSIONS: dict[str, list[str]] = {
     "USER": ["READ"],
 }
 
+from app.models.user import User
+from app.models.user_permission_override import UserPermissionOverride
+from app.core.security import get_password_hash
+
+def seed_demo_accounts(db: Session) -> None:
+    """
+    Seeds the two non-admin demonstration accounts:
+    1. trainer@demo.com: role ML_ENGINEER (READ, EDIT_DATA, TRAIN, EXPORT) without DEPLOY
+    2. approver@demo.com: role ML_ENGINEER (same default bundle) + explicit DEPLOY permission override
+    Demonstrates the per-user permission override mechanism without ADMIN escalation.
+    """
+    engineer_role = db.query(Role).filter(Role.role_name == "ML_ENGINEER").first()
+    if not engineer_role:
+        return
+
+    # 1. trainer@demo.com
+    trainer = db.query(User).filter(User.email == "trainer@demo.com").first()
+    if not trainer:
+        trainer = User(
+            full_name="Demo Trainer",
+            email="trainer@demo.com",
+            password_hash=get_password_hash("DemoPassword123!"),
+            role_id=engineer_role.id,
+            is_active=True,
+        )
+        db.add(trainer)
+        db.flush()
+
+    # 2. approver@demo.com
+    approver = db.query(User).filter(User.email == "approver@demo.com").first()
+    if not approver:
+        approver = User(
+            full_name="Demo Approver",
+            email="approver@demo.com",
+            password_hash=get_password_hash("DemoPassword123!"),
+            role_id=engineer_role.id,
+            is_active=True,
+        )
+        db.add(approver)
+        db.flush()
+
+    # Explicit DEPLOY override for approver
+    deploy_override = db.query(UserPermissionOverride).filter(
+        UserPermissionOverride.user_id == approver.id,
+        UserPermissionOverride.permission_key == "DEPLOY"
+    ).first()
+    if not deploy_override:
+        deploy_override = UserPermissionOverride(
+            user_id=approver.id,
+            permission_key="DEPLOY",
+            is_granted=True,
+        )
+        db.add(deploy_override)
+
+    db.commit()
+    logger.info("Demo accounts (trainer@demo.com and approver@demo.com) successfully seeded.")
+
 def seed_rbac_data(db: Session) -> None:
     """
     Seeds canonical roles, permissions, and role-permission mappings.
@@ -72,3 +129,6 @@ def seed_rbac_data(db: Session) -> None:
 
     db.commit()
     logger.info("RBAC roles, permissions, and mappings successfully seeded.")
+
+    # 4. Seed Demo Accounts
+    seed_demo_accounts(db)

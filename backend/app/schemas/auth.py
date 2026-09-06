@@ -31,6 +31,11 @@ class RegisterRequest(BaseModel):
     password: str = Field(..., min_length=6)
     role_name: str | None = Field(default="ML_ENGINEER")
 
+class SignupRequest(BaseModel):
+    full_name: str = Field(..., min_length=2, max_length=150)
+    email: str = Field(..., min_length=3, max_length=150)
+    password: str = Field(..., min_length=6)
+
 class LoginRequest(BaseModel):
     email: str
     password: str

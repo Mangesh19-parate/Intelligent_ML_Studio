@@ -1,10 +1,11 @@
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Request, status
 from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.dependencies import get_current_user
 from app.models.user import User
 from app.schemas.auth import (
     RegisterRequest,
+    SignupRequest,
     LoginRequest,
     TokenResponse,
     RefreshTokenRequest,
@@ -13,6 +14,24 @@ from app.schemas.auth import (
 from app.services.auth_service import AuthService
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
+
+@router.post(
+    "/signup",
+    response_model=UserResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Sign up a new user (hardcodes role to USER, rejects any role key with 400)"
+)
+async def signup(
+    request: Request,
+    payload: SignupRequest,
+    db: Session = Depends(get_db)
+):
+    try:
+        raw_body = await request.json()
+    except Exception:
+        raw_body = {}
+    service = AuthService(db)
+    return service.signup_user(payload, raw_body=raw_body)
 
 @router.post(
     "/register",

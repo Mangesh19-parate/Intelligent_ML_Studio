@@ -12,6 +12,7 @@ CANONICAL_ROLES = [
     ("DATA_STEWARD", "Data steward with dataset management and editing permissions"),
     ("DEPLOYMENT_MANAGER", "Deployment manager with model deployment and export permissions"),
     ("VIEWER", "Read-only viewer with inspection permissions"),
+    ("USER", "Standard registered user with basic access"),
 ]
 
 CANONICAL_PERMISSIONS = [
@@ -29,6 +30,7 @@ DEFAULT_ROLE_PERMISSIONS: dict[str, list[str]] = {
     "DATA_STEWARD": ["READ", "EDIT_DATA"],
     "DEPLOYMENT_MANAGER": ["READ", "DEPLOY", "EXPORT"],
     "VIEWER": ["READ"],
+    "USER": ["READ"],
 }
 
 def seed_rbac_data(db: Session) -> None:

@@ -12,6 +12,7 @@ from app.models.user import User
 from app.repositories.user_repository import UserRepository
 from app.schemas.auth import (
     RegisterRequest,
+    SignupRequest,
     LoginRequest,
     TokenResponse,
     UserResponse,
@@ -45,6 +46,39 @@ class AuthService:
             created_at=user.created_at,
             updated_at=user.updated_at,
         )
+
+    def signup_user(self, payload: SignupRequest, raw_body: dict | None = None) -> UserResponse:
+        if raw_body and ("role" in raw_body or "role_name" in raw_body):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Specifying a role during signup is forbidden."
+            )
+
+        existing = self.user_repo.get_by_email(payload.email)
+        if existing:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="A user with this email address already exists."
+            )
+
+        role = self.user_repo.get_role_by_name("USER")
+        if not role:
+            role = self.user_repo.get_role_by_name("VIEWER")
+            if not role:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="Default role configuration is missing. Please initialize RBAC seed."
+                )
+
+        new_user = User(
+            full_name=payload.full_name.strip(),
+            email=payload.email.lower().strip(),
+            password_hash=get_password_hash(payload.password),
+            role_id=role.id,
+            is_active=True,
+        )
+        created_user = self.user_repo.create(new_user)
+        return self._build_user_response(created_user)
 
     def register_user(self, payload: RegisterRequest) -> UserResponse:
         existing = self.user_repo.get_by_email(payload.email)

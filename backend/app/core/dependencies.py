@@ -46,27 +46,35 @@ def get_current_user(
 def require_permission(permission_key: str) -> Callable[[User], User]:
     """
     Dependency factory that enforces permission-based access control.
-    Strictly permission-based (no hardcoded role names).
+    Strictly permission-based: computes effective permissions from the user's role
+    default bundle, overlaid with granular user_permission_overrides (grant / revoke).
     """
     def _permission_checker(
         current_user: User = Depends(get_current_user)
     ) -> User:
-        if not current_user.role or not current_user.role.permissions:
+        effective_permissions: set[str] = set()
+
+        # 1. Base permissions from role
+        if current_user.role and current_user.role.permissions:
+            effective_permissions.update(
+                p.permission_key for p in current_user.role.permissions
+            )
+
+        # 2. Granular per-user overrides (grants add, revokes remove)
+        if hasattr(current_user, "permission_overrides") and current_user.permission_overrides:
+            for override in current_user.permission_overrides:
+                if override.is_granted:
+                    effective_permissions.add(override.permission_key)
+                else:
+                    effective_permissions.discard(override.permission_key)
+
+        # 3. Check requested permission key
+        if permission_key not in effective_permissions:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=f"Access denied: Missing required permission '{permission_key}'"
             )
-        
-        user_permission_keys = {
-            p.permission_key for p in current_user.role.permissions
-        }
-        
-        if permission_key not in user_permission_keys:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Access denied: Requires '{permission_key}' permission"
-            )
-            
+
         return current_user
 
     return _permission_checker

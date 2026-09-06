@@ -17,6 +17,12 @@ class User(Base, TimestampMixin):
     role = relationship("Role", back_populates="users", lazy="joined")
     projects = relationship("Project", back_populates="owner", cascade="all, delete-orphan")
     datasets = relationship("Dataset", back_populates="uploader")
+    permission_overrides = relationship(
+        "UserPermissionOverride",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        lazy="joined"
+    )
 
     def __repr__(self) -> str:
         return f"<User {self.email}>"

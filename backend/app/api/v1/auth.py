@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, Request, status
 from sqlalchemy.orm import Session
 from app.core.database import get_db
-from app.core.dependencies import get_current_user
+from app.core.dependencies import get_current_user, require_permission
 from app.models.user import User
 from app.schemas.auth import (
     RegisterRequest,
@@ -84,3 +84,18 @@ def get_me(
 ):
     service = AuthService(db)
     return service._build_user_response(current_user)
+
+@router.get(
+    "/protected-demo",
+    status_code=status.HTTP_200_OK,
+    summary="Protected demonstration route requiring TRAIN permission"
+)
+def protected_demo(
+    current_user: User = Depends(require_permission("TRAIN"))
+):
+    return {
+        "status": "success",
+        "message": "Permission TRAIN verified.",
+        "user_id": str(current_user.id),
+        "email": current_user.email,
+    }

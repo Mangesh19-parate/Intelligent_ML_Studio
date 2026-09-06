@@ -395,9 +395,10 @@ class FeatureSelectionService:
                 detail=f"Target column '{project.target_column}' does not exist in dataset."
             )
 
-        # Separate target y and feature candidates X
+        # Separate target y and feature candidates X (excluding system identifier row_uid)
         y_raw = dev_df[project.target_column]
-        X_df = dev_df.drop(columns=[project.target_column])
+        drop_cols = [c for c in [project.target_column, "row_uid"] if c in dev_df.columns]
+        X_df = dev_df.drop(columns=drop_cols)
         candidate_cols = list(X_df.columns)
 
         if len(candidate_cols) == 0:

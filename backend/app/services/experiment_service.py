@@ -355,7 +355,8 @@ class ExperimentService:
                 )
 
             y_raw = dev_df[project.target_column]
-            X_df = dev_df.drop(columns=[project.target_column])
+            drop_cols = [c for c in [project.target_column, "row_uid"] if c in dev_df.columns]
+            X_df = dev_df.drop(columns=drop_cols)
             candidate_cols = list(X_df.columns)
 
             n_samples = len(dev_df)
@@ -895,7 +896,8 @@ class ExperimentService:
 
         target_col = project.target_column
         y_dev = dev_df[target_col].values
-        X_dev = dev_df.drop(columns=[target_col])
+        drop_cols = [c for c in [target_col, "row_uid"] if c in dev_df.columns]
+        X_dev = dev_df.drop(columns=drop_cols)
         candidate_cols = list(X_dev.columns)
 
         # Fresh Transformer on full Development data
@@ -1279,7 +1281,8 @@ class ExperimentService:
         dev_df = self.split_service.get_development_data(latest_dataset.id)
         target_col = project.target_column
         y_dev = dev_df[target_col].values
-        X_dev = dev_df.drop(columns=[target_col])
+        drop_cols = [c for c in [target_col, "row_uid"] if c in dev_df.columns]
+        X_dev = dev_df.drop(columns=drop_cols)
         candidate_cols = list(X_dev.columns)
 
         transformer = self.trans_service.build_pipeline(project.id)

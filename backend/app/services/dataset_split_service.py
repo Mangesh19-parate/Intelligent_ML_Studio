@@ -44,19 +44,32 @@ class DatasetSplitService:
 
         if suffix in [".csv", ".txt"]:
             try:
-                return pd.read_csv(stream)
+                df = pd.read_csv(stream)
             except Exception:
                 stream.seek(0)
-                return pd.read_csv(stream, sep=None, engine="python")
+                df = pd.read_csv(stream, sep=None, engine="python")
         elif suffix in [".xlsx", ".xls"]:
-            return pd.read_excel(stream)
+            df = pd.read_excel(stream)
         elif suffix == ".json":
-            return pd.read_json(stream)
+            df = pd.read_json(stream)
         else:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Unsupported file format '{suffix}' for dataset parsing."
             )
+
+        if "row_uid" not in df.columns:
+            import uuid as py_uuid
+            if dataset.content_hash:
+                namespace = py_uuid.NAMESPACE_DNS
+                df["row_uid"] = [
+                    str(py_uuid.uuid5(namespace, f"{dataset.content_hash}_row_{i}"))
+                    for i in range(len(df))
+                ]
+            else:
+                df["row_uid"] = [str(py_uuid.uuid4()) for _ in range(len(df))]
+
+        return df
 
     def create_outer_split(
         self,
@@ -111,10 +124,16 @@ class DatasetSplitService:
             .first()
         )
 
-        row_indices = np.arange(total_rows)
+        df = self._load_full_dataframe(dataset)
+        total_rows = len(df)
+        if "row_uid" in df.columns:
+            row_items = df["row_uid"].to_numpy()
+        else:
+            row_items = np.arange(total_rows)
+
         test_size = locked_test_pct / 100.0
 
-        if target_column_record:
+        if target_column_record and target_column_record.column_name in df.columns:
             # Check structural metadata: non-numeric OR low unique count relative to rows
             is_categorical_type = target_column_record.data_type in ["CATEGORICAL", "MIXED"]
             is_low_cardinality = (
@@ -125,14 +144,13 @@ class DatasetSplitService:
             if is_categorical_type or is_low_cardinality:
                 # Load the target column to attempt stratified partition
                 try:
-                    df = self._load_full_dataframe(dataset)
                     target_series = df[target_column_record.column_name]
                     
                     # Stratification requires at least 2 samples per class
                     value_counts = target_series.value_counts(dropna=False)
                     if (value_counts >= 2).all() and len(value_counts) > 1:
                         dev_idx, test_idx = train_test_split(
-                            row_indices,
+                            row_items,
                             test_size=test_size,
                             random_state=effective_seed,
                             stratify=target_series
@@ -141,33 +159,33 @@ class DatasetSplitService:
                     else:
                         # Fallback to standard random split if class counts are insufficient
                         dev_idx, test_idx = train_test_split(
-                            row_indices,
+                            row_items,
                             test_size=test_size,
                             random_state=effective_seed
                         )
                 except Exception:
                     # In case of any stratification failure, fallback to plain random split
                     dev_idx, test_idx = train_test_split(
-                        row_indices,
+                        row_items,
                         test_size=test_size,
                         random_state=effective_seed
                     )
             else:
                 dev_idx, test_idx = train_test_split(
-                    row_indices,
+                    row_items,
                     test_size=test_size,
                     random_state=effective_seed
                 )
         else:
             dev_idx, test_idx = train_test_split(
-                row_indices,
+                row_items,
                 test_size=test_size,
                 random_state=effective_seed
             )
 
-        # 5. Persist partitions
-        dev_indices_list = sorted(dev_idx.tolist())
-        test_indices_list = sorted(test_idx.tolist())
+        # 5. Persist partitions (row_uid strings or positional indices)
+        dev_indices_list = dev_idx.tolist()
+        test_indices_list = test_idx.tolist()
         now = datetime.now(timezone.utc)
 
         dev_split = DatasetSplit(
@@ -256,7 +274,7 @@ class DatasetSplitService:
         THIS is the ONLY method any future service (profiling, transformation,
         feature engineering, training - Days 3 to 6) is allowed to call to get data.
         
-        Loads the dataset file, filters strictly to DEVELOPMENT row indices,
+        Loads the dataset file, filters strictly to DEVELOPMENT row identities,
         and returns a pandas DataFrame.
         """
         dataset = self.dataset_repo.get_by_id(dataset_id)
@@ -275,6 +293,8 @@ class DatasetSplitService:
 
         df = self._load_full_dataframe(dataset)
         dev_indices = dev_split.row_indices
+        if dev_indices and isinstance(dev_indices[0], str) and "row_uid" in df.columns:
+            return df[df["row_uid"].isin(dev_indices)].reset_index(drop=True)
         return df.iloc[dev_indices].reset_index(drop=True)
 
     def get_locked_test_data(self, dataset_id: UUID | str) -> pd.DataFrame:
@@ -300,6 +320,8 @@ class DatasetSplitService:
 
         df = self._load_full_dataframe(dataset)
         test_indices = test_split.row_indices
+        if test_indices and isinstance(test_indices[0], str) and "row_uid" in df.columns:
+            return df[df["row_uid"].isin(test_indices)].reset_index(drop=True)
         return df.iloc[test_indices].reset_index(drop=True)
 
     def get_development_preview(self, dataset_id: UUID | str, limit: int = 10) -> dict:

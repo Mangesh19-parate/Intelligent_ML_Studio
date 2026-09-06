@@ -103,8 +103,12 @@ def test_adversarial_locked_test_leakage_barrier(client, db_session):
     assert len(locked_indices) == 20
 
     # Parse full original CSV to know the exact record_ids in the locked test set
-    df_full = pd.read_csv(io.BytesIO(csv_bytes))
-    locked_record_ids = set(df_full.iloc[list(locked_indices)]["record_id"].tolist())
+    loaded_df = DatasetSplitService(db_session)._load_full_dataframe(test_split_db.dataset)
+    if "row_uid" in loaded_df.columns and isinstance(next(iter(locked_indices)), str):
+        locked_record_ids = set(loaded_df[loaded_df["row_uid"].isin(locked_indices)]["record_id"].tolist())
+    else:
+        df_full = pd.read_csv(io.BytesIO(csv_bytes))
+        locked_record_ids = set(df_full.iloc[list(locked_indices)]["record_id"].tolist())
 
     # 5. Call GET /split summary endpoint: verify no row-level leakage
     get_split_res = client.get(

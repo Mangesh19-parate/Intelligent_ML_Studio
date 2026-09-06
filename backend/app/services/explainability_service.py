@@ -186,8 +186,8 @@ class ExplainabilityService:
         selected_indices = artifact.get("selected_indices", [])
         selected_feature_names = artifact.get("selected_feature_names", [])
 
-        # Filter candidate columns
-        valid_cols = [col for col in feature_names_in if col in df_dev.columns]
+        # Filter candidate columns (strictly exclude system row_uid)
+        valid_cols = [col for col in feature_names_in if col in df_dev.columns and col != "row_uid"]
         df_dev_features = df_dev[valid_cols]
 
         # Draw deterministic seeded sample

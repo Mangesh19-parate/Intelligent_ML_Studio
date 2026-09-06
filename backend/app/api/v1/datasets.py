@@ -1,5 +1,5 @@
 from uuid import UUID
-from fastapi import APIRouter, Depends, UploadFile, File, status, HTTPException, Query
+from fastapi import APIRouter, Depends, UploadFile, File, Form, status, HTTPException, Query
 from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.dependencies import require_permission
@@ -18,21 +18,15 @@ from app.services.project_service import ProjectService
 
 router = APIRouter(tags=["Datasets"])
 
-@router.post(
-    "/projects/{id}/datasets",
-    response_model=DatasetDetailResponse,
-    status_code=status.HTTP_201_CREATED,
-    summary="Upload dataset and detect structural schema"
-)
-async def upload_dataset(
-    id: UUID,
-    file: UploadFile = File(...),
-    current_user: User = Depends(require_permission("EDIT_DATA")),
-    db: Session = Depends(get_db),
-):
+async def _process_dataset_upload(
+    project_id: UUID,
+    file: UploadFile,
+    current_user: User,
+    db: Session,
+) -> DatasetDetailResponse:
     # Verify project access
     project_service = ProjectService(db)
-    project = project_service.get_project_by_id(id, current_user)
+    project = project_service.get_project_by_id(project_id, current_user)
 
     # Read uploaded file content
     content = await file.read()
@@ -72,6 +66,34 @@ async def upload_dataset(
         created_at=dataset.created_at,
         columns=column_responses,
     )
+
+@router.post(
+    "/datasets/upload",
+    response_model=DatasetDetailResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Upload dataset via form multipart (Day 1 standard)"
+)
+async def upload_dataset_form(
+    project_id: UUID = Form(...),
+    file: UploadFile = File(...),
+    current_user: User = Depends(require_permission("EDIT_DATA")),
+    db: Session = Depends(get_db),
+):
+    return await _process_dataset_upload(project_id, file, current_user, db)
+
+@router.post(
+    "/projects/{id}/datasets",
+    response_model=DatasetDetailResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Upload dataset and detect structural schema"
+)
+async def upload_dataset(
+    id: UUID,
+    file: UploadFile = File(...),
+    current_user: User = Depends(require_permission("EDIT_DATA")),
+    db: Session = Depends(get_db),
+):
+    return await _process_dataset_upload(id, file, current_user, db)
 
 @router.get(
     "/projects/{id}/datasets",

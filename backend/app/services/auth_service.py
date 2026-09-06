@@ -26,7 +26,17 @@ class AuthService:
         self.user_repo = UserRepository(db)
 
     def _build_user_response(self, user: User) -> UserResponse:
-        permissions = [p.permission_key for p in user.role.permissions] if user.role and user.role.permissions else []
+        effective_perms = set()
+        if user.role and user.role.permissions:
+            effective_perms.update(p.permission_key for p in user.role.permissions)
+        if hasattr(user, "permission_overrides") and user.permission_overrides:
+            for override in user.permission_overrides:
+                if override.is_granted:
+                    effective_perms.add(override.permission_key)
+                else:
+                    effective_perms.discard(override.permission_key)
+
+        permissions = sorted(list(effective_perms))
         role_resp = RoleResponse(
             id=user.role.id,
             role_name=user.role.role_name,

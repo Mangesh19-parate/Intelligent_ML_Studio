@@ -21,25 +21,24 @@ depends_on: Union[str, Sequence[str], None] = None
 def upgrade() -> None:
     op.create_table(
         'explainability_summaries',
-        sa.Column('id', postgresql.UUID(as_uuid=True), primary_key=True, default=uuid.uuid4),
+        sa.Column('id', sa.Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4),
         sa.Column(
             'model_id',
-            postgresql.UUID(as_uuid=True),
+            sa.Uuid(as_uuid=True),
             sa.ForeignKey('trained_models.id', ondelete='CASCADE'),
             nullable=False,
             unique=True
         ),
-        sa.Column('shap_values', postgresql.JSONB(astext_type=sa.Text()), nullable=False),
+        sa.Column('shap_values', sa.JSON(), nullable=False),
         sa.Column('background_sample_size', sa.Integer(), nullable=False),
         sa.Column('explainer_type', sa.String(length=20), nullable=False),
         sa.Column('generated_at', sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.CheckConstraint(
+            "explainer_type IN ('TREE', 'LINEAR', 'KERNEL')",
+            name='chk_explainability_summary_explainer_type'
+        ),
     )
     op.create_index(op.f('ix_explainability_summaries_model_id'), 'explainability_summaries', ['model_id'], unique=True)
-    op.create_check_constraint(
-        'chk_explainability_summary_explainer_type',
-        'explainability_summaries',
-        "explainer_type IN ('TREE', 'LINEAR', 'KERNEL')"
-    )
 
 
 def downgrade() -> None:

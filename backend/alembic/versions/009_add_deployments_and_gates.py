@@ -35,10 +35,10 @@ def upgrade() -> None:
     if 'deployment_gates' not in tables:
         op.create_table(
             'deployment_gates',
-            sa.Column('id', postgresql.UUID(as_uuid=True), primary_key=True, default=uuid.uuid4),
+            sa.Column('id', sa.Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4),
             sa.Column(
                 'model_id',
-                postgresql.UUID(as_uuid=True),
+                sa.Uuid(as_uuid=True),
                 sa.ForeignKey('trained_models.id', ondelete='CASCADE'),
                 nullable=False,
                 index=True
@@ -61,10 +61,10 @@ def upgrade() -> None:
     if 'deployments' not in tables:
         op.create_table(
             'deployments',
-            sa.Column('id', postgresql.UUID(as_uuid=True), primary_key=True, default=uuid.uuid4),
+            sa.Column('id', sa.Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4),
             sa.Column(
                 'model_id',
-                postgresql.UUID(as_uuid=True),
+                sa.Uuid(as_uuid=True),
                 sa.ForeignKey('trained_models.id', ondelete='CASCADE'),
                 nullable=False,
                 index=True
@@ -73,7 +73,7 @@ def upgrade() -> None:
             sa.Column('status', sa.String(length=20), server_default='LIVE', nullable=False),
             sa.Column(
                 'deployed_by',
-                postgresql.UUID(as_uuid=True),
+                sa.Uuid(as_uuid=True),
                 sa.ForeignKey('users.id', ondelete='SET NULL'),
                 nullable=True
             ),
@@ -89,15 +89,15 @@ def upgrade() -> None:
     if 'prediction_logs' not in tables:
         op.create_table(
             'prediction_logs',
-            sa.Column('id', postgresql.UUID(as_uuid=True), primary_key=True, default=uuid.uuid4),
+            sa.Column('id', sa.Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4),
             sa.Column(
                 'deployment_id',
-                postgresql.UUID(as_uuid=True),
+                sa.Uuid(as_uuid=True),
                 sa.ForeignKey('deployments.id', ondelete='CASCADE'),
                 nullable=False,
                 index=True
             ),
-            sa.Column('request_id', postgresql.UUID(as_uuid=True), nullable=False, index=True),
+            sa.Column('request_id', sa.Uuid(as_uuid=True), nullable=False, index=True),
             sa.Column('schema_hash', sa.String(length=64), nullable=False),
             sa.Column('payload_mode', sa.String(length=20), server_default='HASHED', nullable=False),
             sa.Column('input_payload', sa.JSON(), nullable=True),

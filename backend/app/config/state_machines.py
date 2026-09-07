@@ -280,3 +280,110 @@ def validate_transition(
             target_state=target_state.value,
             allowed_states=[s.value for s in valid_targets],
         )
+
+
+# ============================================================================
+# 6. CROSS-ENTITY STATE LEGALITY (SRS v9 §2 / Day 2)
+# ============================================================================
+
+def _resolve_enum_state(state_input: Any, enum_cls: Type[Enum]) -> Enum:
+    """Helper to resolve string or Enum instance to target enum member."""
+    if isinstance(state_input, enum_cls):
+        return state_input
+    if isinstance(state_input, str):
+        val = state_input.upper().strip()
+        try:
+            return enum_cls(val)
+        except ValueError:
+            raise ValueError(f"'{state_input}' is not a valid {enum_cls.__name__} member.")
+    raise TypeError(f"Expected {enum_cls.__name__} or str, got {type(state_input)}")
+
+
+def check_deployment_approval_state_legality(
+    deployment_current_state: DeploymentState | str,
+    model_state: ModelState | str,
+    experiment_state: ExperimentState | str,
+) -> bool:
+    """
+    Checks the cross-entity STATE-LEGALITY for transitioning a Deployment to APPROVED.
+    
+    Cross-Entity Invariants (SRS v9 §2):
+    1. Deployment must be in a state capable of transitioning to APPROVED (i.e. GATE_PASSED).
+    2. Associated TrainedModel status must be DEPLOYABLE.
+    3. Associated Experiment status must be REGISTERED.
+
+    CRITICAL BOUNDARY:
+    This check strictly validates entity state compatibility across independent table status
+    columns. It explicitly does NOT evaluate the six substantive gate conditions
+    (locked_test_evaluated, schema_locked, etc.), which are managed separately by
+    the DeploymentGateService.
+
+    Returns:
+        True if all three cross-entity states legally permit transition to APPROVED, False otherwise.
+    """
+    try:
+        dep_enum = _resolve_enum_state(deployment_current_state, DeploymentState)
+        model_enum = _resolve_enum_state(model_state, ModelState)
+        exp_enum = _resolve_enum_state(experiment_state, ExperimentState)
+    except (ValueError, TypeError):
+        return False
+
+    # 1. Deployment must legally transition to APPROVED (GATE_PASSED -> APPROVED)
+    if not can_transition(dep_enum, DeploymentState.APPROVED):
+        return False
+
+    # 2. Associated Model must be DEPLOYABLE
+    if model_enum != ModelState.DEPLOYABLE:
+        return False
+
+    # 3. Associated Experiment must be REGISTERED
+    if exp_enum != ExperimentState.REGISTERED:
+        return False
+
+    return True
+
+
+def validate_deployment_approval_state_legality(
+    deployment_current_state: DeploymentState | str,
+    model_state: ModelState | str,
+    experiment_state: ExperimentState | str,
+) -> None:
+    """
+    Validates cross-entity state legality for Deployment approval, raising
+    InvalidStateTransitionError if illegal.
+
+    CRITICAL BOUNDARY:
+    Does NOT evaluate the six substantive gate conditions (which belongs exclusively
+    to DeploymentGateService).
+    """
+    dep_enum = _resolve_enum_state(deployment_current_state, DeploymentState)
+    model_enum = _resolve_enum_state(model_state, ModelState)
+    exp_enum = _resolve_enum_state(experiment_state, ExperimentState)
+
+    violations = []
+    if not can_transition(dep_enum, DeploymentState.APPROVED):
+        valid_targets = [s.value for s in get_valid_transitions(dep_enum)]
+        violations.append(
+            f"Deployment status '{dep_enum.value}' cannot transition to APPROVED (allowed: {valid_targets})"
+        )
+
+    if model_enum != ModelState.DEPLOYABLE:
+        violations.append(
+            f"TrainedModel status is '{model_enum.value}', but must be 'DEPLOYABLE'"
+        )
+
+    if exp_enum != ExperimentState.REGISTERED:
+        violations.append(
+            f"Experiment status is '{exp_enum.value}', but must be 'REGISTERED'"
+        )
+
+    if violations:
+        raise InvalidStateTransitionError(
+            machine_name="CrossEntityDeploymentApproval",
+            current_state=f"Deployment={dep_enum.value}, Model={model_enum.value}, Experiment={exp_enum.value}",
+            target_state="DeploymentState.APPROVED",
+            allowed_states=[
+                f"DeploymentState.GATE_PASSED with ModelState.DEPLOYABLE and ExperimentState.REGISTERED. Violations: {'; '.join(violations)}"
+            ],
+        )
+

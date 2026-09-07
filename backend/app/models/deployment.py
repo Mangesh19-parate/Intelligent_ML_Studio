@@ -4,16 +4,17 @@ from sqlalchemy import Column, String, Integer, ForeignKey, DateTime, Uuid, Chec
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.core.database import Base
+from app.config.state_machines import DeploymentState
 
 
 class Deployment(Base):
     """
-    Model Deployments Table (Day 10).
+    Model Deployments Table (Day 10 / SRS v9 §2).
     
-    ARCHITECTURAL NOTE (SRS §2.14 / §2.16):
+    ARCHITECTURAL NOTE (SRS §2.14 / §2.16 / SRS v9 §2):
     Represents an active or historical production inference endpoint.
-    - status lifecycle: LIVE -> PAUSED -> RETIRED
-    - Invariant: A RETIRED deployment is immutable and can NEVER return to LIVE or PAUSED.
+    - Independent status column wired to DeploymentState enum.
+    - Invariant: A RETIRED deployment is immutable and can NEVER return to DEPLOYED/LIVE or PAUSED.
     """
     __tablename__ = "deployments"
 
@@ -25,7 +26,7 @@ class Deployment(Base):
         index=True
     )
     endpoint_path = Column(String(200), nullable=False, unique=True)
-    status = Column(String(20), nullable=False, default="LIVE", server_default="LIVE")
+    status = Column(String(30), nullable=False, default=DeploymentState.DEPLOYED.value, server_default="DEPLOYED")
     deployed_by = Column(
         Uuid(as_uuid=True),
         ForeignKey("users.id", ondelete="SET NULL"),
@@ -41,7 +42,7 @@ class Deployment(Base):
 
     __table_args__ = (
         CheckConstraint(
-            "status IN ('LIVE', 'PAUSED', 'RETIRED')",
+            "status IN ('CREATED', 'GATE_PENDING', 'GATE_PASSED', 'GATE_BLOCKED', 'APPROVED', 'DEPLOYED', 'PAUSED', 'RETIRED', 'LIVE')",
             name="chk_deployment_status"
         ),
     )

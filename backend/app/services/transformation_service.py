@@ -334,8 +334,8 @@ class TransformationService:
         is_categorical = data_type in ["CATEGORICAL", "MIXED"]
 
         # 1. Missing Value Imputation
-        missing_strat = config.missing_value_strategy
-        if missing_strat and missing_strat != "none":
+        missing_strat = (config.missing_value_strategy or "none").lower()
+        if missing_strat != "none":
             if is_numeric:
                 if missing_strat == "mean":
                     steps.append(("imputer", SimpleImputer(strategy="mean")))
@@ -354,13 +354,13 @@ class TransformationService:
                     steps.append(("imputer", SimpleImputer(strategy="constant", fill_value="missing")))
 
         # 2. Outlier Handling (Numeric only)
-        outlier_strat = config.outlier_strategy
-        if is_numeric and outlier_strat and outlier_strat != "none":
+        outlier_strat = (config.outlier_strategy or "none").lower()
+        if is_numeric and outlier_strat != "none":
             steps.append(("outlier_capper", OutlierCapper(strategy=outlier_strat)))
 
         # 3. Scaling (Numeric only)
-        scaling_strat = config.scaling_strategy
-        if is_numeric and scaling_strat and scaling_strat != "none":
+        scaling_strat = (config.scaling_strategy or "none").lower()
+        if is_numeric and scaling_strat != "none":
             if scaling_strat == "standard":
                 steps.append(("scaler", StandardScaler()))
             elif scaling_strat == "minmax":
@@ -369,8 +369,8 @@ class TransformationService:
                 steps.append(("scaler", RobustScaler()))
 
         # 4. Encoding (Categorical only)
-        encoding_strat = config.encoding_strategy
-        if is_categorical and encoding_strat and encoding_strat != "none":
+        encoding_strat = (config.encoding_strategy or "none").lower()
+        if is_categorical and encoding_strat != "none":
             if encoding_strat == "one_hot":
                 steps.append(("encoder", OneHotEncoder(handle_unknown="ignore", sparse_output=False)))
             elif encoding_strat == "ordinal":

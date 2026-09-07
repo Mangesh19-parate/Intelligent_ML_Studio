@@ -30,7 +30,7 @@ class OutlierCapper(BaseEstimator, TransformerMixin):
         winsorize_lower: float = 5.0,
         winsorize_upper: float = 95.0,
     ):
-        self.strategy = strategy
+        self.strategy = strategy.lower() if strategy else "none"
         self.z_threshold = z_threshold
         self.iqr_multiplier = iqr_multiplier
         self.percentile_lower = percentile_lower
@@ -39,7 +39,8 @@ class OutlierCapper(BaseEstimator, TransformerMixin):
         self.winsorize_upper = winsorize_upper
 
     def fit(self, X, y=None):
-        if self.strategy == "none" or not self.strategy:
+        strat = (self.strategy or "none").lower()
+        if strat == "none":
             self.lower_bounds_ = None
             self.upper_bounds_ = None
             self.n_features_in_ = np.asarray(X).shape[1] if len(np.asarray(X).shape) > 1 else 1

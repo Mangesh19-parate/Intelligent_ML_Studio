@@ -104,7 +104,7 @@ def derive_pipeline_stage(project_id: UUID | str, db: Session) -> str:
             db.query(Deployment)
             .filter(
                 Deployment.model_id.in_(model_ids),
-                Deployment.status == "LIVE"
+                Deployment.status.in_(["LIVE", "DEPLOYED"])
             )
             .first()
         )
@@ -135,13 +135,13 @@ def derive_pipeline_stage(project_id: UUID | str, db: Session) -> str:
         if locked_test_metrics or any(e.locked_test_consumed for e in experiments):
             return "EVALUATED"
 
-    # Check for COMPLETED experiment
-    completed_exp = any(e.status == "COMPLETED" for e in experiments)
+    # Check for COMPLETED / REGISTERED experiment
+    completed_exp = any(e.status in ["COMPLETED", "REGISTERED", "EVALUATED", "TEST_CONSUMED"] for e in experiments)
     if completed_exp:
         return "TRAINED"
 
-    # Check for RUNNING experiment
-    running_exp = any(e.status == "RUNNING" for e in experiments)
+    # Check for RUNNING / TRAINING experiment
+    running_exp = any(e.status in ["RUNNING", "TRAINING"] for e in experiments)
     if running_exp:
         return "TRAINING"
 
@@ -232,7 +232,7 @@ class WorkspaceAnalyticsService:
             self.db.query(func.count(Experiment.id))
             .filter(
                 Experiment.project_id.in_(project_ids),
-                Experiment.status == "COMPLETED"
+                Experiment.status.in_(["COMPLETED", "REGISTERED", "EVALUATED", "TEST_CONSUMED"])
             )
             .scalar() or 0
         )
@@ -243,7 +243,7 @@ class WorkspaceAnalyticsService:
             .join(Experiment, TrainedModel.experiment_id == Experiment.id)
             .filter(
                 Experiment.project_id.in_(project_ids),
-                TrainedModel.status == "COMPLETED"
+                TrainedModel.status.in_(["COMPLETED", "TRAINED", "ARTIFACT_VERIFIED", "DEPLOYABLE"])
             )
             .scalar() or 0
         )
@@ -260,14 +260,14 @@ class WorkspaceAnalyticsService:
             .scalar() or 0
         )
 
-        # 7. Currently LIVE deployments count
+        # 7. Currently LIVE / DEPLOYED deployments count
         live_deployments_count = (
             self.db.query(func.count(Deployment.id))
             .join(TrainedModel, Deployment.model_id == TrainedModel.id)
             .join(Experiment, TrainedModel.experiment_id == Experiment.id)
             .filter(
                 Experiment.project_id.in_(project_ids),
-                Deployment.status == "LIVE"
+                Deployment.status.in_(["LIVE", "DEPLOYED"])
             )
             .scalar() or 0
         )
@@ -366,10 +366,10 @@ class WorkspaceAnalyticsService:
 
         deployment_summary = None
         if model_ids:
-            # Find LIVE deployment first, else latest deployment
+            # Find LIVE / DEPLOYED deployment first, else latest deployment
             deployment = (
                 self.db.query(Deployment)
-                .filter(Deployment.model_id.in_(model_ids), Deployment.status == "LIVE")
+                .filter(Deployment.model_id.in_(model_ids), Deployment.status.in_(["LIVE", "DEPLOYED"]))
                 .first()
             )
             if not deployment:

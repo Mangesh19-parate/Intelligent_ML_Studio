@@ -4,16 +4,14 @@ from sqlalchemy import Column, String, ForeignKey, DateTime, Uuid, Numeric, Text
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.core.database import Base
+from app.config.state_machines import ModelState
 
 class TrainedModel(Base):
     """
-    Trained models table (Day 7 updated).
+    Trained models table (Day 7 updated / SRS v9 §2).
     
-    ARCHITECTURAL NOTE (SRS §2.8 / §2.9 / §2.10):
-    - fit_diagnosis: 'GOOD_FIT', 'POTENTIAL_OVERFIT', 'POTENTIAL_UNDERFIT_WEAK_SIGNAL', 'INSUFFICIENT_DATA'
-    - model_selection_score: composite convenience indicator (never used for leaderboard sorting)
-    - metrics: relationship to ModelMetric table
-    - Day 8 adds artifact checksum and snapshots.
+    ARCHITECTURAL NOTE (SRS §2.8 / §2.9 / §2.10 / SRS v9 §2):
+    - Independent status column wired to ModelState enum.
     """
     __tablename__ = "trained_models"
 
@@ -48,7 +46,7 @@ class TrainedModel(Base):
         nullable=True
     )
     
-    status = Column(String(20), nullable=False, default="COMPLETED", server_default="COMPLETED")
+    status = Column(String(30), nullable=False, default=ModelState.TRAINED.value, server_default="TRAINED")
     error_message = Column(Text, nullable=True)
     
     created_at = Column(
@@ -62,6 +60,10 @@ class TrainedModel(Base):
         CheckConstraint(
             "fit_diagnosis IS NULL OR fit_diagnosis IN ('GOOD_FIT', 'POTENTIAL_OVERFIT', 'POTENTIAL_UNDERFIT_WEAK_SIGNAL', 'INSUFFICIENT_DATA')",
             name="chk_trained_model_fit_diagnosis"
+        ),
+        CheckConstraint(
+            "status IN ('TRAINED', 'ARTIFACT_VERIFIED', 'DEPLOYABLE', 'ARTIFACT_INVALID', 'COMPLETED', 'FAILED')",
+            name="chk_trained_model_status"
         ),
     )
 

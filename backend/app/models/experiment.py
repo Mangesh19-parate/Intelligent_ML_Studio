@@ -4,18 +4,14 @@ from sqlalchemy import Column, String, Integer, ForeignKey, DateTime, Uuid, Bool
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.core.database import Base
+from app.config.state_machines import ExperimentState
 
 class Experiment(Base):
     """
     Experiments execution tracking table.
     
-    ARCHITECTURAL NOTE (SRS §2.5 / §2.9 / §2.12 / §2.17):
-    - Day 5 shell table stores core execution tracking for CV feature selection fold attachments.
-    - Day 6 ALTER adds task_type (frozen at start), fold_count, and cv_seed.
-    - Day 7 ALTER adds selection_metric, selection_direction, selected_model_id,
-      locked_test_consumed, and locked_test_consumed_at.
-    - Day 8 ALTER adds full lineage columns (experiment_config, dataset_content_hash,
-      versions, environment_capture_method, feature_selection_snapshot_id).
+    ARCHITECTURAL NOTE (SRS §2.5 / §2.9 / §2.12 / §2.17 / SRS v9 §2):
+    - Independent status column wired to ExperimentState enum.
     """
     __tablename__ = "experiments"
 
@@ -27,10 +23,10 @@ class Experiment(Base):
         index=True
     )
     status = Column(
-        String(20),
+        String(30),
         nullable=False,
-        default="RUNNING",
-        server_default="RUNNING"
+        default=ExperimentState.CREATED.value,
+        server_default="CREATED"
     )
     task_type = Column(String(30), nullable=True)
     fold_count = Column(Integer, nullable=True)
@@ -82,7 +78,10 @@ class Experiment(Base):
     )
 
     __table_args__ = (
-        CheckConstraint("status IN ('RUNNING', 'COMPLETED', 'FAILED')", name="chk_experiment_status"),
+        CheckConstraint(
+            "status IN ('CREATED', 'CONFIGURED', 'TRAINING', 'EVALUATED', 'TEST_CONSUMED', 'REGISTERED', 'TRAINING_FAILED', 'ARTIFACT_WRITE_FAILED', 'RUNNING', 'COMPLETED', 'FAILED')",
+            name="chk_experiment_status"
+        ),
         CheckConstraint("selection_direction IN ('MAXIMIZE', 'MINIMIZE')", name="chk_experiment_selection_direction"),
         CheckConstraint("environment_capture_method IS NULL OR environment_capture_method IN ('CAPTURED_LIVE', 'BACKFILLED_APPROXIMATE')", name="chk_experiment_env_capture_method"),
     )

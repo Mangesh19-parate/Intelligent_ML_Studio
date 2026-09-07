@@ -37,6 +37,34 @@ class ExperimentCreateRequest(BaseModel):
         description="Optional frozen performance threshold evaluated at deployment gate",
     )
 
+class ExperimentFreezeRequest(BaseModel):
+    algorithms: list[str] | None = Field(
+        default=None,
+        description="Optional list of algorithm names to freeze in experiment_config",
+    )
+    folds: int | None = Field(
+        default=None,
+        ge=2,
+        le=20,
+        description="Number of inner cross-validation folds",
+    )
+    seed: int | None = Field(
+        default=None,
+        description="Random seed for cross-validation splitting and estimators",
+    )
+    selection_metric: str | None = Field(
+        default=None,
+        description="Primary metric for model selection (e.g. RMSE, macro_f1)",
+    )
+    selection_direction: str | None = Field(
+        default=None,
+        description="Direction for primary metric: MAXIMIZE or MINIMIZE",
+    )
+    deployment_threshold: DeploymentThresholdConfig | None = Field(
+        default=None,
+        description="Optional frozen performance threshold evaluated at deployment gate",
+    )
+
 class TrainedModelResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True, protected_namespaces=())
 

@@ -8,6 +8,7 @@ from app.models.transformation_snapshot import TransformationSnapshot
 from app.models.feature_selection_snapshot import FeatureSelectionSnapshot
 from app.models.trained_model import TrainedModel
 from app.models.model_metric import ModelMetric
+from app.config.state_machines import ExperimentState, ModelState
 from app.repositories.base import BaseRepository
 
 class ExperimentRepository(BaseRepository[Experiment]):
@@ -22,7 +23,7 @@ class ExperimentRepository(BaseRepository[Experiment]):
         cv_seed: int | None = None,
         selection_metric: str | None = None,
         selection_direction: str = "MAXIMIZE",
-        status: str = "RUNNING",
+        status: str = "CREATED",
         experiment_config: dict | None = None,
         dataset_content_hash: str | None = None,
         code_version: str | None = None,
@@ -110,7 +111,7 @@ class ExperimentRepository(BaseRepository[Experiment]):
             exp.status = status
             if completed_at is not None:
                 exp.completed_at = completed_at
-            elif status in ["COMPLETED", "FAILED"] and exp.completed_at is None:
+            elif status in ["REGISTERED", "EVALUATED", "COMPLETED", "FAILED", "TRAINING_FAILED", "ARTIFACT_WRITE_FAILED"] and exp.completed_at is None:
                 exp.completed_at = datetime.now(timezone.utc)
             self.db.add(exp)
             self.db.commit()
@@ -209,7 +210,7 @@ class ExperimentRepository(BaseRepository[Experiment]):
         quick_cv_score: float | None = None,
         fit_diagnosis: str | None = None,
         model_selection_score: float | None = None,
-        status: str = "COMPLETED",
+        status: str = "TRAINED",
         error_message: str | None = None,
     ) -> TrainedModel:
         if isinstance(experiment_id, str):

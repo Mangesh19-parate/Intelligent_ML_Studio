@@ -9,12 +9,22 @@ from typing import Any
 import numpy as np
 import pandas as pd
 from fastapi import HTTPException, status
+from sqlalchemy import update
 from sqlalchemy.orm import Session
 from sklearn.model_selection import KFold, StratifiedKFold
 from sklearn.impute import SimpleImputer
+from sklearn.pipeline import Pipeline
+from sklearn.linear_model import LinearRegression, LogisticRegression
 
 from app.core.config import settings
 from app.core.database import SessionLocal
+from app.config.state_machines import (
+    ExperimentState,
+    ModelState,
+    can_transition,
+    validate_transition,
+    InvalidStateTransitionError,
+)
 from app.models.project import Project
 from app.models.dataset_split import DatasetSplit
 from app.models.transformation_config import TransformationConfig
@@ -53,6 +63,7 @@ class ExperimentService:
     4. Primary-Metric Driven Leaderboard: Sorting strictly by selection_metric / selection_direction.
     5. Single Locked Test Evaluation: Exactly one evaluation for the winning model, permanently consumed.
     6. Fault Isolation: Single fold failure fails that algorithm entirely; surviving algorithms complete.
+    7. Concurrency Protection (SRS v9 §6): At most one active TRAINING job per experiment; concurrent attempts rejected immediately.
     """
 
     VALID_REGRESSION_ALGORITHMS = {
@@ -76,6 +87,206 @@ class ExperimentService:
         self.split_service = DatasetSplitService(db, self.storage)
         self.trans_service = TransformationService(db, self.storage)
         self.fs_service = FeatureSelectionService(db, self.storage)
+
+    def start_training(self, experiment_id: UUID | str) -> Experiment:
+        """
+        Atomically transitions an experiment into TRAINING state with DB-level concurrency protection (SRS v9 §6).
+        Ensures at most one active TRAINING job per experiment.
+        Rejects concurrent start attempts immediately with HTTP 409 Conflict (not queued or silently allowed).
+        """
+        exp_uuid = UUID(str(experiment_id)) if not isinstance(experiment_id, UUID) else experiment_id
+
+        # Atomic conditional update at DB level
+        try:
+            stmt = (
+                update(Experiment)
+                .where(
+                    Experiment.id == exp_uuid,
+                    Experiment.status.not_in([ExperimentState.TRAINING.value, "TRAINING", "RUNNING"])
+                )
+                .values(status=ExperimentState.TRAINING.value)
+            )
+            result = self.db.execute(stmt)
+            self.db.commit()
+            rowcount = result.rowcount
+        except Exception as e:
+            self.db.rollback()
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"Experiment {exp_uuid} is already actively training. Concurrent training execution rejected."
+            )
+
+        if rowcount == 0:
+            # Check if experiment exists or if it failed condition because it's actively training
+            try:
+                exp_check = self.exp_repo.get_by_id(exp_uuid)
+                if not exp_check:
+                    raise HTTPException(
+                        status_code=status.HTTP_404_NOT_FOUND,
+                        detail=f"Experiment {exp_uuid} not found."
+                    )
+            except HTTPException:
+                raise
+            except Exception:
+                pass
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"Experiment {exp_uuid} is already actively training. Concurrent training execution rejected."
+            )
+
+        try:
+            exp = self.exp_repo.get_by_id(exp_uuid)
+        except Exception:
+            self.db.rollback()
+            exp = self.exp_repo.get_by_id(exp_uuid)
+        return exp
+
+    def freeze_experiment_config(
+        self,
+        experiment_id: UUID | str,
+        config_override: dict[str, Any] | None = None,
+    ) -> Experiment:
+        """
+        Freezes the experiment configuration (ExperimentState.CREATED -> ExperimentState.CONFIGURED).
+        Ensures immutability of the experiment specification.
+        Strictly rejects any subsequent re-freeze attempts with HTTP 409 Conflict.
+        """
+        exp_uuid = UUID(str(experiment_id)) if not isinstance(experiment_id, UUID) else experiment_id
+        experiment = self.exp_repo.get_by_id(exp_uuid)
+        if not experiment:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Experiment {exp_uuid} not found."
+            )
+
+        # Strict rejection if already configured or in any subsequent lifecycle state
+        if experiment.status in [
+            ExperimentState.CONFIGURED.value,
+            "CONFIGURED",
+            ExperimentState.TRAINING.value,
+            "TRAINING",
+            "RUNNING",
+            ExperimentState.EVALUATED.value,
+            "EVALUATED",
+            ExperimentState.TEST_CONSUMED.value,
+            "TEST_CONSUMED",
+            ExperimentState.REGISTERED.value,
+            "REGISTERED",
+            "COMPLETED",
+        ] or (experiment.experiment_config is not None and experiment.status != ExperimentState.TRAINING_FAILED.value):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"Experiment {exp_uuid} configuration is already frozen. Re-freezing is rejected."
+            )
+
+        project = self.project_repo.get_by_id(experiment.project_id)
+        if not project:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Associated project not found."
+            )
+
+        override = config_override or {}
+        task_type = override.get("task_type") or experiment.task_type or project.task_type or "REGRESSION"
+        target_col = override.get("target") or project.target_column
+        folds = override.get("folds") or experiment.fold_count or 5
+        cv_seed = override.get("seed") or experiment.cv_seed or secrets.randbelow(1_000_000)
+
+        # Capture transformation snapshot if not already present
+        trans_configs = self.db.query(TransformationConfig).filter(
+            TransformationConfig.project_id == project.id
+        ).order_by(TransformationConfig.column_name.asc()).all()
+        frozen_trans_json = [
+            {
+                "id": str(tc.id),
+                "column_name": tc.column_name,
+                "missing_value_strategy": tc.missing_value_strategy,
+                "encoding_strategy": tc.encoding_strategy,
+                "scaling_strategy": tc.scaling_strategy,
+                "outlier_strategy": tc.outlier_strategy,
+                "is_active": tc.is_active,
+            }
+            for tc in trans_configs
+        ]
+
+        trans_snapshot = self.exp_repo.create_transformation_snapshot(
+            experiment_id=experiment.id,
+            config_json=frozen_trans_json,
+        )
+
+        cv_strategy = "STRATIFIED_KFOLD" if task_type == "CLASSIFICATION" else "KFOLD"
+
+        split_seed = 42
+        datasets = self.dataset_repo.get_by_project(project.id)
+        if datasets:
+            dev_split = self.db.query(DatasetSplit).filter(
+                DatasetSplit.dataset_id == datasets[0].id,
+                DatasetSplit.split_type == "DEVELOPMENT"
+            ).first()
+            if dev_split:
+                split_seed = dev_split.split_seed
+
+        eff_metric = override.get("selection_metric") or experiment.selection_metric or ("rmse" if task_type == "REGRESSION" else "f1_macro")
+        eff_dir = override.get("selection_direction") or experiment.selection_direction or ("MINIMIZE" if eff_metric in ["rmse", "mae", "mse"] else "MAXIMIZE")
+
+        dep_thresh_override = override.get("deployment_threshold")
+        dep_metric = eff_metric
+        dep_min_val = None
+        if dep_thresh_override and isinstance(dep_thresh_override, dict):
+            dep_metric = dep_thresh_override.get("metric", eff_metric)
+            dep_min_val = dep_thresh_override.get("min_value")
+
+        algs = override.get("algorithms")
+        if algs:
+            algs = self.validate_algorithms(task_type, algs)
+
+        experiment_config_payload = {
+            "task_type": task_type,
+            "target": target_col,
+            "algorithms": algs,
+            "split": {
+                "seed": split_seed,
+                "locked_test_pct": 20,
+            },
+            "cv": {
+                "strategy": cv_strategy,
+                "folds": folds,
+                "seed": cv_seed,
+            },
+            "preprocessing": {
+                "snapshot_id": str(trans_snapshot.id),
+            },
+            "feature_selection": {
+                "method": "rank_aggregation_ensemble",
+            },
+            "threshold_selection": {
+                "objective": "F1",
+                "search_range": [0.10, 0.90],
+                "resolution": 0.01,
+                "tie_break": "closest_to_0.5",
+            },
+            "deployment_threshold": {
+                "metric": dep_metric,
+                "min_value": dep_min_val,
+            },
+        }
+
+        experiment.experiment_config = experiment_config_payload
+        experiment.deployment_threshold_frozen_at_creation = True
+        experiment.status = ExperimentState.CONFIGURED.value
+        if override.get("selection_metric"):
+            experiment.selection_metric = eff_metric
+        if override.get("selection_direction"):
+            experiment.selection_direction = eff_dir
+        if override.get("folds"):
+            experiment.fold_count = folds
+        if override.get("seed"):
+            experiment.cv_seed = cv_seed
+
+        self.db.add(experiment)
+        self.db.commit()
+        self.db.refresh(experiment)
+        return experiment
 
     @staticmethod
     def normalize_selection_metric(
@@ -133,39 +344,287 @@ class ExperimentService:
             )
 
         canonical_algorithms: list[str] = []
-        if task_type == "REGRESSION":
-            valid_set = self.VALID_REGRESSION_ALGORITHMS
-            canonical_map = RegressionTrainer.CANONICAL_NAMES
-            allowed_str = "LinearRegression, Ridge, RandomForestRegressor"
-        elif task_type == "CLASSIFICATION":
-            valid_set = self.VALID_CLASSIFICATION_ALGORITHMS
-            canonical_map = ClassificationTrainer.CANONICAL_NAMES
-            allowed_str = "LogisticRegression, RandomForestClassifier, GradientBoostingClassifier"
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail=f"Unsupported project task_type '{task_type}' for model training."
-            )
-
         for alg in algorithms:
-            if alg not in valid_set:
+            if task_type == "REGRESSION":
+                if not RegressionTrainer.is_supported(alg):
+                    raise HTTPException(
+                        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                        detail=(
+                            f"Invalid algorithm '{alg}' for task type {task_type}. "
+                            f"Allowed algorithms: {', '.join(RegressionTrainer.get_supported_algorithms())}"
+                        )
+                    )
+                canonical_name = RegressionTrainer.to_canonical_name(alg)
+            elif task_type == "CLASSIFICATION":
+                if not ClassificationTrainer.is_supported(alg):
+                    raise HTTPException(
+                        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                        detail=(
+                            f"Invalid algorithm '{alg}' for task type {task_type}. "
+                            f"Allowed algorithms: {', '.join(ClassificationTrainer.get_supported_algorithms())}"
+                        )
+                    )
+                canonical_name = ClassificationTrainer.to_canonical_name(alg)
+            else:
                 raise HTTPException(
                     status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                    detail=(
-                        f"Invalid algorithm '{alg}' for task type {task_type}. "
-                        f"Allowed algorithms: {allowed_str}"
-                    )
+                    detail=f"Unsupported project task_type '{task_type}' for model training."
                 )
-            canonical_name = canonical_map[alg]
+
             if canonical_name not in canonical_algorithms:
                 canonical_algorithms.append(canonical_name)
 
         return canonical_algorithms
 
-    def run_experiment(
+    def prepare_experiment_cv_context(
+        self,
+        experiment_id: UUID | str,
+    ) -> dict[str, Any]:
+        """
+        Builds the foundational execution skeleton for an experiment (SRS v9 §2 / Day 3):
+        1. Loads frozen experiment_config (or auto-freezes if CREATED).
+        2. Loads Development partition strictly by row_uid (Zero Test Leakage Invariant).
+        3. Constructs deterministic CV splits (KFold / StratifiedKFold) and validates zero leakage.
+
+        Returns a structured dictionary with:
+        - experiment: Experiment instance
+        - project: Project instance
+        - dataset: Dataset instance
+        - experiment_config: dict
+        - dev_df: pd.DataFrame (Development partition only)
+        - X_df: pd.DataFrame (features only, without target or row_uid)
+        - y_raw: pd.Series / np.ndarray
+        - candidate_cols: list[str]
+        - cv_strategy: str ("STRATIFIED_KFOLD" or "KFOLD")
+        - fold_count: int
+        - cv_seed: int
+        - splitter: BaseCrossValidator (KFold or StratifiedKFold)
+        - fold_splits: list of dicts with fold_idx, train_indices, val_indices, train_size, val_size, train_row_uids, val_row_uids
+        """
+        exp_uuid = UUID(str(experiment_id)) if not isinstance(experiment_id, UUID) else experiment_id
+        experiment = self.exp_repo.get_by_id(exp_uuid)
+        if not experiment:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Experiment {exp_uuid} not found."
+            )
+
+        # 1. Load or freeze config
+        if not experiment.experiment_config:
+            experiment = self.freeze_experiment_config(experiment.id)
+
+        config = experiment.experiment_config or {}
+        task_type = config.get("task_type") or experiment.task_type or "REGRESSION"
+        target_col = config.get("target")
+
+        project = self.project_repo.get_by_id(experiment.project_id)
+        if not project:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Associated project not found."
+            )
+
+        if not target_col:
+            target_col = project.target_column
+        if not target_col:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Project has no target column configured. Please select a target column first."
+            )
+
+        # 2. Retrieve latest dataset
+        datasets = self.dataset_repo.get_by_project(project.id)
+        if not datasets:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="No dataset found for this project."
+            )
+        latest_dataset = datasets[0]
+
+        # 3. Load Development data ONLY by row_uid (Zero Test Leakage Invariant)
+        dev_df = self.split_service.get_development_data(latest_dataset.id)
+        if target_col not in dev_df.columns:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Target column '{target_col}' not found in Development data."
+            )
+
+        y_raw = dev_df[target_col]
+        drop_cols = [c for c in [target_col, "row_uid"] if c in dev_df.columns]
+        X_df = dev_df.drop(columns=drop_cols)
+        candidate_cols = list(X_df.columns)
+
+        # Extract CV parameters from frozen config
+        cv_conf = config.get("cv", {})
+        folds = cv_conf.get("folds") or experiment.fold_count or 5
+        cv_seed = cv_conf.get("seed") or experiment.cv_seed or 42
+
+        n_samples = len(dev_df)
+        if n_samples < folds:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Insufficient samples ({n_samples}) for {folds}-fold cross-validation."
+            )
+
+        # 4. Construct CV Splitter
+        if task_type == "CLASSIFICATION":
+            class_counts = y_raw.value_counts()
+            if (class_counts < folds).any():
+                splitter = KFold(n_splits=folds, shuffle=True, random_state=cv_seed)
+                cv_strategy = "KFOLD"
+            else:
+                splitter = StratifiedKFold(n_splits=folds, shuffle=True, random_state=cv_seed)
+                cv_strategy = "STRATIFIED_KFOLD"
+        else:
+            splitter = KFold(n_splits=folds, shuffle=True, random_state=cv_seed)
+            cv_strategy = "KFOLD"
+
+        # Generate and verify fold splits
+        fold_splits = []
+        has_row_uids = "row_uid" in dev_df.columns
+        for fold_idx, (train_idx, val_idx) in enumerate(splitter.split(X_df, y_raw)):
+            train_set = set(train_idx)
+            val_set = set(val_idx)
+            overlap = train_set.intersection(val_set)
+            if len(overlap) > 0:
+                raise RuntimeError(
+                    f"Data leakage detected in fold {fold_idx}: overlap indices {overlap}"
+                )
+
+            train_uids = dev_df["row_uid"].iloc[train_idx].tolist() if has_row_uids else None
+            val_uids = dev_df["row_uid"].iloc[val_idx].tolist() if has_row_uids else None
+
+            fold_splits.append({
+                "fold_index": fold_idx,
+                "train_indices": train_idx,
+                "val_indices": val_idx,
+                "train_size": len(train_idx),
+                "val_size": len(val_idx),
+                "train_row_uids": train_uids,
+                "val_row_uids": val_uids,
+            })
+
+        return {
+            "experiment": experiment,
+            "project": project,
+            "dataset": latest_dataset,
+            "experiment_config": config,
+            "dev_df": dev_df,
+            "X_df": X_df,
+            "y_raw": y_raw,
+            "candidate_cols": candidate_cols,
+            "cv_strategy": cv_strategy,
+            "fold_count": folds,
+            "cv_seed": cv_seed,
+            "splitter": splitter,
+            "fold_splits": fold_splits,
+        }
+
+    def build_fold_pipeline(
         self,
         project_id: UUID | str,
-        algorithms: list[str],
+        task_type: str = "REGRESSION",
+        selected_features: list[str] | list[int] | None = None,
+        estimator: Any | None = None,
+    ) -> Pipeline:
+        """
+        Constructs a unified, unfit scikit-learn Pipeline for a cross-validation fold (SRS v9 §2 / Day 4).
+        
+        Pipeline structure:
+        1. 'transformer': Unfit ColumnTransformer generated from project active transformation configs.
+        2. 'selector': FeatureSelector transformer step.
+        3. 'estimator': Target estimator or placeholder model.
+        """
+        transformer = self.trans_service.build_pipeline(project_id)
+        selector = FeatureSelector(selected_features=selected_features)
+
+        if estimator is None:
+            if task_type == "CLASSIFICATION":
+                estimator = LogisticRegression(max_iter=1000)
+            else:
+                estimator = LinearRegression()
+
+        return Pipeline(
+            steps=[
+                ("transformer", transformer),
+                ("selector", selector),
+                ("estimator", estimator),
+            ]
+        )
+
+    def run_experiment_fold_pipelines(
+        self,
+        experiment_id: UUID | str,
+        estimator: Any | None = None,
+    ) -> dict[str, Any]:
+        """
+        Executes per-fold pipeline construction, independent fitting, and validation evaluation (Day 4).
+        Ensures that transformer and selector instances are fit strictly per fold without cross-fold leakage.
+        """
+        ctx = self.prepare_experiment_cv_context(experiment_id)
+        project_id = ctx["project"].id
+        task_type = ctx["experiment_config"].get("task_type", "REGRESSION")
+        X_df = ctx["X_df"]
+        y_raw = ctx["y_raw"]
+
+        fold_results = []
+        for fold in ctx["fold_splits"]:
+            f_idx = fold["fold_index"]
+            train_idx = fold["train_indices"]
+            val_idx = fold["val_indices"]
+
+            X_train = X_df.iloc[train_idx].copy()
+            y_train = y_raw.iloc[train_idx].values
+            X_val = X_df.iloc[val_idx].copy()
+            y_val = y_raw.iloc[val_idx].values
+
+            # Construct fresh fold pipeline instance
+            fold_pipe = self.build_fold_pipeline(
+                project_id=project_id,
+                task_type=task_type,
+                estimator=estimator,
+            )
+
+            # Format targets if needed
+            if task_type == "CLASSIFICATION":
+                if pd.api.types.is_numeric_dtype(y_train) and not np.isnan(y_train).any():
+                    y_fit = y_train.astype(int)
+                    y_val_eval = y_val.astype(int)
+                else:
+                    y_fit = pd.Series(y_train).astype(str).values
+                    y_val_eval = pd.Series(y_val).astype(str).values
+            else:
+                y_fit = y_train.astype(float)
+                y_val_eval = y_val.astype(float)
+
+            # Fit full pipeline exclusively on fold training partition
+            fold_pipe.fit(X_train, y_fit)
+
+            # Predict on fold validation partition
+            y_val_pred = fold_pipe.predict(X_val)
+
+            fold_results.append({
+                "fold_index": f_idx,
+                "pipeline": fold_pipe,
+                "train_size": len(train_idx),
+                "val_size": len(val_idx),
+                "y_val_true": y_val_eval,
+                "y_val_pred": y_val_pred,
+            })
+
+        return {
+            "experiment_id": ctx["experiment"].id,
+            "project_id": project_id,
+            "task_type": task_type,
+            "cv_strategy": ctx["cv_strategy"],
+            "fold_count": ctx["fold_count"],
+            "fold_results": fold_results,
+        }
+
+    def run_experiment(
+        self,
+        project_id: UUID | str | None = None,
+        algorithms: list[str] | None = None,
         folds: int = 5,
         seed: int | None = None,
         threshold: float = 0.0,
@@ -180,6 +639,18 @@ class ExperimentService:
         Computes full multi-metric evaluations, fit diagnostics, composite scores, and
         optionally executes authoritative finalization & Locked Test evaluation.
         """
+        experiment = None
+        if experiment_id is not None:
+            experiment = self.exp_repo.get_by_id(experiment_id)
+            if experiment and project_id is None:
+                project_id = experiment.project_id
+
+        if not project_id:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Project not found"
+            )
+
         project = self.project_repo.get_by_id(project_id)
         if not project:
             raise HTTPException(
@@ -199,6 +670,26 @@ class ExperimentService:
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Project task type must be 'REGRESSION' or 'CLASSIFICATION' before training."
             )
+
+        # If experiment already has frozen config, load defaults from it
+        if experiment and experiment.experiment_config:
+            cfg = experiment.experiment_config
+            if not algorithms:
+                algorithms = cfg.get("algorithms", algorithms)
+            task_type = cfg.get("task_type", task_type)
+            folds = cfg.get("cv", {}).get("folds", folds)
+            if seed is None:
+                seed = cfg.get("cv", {}).get("seed", seed)
+            if selection_metric is None:
+                selection_metric = cfg.get("selection_metric", selection_metric)
+            if selection_direction is None:
+                selection_direction = cfg.get("selection_direction", selection_direction)
+
+        if not algorithms:
+            if task_type == "REGRESSION":
+                algorithms = ["LinearRegression", "Ridge", "RandomForestRegressor"]
+            else:
+                algorithms = ["LogisticRegression", "RandomForestClassifier", "GradientBoostingClassifier"]
 
         # 1. Validate requested algorithms against project task type
         canonical_algs = self.validate_algorithms(task_type, algorithms)
@@ -231,7 +722,6 @@ class ExperimentService:
 
         # 3. Retrieve or create Experiment record
         if experiment_id is not None:
-            experiment = self.exp_repo.get_by_id(experiment_id)
             if not experiment:
                 experiment = self.exp_repo.create_experiment(
                     project_id=project.id,
@@ -240,7 +730,7 @@ class ExperimentService:
                     cv_seed=cv_seed,
                     selection_metric=eff_metric,
                     selection_direction=eff_direction,
-                    status="RUNNING",
+                    status=ExperimentState.CREATED.value,
                     dataset_content_hash=dataset_content_hash,
                     code_version=env_info.get("code_version"),
                     python_version=env_info.get("python_version"),
@@ -250,13 +740,13 @@ class ExperimentService:
                     model_library_versions=env_info.get("model_library_versions"),
                     environment_capture_method="CAPTURED_LIVE",
                 )
+                self.start_training(experiment.id)
             else:
                 experiment.task_type = task_type
                 experiment.fold_count = folds
                 experiment.cv_seed = cv_seed
                 experiment.selection_metric = eff_metric
                 experiment.selection_direction = eff_direction
-                experiment.status = "RUNNING"
                 experiment.dataset_content_hash = dataset_content_hash
                 experiment.code_version = env_info.get("code_version")
                 experiment.python_version = env_info.get("python_version")
@@ -267,6 +757,7 @@ class ExperimentService:
                 experiment.environment_capture_method = "CAPTURED_LIVE"
                 self.db.add(experiment)
                 self.db.commit()
+                self.start_training(experiment.id)
         else:
             experiment = self.exp_repo.create_experiment(
                 project_id=project.id,
@@ -275,7 +766,7 @@ class ExperimentService:
                 cv_seed=cv_seed,
                 selection_metric=eff_metric,
                 selection_direction=eff_direction,
-                status="RUNNING",
+                status=ExperimentState.CREATED.value,
                 dataset_content_hash=dataset_content_hash,
                 code_version=env_info.get("code_version"),
                 python_version=env_info.get("python_version"),
@@ -285,65 +776,66 @@ class ExperimentService:
                 model_library_versions=env_info.get("model_library_versions"),
                 environment_capture_method="CAPTURED_LIVE",
             )
+            self.start_training(experiment.id)
 
-        # 4. Deep copy current transformation configs into TransformationSnapshot (Day 8)
-        trans_configs = self.db.query(TransformationConfig).filter(
-            TransformationConfig.project_id == project.id
-        ).order_by(TransformationConfig.column_name.asc()).all()
-        frozen_trans_json = [
-            {
-                "id": str(tc.id),
-                "column_name": tc.column_name,
-                "missing_value_strategy": tc.missing_value_strategy,
-                "encoding_strategy": tc.encoding_strategy,
-                "scaling_strategy": tc.scaling_strategy,
-                "outlier_strategy": tc.outlier_strategy,
-                "is_active": tc.is_active,
+        # 4. Assemble and freeze experiment_config if not already frozen
+        if not experiment.experiment_config:
+            trans_configs = self.db.query(TransformationConfig).filter(
+                TransformationConfig.project_id == project.id
+            ).order_by(TransformationConfig.column_name.asc()).all()
+            frozen_trans_json = [
+                {
+                    "id": str(tc.id),
+                    "column_name": tc.column_name,
+                    "missing_value_strategy": tc.missing_value_strategy,
+                    "encoding_strategy": tc.encoding_strategy,
+                    "scaling_strategy": tc.scaling_strategy,
+                    "outlier_strategy": tc.outlier_strategy,
+                    "is_active": tc.is_active,
+                }
+                for tc in trans_configs
+            ]
+
+            trans_snapshot = self.exp_repo.create_transformation_snapshot(
+                experiment_id=experiment.id,
+                config_json=frozen_trans_json,
+            )
+
+            cv_strategy = "STRATIFIED_KFOLD" if task_type == "CLASSIFICATION" else "KFOLD"
+
+            experiment.experiment_config = {
+                "task_type": task_type,
+                "target": project.target_column,
+                "split": {
+                    "seed": split_seed,
+                    "locked_test_pct": 20,
+                },
+                "cv": {
+                    "strategy": cv_strategy,
+                    "folds": folds,
+                    "seed": cv_seed,
+                },
+                "preprocessing": {
+                    "snapshot_id": str(trans_snapshot.id),
+                },
+                "feature_selection": {
+                    "method": "rank_aggregation_ensemble",
+                },
+                "threshold_selection": {
+                    "objective": "F1",
+                    "search_range": [0.10, 0.90],
+                    "resolution": 0.01,
+                    "tie_break": "closest_to_0.5",
+                },
+                "deployment_threshold": {
+                    "metric": (deployment_threshold.get("metric") or eff_metric) if deployment_threshold else eff_metric,
+                    "min_value": deployment_threshold.get("min_value") if deployment_threshold else None,
+                },
             }
-            for tc in trans_configs
-        ]
-
-        trans_snapshot = self.exp_repo.create_transformation_snapshot(
-            experiment_id=experiment.id,
-            config_json=frozen_trans_json,
-        )
-
-        cv_strategy = "STRATIFIED_KFOLD" if task_type == "CLASSIFICATION" else "KFOLD"
-
-        # 5. Assemble and freeze experiment_config (SRS §2.5 / Day 8) - never edited after
-        experiment.experiment_config = {
-            "task_type": task_type,
-            "target": project.target_column,
-            "split": {
-                "seed": split_seed,
-                "locked_test_pct": 20,
-            },
-            "cv": {
-                "strategy": cv_strategy,
-                "folds": folds,
-                "seed": cv_seed,
-            },
-            "preprocessing": {
-                "snapshot_id": str(trans_snapshot.id),
-            },
-            "feature_selection": {
-                "method": "rank_aggregation_ensemble",
-            },
-            "threshold_selection": {
-                "objective": "F1",
-                "search_range": [0.10, 0.90],
-                "resolution": 0.01,
-                "tie_break": "closest_to_0.5",
-            },
-            "deployment_threshold": {
-                "metric": (deployment_threshold.get("metric") or eff_metric) if deployment_threshold else eff_metric,
-                "min_value": deployment_threshold.get("min_value") if deployment_threshold else None,
-            },
-        }
-        experiment.deployment_threshold_frozen_at_creation = True
-        self.db.add(experiment)
-        self.db.commit()
-        self.db.refresh(experiment)
+            experiment.deployment_threshold_frozen_at_creation = True
+            self.db.add(experiment)
+            self.db.commit()
+            self.db.refresh(experiment)
 
         try:
             # 3. Load Development partition ONLY (Zero Test Leakage Invariant)
@@ -668,7 +1160,7 @@ class ExperimentService:
                         quick_cv_score=None,
                         fit_diagnosis=None,
                         model_selection_score=None,
-                        status="FAILED",
+                        status=ModelState.ARTIFACT_INVALID.value,
                         error_message=err_msg,
                     )
                 else:
@@ -716,7 +1208,7 @@ class ExperimentService:
                         quick_cv_score=primary_val,
                         fit_diagnosis=fit_diag,
                         model_selection_score=sel_score,
-                        status="COMPLETED",
+                        status=ModelState.TRAINED.value,
                         error_message=None,
                     )
                     created_model_records[alg_name] = model_rec
@@ -773,10 +1265,17 @@ class ExperimentService:
                         )
 
             # 7. Finalize Experiment & Locked Test Single Evaluation
-            if auto_finalize and any(m.status == "COMPLETED" for m in self.exp_repo.get_trained_models(experiment.id)):
+            all_trained_models = self.exp_repo.get_trained_models(experiment.id)
+            has_successful_models = any(
+                m.status in [ModelState.TRAINED.value, ModelState.ARTIFACT_VERIFIED.value, ModelState.DEPLOYABLE.value, "COMPLETED", "TRAINED"]
+                for m in all_trained_models
+            )
+            if auto_finalize and has_successful_models:
                 self.finalize_experiment(experiment.id)
+            elif has_successful_models:
+                self.exp_repo.update_status(experiment.id, ExperimentState.EVALUATED.value)
             else:
-                self.exp_repo.update_status(experiment.id, "COMPLETED")
+                self.exp_repo.update_status(experiment.id, ExperimentState.TRAINING_FAILED.value)
 
             project.pipeline_stage = "TRAINED"
             self.db.add(project)
@@ -810,7 +1309,7 @@ class ExperimentService:
 
 
         except Exception as e:
-            self.exp_repo.update_status(experiment.id, "FAILED")
+            self.exp_repo.update_status(experiment.id, ExperimentState.TRAINING_FAILED.value)
             self.db.rollback()
             logger.exception(f"Experiment {experiment.id} failed: {str(e)}")
             raise HTTPException(
@@ -855,7 +1354,10 @@ class ExperimentService:
             )
         latest_dataset = datasets[0]
 
-        completed_models = [m for m in experiment.trained_models if m.status == "COMPLETED"]
+        completed_models = [
+            m for m in experiment.trained_models
+            if m.status in [ModelState.TRAINED.value, ModelState.ARTIFACT_VERIFIED.value, ModelState.DEPLOYABLE.value, "COMPLETED", "TRAINED"]
+        ]
         if not completed_models:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -1006,10 +1508,11 @@ class ExperimentService:
                 hasher.update(chunk)
         artifact_checksum = hasher.hexdigest()
 
-        # Update winning model record with artifact path, checksum, and snapshot foreign keys
+        # Update winning model record with artifact path, checksum, and status ARTIFACT_VERIFIED
         winning_model.artifact_path = str(artifact_file)
         winning_model.artifact_checksum = artifact_checksum
         winning_model.feature_selection_snapshot_id = fs_snapshot.id
+        winning_model.status = ModelState.ARTIFACT_VERIFIED.value
 
         # Retrieve preprocessing snapshot ID
         trans_snapshot_id = None
@@ -1139,14 +1642,17 @@ class ExperimentService:
                     fold_index=None,
                 )
 
-        # 4. Mark Locked Test as Permanently Consumed & Experiment Completed
+        # 4. Mark Locked Test as Permanently Consumed & Experiment Registered
         now = datetime.now(timezone.utc)
         self.exp_repo.mark_locked_test_consumed(experiment.id, consumed_at=now)
-        self.exp_repo.update_status(experiment.id, "COMPLETED", completed_at=now)
+        winning_model.status = ModelState.DEPLOYABLE.value
+        self.db.add(winning_model)
+        self.db.commit()
+        self.exp_repo.update_status(experiment.id, ExperimentState.REGISTERED.value, completed_at=now)
 
         return {
             "experiment_id": experiment.id,
-            "status": "COMPLETED",
+            "status": ExperimentState.REGISTERED.value,
             "selected_model_id": winning_model.id,
             "winning_algorithm": winning_model.algorithm_name,
             "selection_metric": metric_name,

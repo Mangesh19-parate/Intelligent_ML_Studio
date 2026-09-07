@@ -5,11 +5,13 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.dependencies import require_permission
+from app.config.state_machines import ExperimentState
 from app.models.user import User
 from app.repositories.project_repository import ProjectRepository
 from app.repositories.experiment_repository import ExperimentRepository
 from app.schemas.experiment import (
     ExperimentCreateRequest,
+    ExperimentFreezeRequest,
     ExperimentResponse,
     ExperimentCreateResponse,
     TrainedModelResponse,
@@ -76,7 +78,7 @@ def create_experiment(
             "min_value": None,
         }
 
-    # Create Experiment shell record in RUNNING status
+    # Create Experiment shell record in CREATED status
     experiment = exp_repo.create_experiment(
         project_id=project.id,
         task_type=project.task_type,
@@ -84,9 +86,12 @@ def create_experiment(
         cv_seed=cv_seed,
         selection_metric=eff_metric,
         selection_direction=eff_direction,
-        status="RUNNING",
+        status=ExperimentState.CREATED.value,
         deployment_threshold_frozen_at_creation=True,
     )
+
+    # Atomically acquire training lock with DB concurrency protection
+    service.start_training(experiment.id)
 
     # Kick off background execution
     background_tasks.add_task(
@@ -103,13 +108,143 @@ def create_experiment(
 
     return ExperimentCreateResponse(
         experiment_id=experiment.id,
-        status="RUNNING",
+        status=ExperimentState.TRAINING.value,
         task_type=project.task_type,
         fold_count=payload.folds,
         cv_seed=cv_seed,
         selection_metric=eff_metric,
         selection_direction=eff_direction,
         message="Model training experiment started in background.",
+    )
+
+
+@router.post(
+    "/experiments/{id}/freeze",
+    response_model=ExperimentResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Freeze experiment configuration transitioning CREATED -> CONFIGURED (TRAIN permission required)",
+)
+@router.post(
+    "/experiments/{id}/freeze-config",
+    response_model=ExperimentResponse,
+    status_code=status.HTTP_200_OK,
+    include_in_schema=False,
+)
+def freeze_experiment_config_endpoint(
+    id: UUID,
+    payload: ExperimentFreezeRequest | None = None,
+    current_user: User = Depends(require_permission("TRAIN")),
+    db: Session = Depends(get_db),
+):
+    service = ExperimentService(db)
+    override_dict = payload.model_dump(exclude_unset=True) if payload else None
+    exp = service.freeze_experiment_config(id, config_override=override_dict)
+
+    models_res = [
+        TrainedModelResponse(
+            id=m.id,
+            experiment_id=m.experiment_id,
+            algorithm_name=m.algorithm_name,
+            hyperparameters=m.hyperparameters or {},
+            quick_cv_score=float(m.quick_cv_score) if m.quick_cv_score is not None else None,
+            fit_diagnosis=m.fit_diagnosis,
+            model_selection_score=float(m.model_selection_score) if m.model_selection_score is not None else None,
+            status=m.status,
+            error_message=m.error_message,
+            created_at=m.created_at,
+            metrics=[],
+        )
+        for m in (exp.trained_models or [])
+    ]
+
+    return ExperimentResponse(
+        id=exp.id,
+        project_id=exp.project_id,
+        status=exp.status,
+        task_type=exp.task_type,
+        fold_count=exp.fold_count,
+        cv_seed=exp.cv_seed,
+        selection_metric=exp.selection_metric,
+        selection_direction=exp.selection_direction,
+        selected_model_id=exp.selected_model_id,
+        locked_test_consumed=exp.locked_test_consumed,
+        locked_test_consumed_at=exp.locked_test_consumed_at,
+        created_at=exp.created_at,
+        completed_at=exp.completed_at,
+        trained_models=models_res,
+    )
+
+
+@router.post(
+    "/experiments/{id}/start",
+    response_model=ExperimentResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Start training for an experiment with DB concurrency protection (TRAIN permission required)",
+)
+def start_experiment_training_endpoint(
+    id: UUID,
+    background_tasks: BackgroundTasks,
+    current_user: User = Depends(require_permission("TRAIN")),
+    db: Session = Depends(get_db),
+):
+    service = ExperimentService(db)
+    exp = service.start_training(id)
+
+    algorithms = None
+    if exp.experiment_config and isinstance(exp.experiment_config, dict):
+        algorithms = exp.experiment_config.get("algorithms")
+    if not algorithms:
+        if exp.task_type == "CLASSIFICATION":
+            algorithms = ["LogisticRegression", "RandomForestClassifier", "GradientBoostingClassifier"]
+        else:
+            algorithms = ["LinearRegression", "Ridge", "RandomForestRegressor"]
+
+    eff_metric = exp.selection_metric or ("rmse" if exp.task_type == "REGRESSION" else "f1_macro")
+    eff_direction = exp.selection_direction or ("MINIMIZE" if eff_metric in ["rmse", "mae", "mse"] else "MAXIMIZE")
+
+    background_tasks.add_task(
+        ExperimentService.run_experiment_background,
+        project_id=exp.project_id,
+        experiment_id=exp.id,
+        algorithms=algorithms,
+        folds=exp.fold_count or 5,
+        seed=exp.cv_seed or 42,
+        selection_metric=eff_metric,
+        selection_direction=eff_direction,
+    )
+
+    models_res = [
+        TrainedModelResponse(
+            id=m.id,
+            experiment_id=m.experiment_id,
+            algorithm_name=m.algorithm_name,
+            hyperparameters=m.hyperparameters or {},
+            quick_cv_score=float(m.quick_cv_score) if m.quick_cv_score is not None else None,
+            fit_diagnosis=m.fit_diagnosis,
+            model_selection_score=float(m.model_selection_score) if m.model_selection_score is not None else None,
+            status=m.status,
+            error_message=m.error_message,
+            created_at=m.created_at,
+            metrics=[],
+        )
+        for m in (exp.trained_models or [])
+    ]
+
+    return ExperimentResponse(
+        id=exp.id,
+        project_id=exp.project_id,
+        status=exp.status,
+        task_type=exp.task_type,
+        fold_count=exp.fold_count,
+        cv_seed=exp.cv_seed,
+        selection_metric=exp.selection_metric,
+        selection_direction=exp.selection_direction,
+        selected_model_id=exp.selected_model_id,
+        locked_test_consumed=exp.locked_test_consumed,
+        locked_test_consumed_at=exp.locked_test_consumed_at,
+        created_at=exp.created_at,
+        completed_at=exp.completed_at,
+        trained_models=models_res,
     )
 
 

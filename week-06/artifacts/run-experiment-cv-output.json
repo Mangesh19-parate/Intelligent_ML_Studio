@@ -1,0 +1,116 @@
+{
+  "generated_at": "2026-09-07T20:22:00Z",
+  "metadata": {
+    "suite": "Week 6 Full CV Regression & Classification Run Evidence",
+    "zero_leakage_verified": true,
+    "state_machine_transitions": "CONFIGURED -> TRAINING -> REGISTERED",
+    "concurrency_protection": "Active (exclusive lock per experiment)",
+    "canonical_algorithm_names": [
+      "LinearRegression",
+      "Ridge",
+      "RandomForestRegressor",
+      "GradientBoostingRegressor",
+      "LogisticRegression",
+      "RandomForestClassifier",
+      "GradientBoostingClassifier"
+    ]
+  },
+  "regression_experiment": {
+    "experiment_id": "9598bc69-9352-4e1a-afab-95bf7e959428",
+    "project_id": "146a2127-9fe4-4da8-8aca-83110b7fa78b",
+    "status": "REGISTERED",
+    "task_type": "REGRESSION",
+    "fold_count": 5,
+    "cv_seed": 42,
+    "selection_metric": "rmse",
+    "selection_direction": "MINIMIZE",
+    "selected_model_id": "7ec452df-9272-452b-9dbf-d710612a7926",
+    "locked_test_consumed": true,
+    "trained_models": [
+      {
+        "id": "7ec452df-9272-452b-9dbf-d710612a7926",
+        "algorithm_name": "LinearRegression",
+        "hyperparameters": {},
+        "quick_cv_score": 0.53094,
+        "fit_diagnosis": "INSUFFICIENT_DATA",
+        "model_selection_score": 95.9,
+        "status": "DEPLOYABLE",
+        "error_message": null
+      },
+      {
+        "id": "a2c5360b-6a0c-4588-bc1c-2a5a42817ffb",
+        "algorithm_name": "Ridge",
+        "hyperparameters": {},
+        "quick_cv_score": 0.54304,
+        "fit_diagnosis": "INSUFFICIENT_DATA",
+        "model_selection_score": 95.79,
+        "status": "TRAINED",
+        "error_message": null
+      },
+      {
+        "id": "25c404f4-cd53-417f-aafb-cde37894a2c6",
+        "algorithm_name": "RandomForestRegressor",
+        "hyperparameters": {},
+        "quick_cv_score": 1.66815,
+        "fit_diagnosis": "INSUFFICIENT_DATA",
+        "model_selection_score": 83.77,
+        "status": "TRAINED",
+        "error_message": null
+      },
+      {
+        "id": "d0ed29fa-7c3b-4c48-8193-2c97d8d1431d",
+        "algorithm_name": "GradientBoostingRegressor",
+        "hyperparameters": {},
+        "quick_cv_score": 1.40608,
+        "fit_diagnosis": "INSUFFICIENT_DATA",
+        "model_selection_score": 86.79,
+        "status": "TRAINED",
+        "error_message": null
+      }
+    ]
+  },
+  "classification_experiment": {
+    "experiment_id": "4d985fef-9294-4abe-85fb-4d4750ba67fa",
+    "project_id": "e0ec4d71-4b44-4721-8713-716138e77982",
+    "status": "REGISTERED",
+    "task_type": "CLASSIFICATION",
+    "fold_count": 5,
+    "cv_seed": 42,
+    "selection_metric": "f1_macro",
+    "selection_direction": "MAXIMIZE",
+    "selected_model_id": "1d754c35-a3fe-47f0-b3a4-d93f99dba5e4",
+    "locked_test_consumed": true,
+    "trained_models": [
+      {
+        "id": "1d754c35-a3fe-47f0-b3a4-d93f99dba5e4",
+        "algorithm_name": "LogisticRegression",
+        "hyperparameters": {},
+        "quick_cv_score": 0.92593,
+        "fit_diagnosis": "INSUFFICIENT_DATA",
+        "model_selection_score": 95.26,
+        "status": "DEPLOYABLE",
+        "error_message": null
+      },
+      {
+        "id": "93ab8a48-829d-40e1-a595-d3bda7f5e566",
+        "algorithm_name": "RandomForestClassifier",
+        "hyperparameters": {},
+        "quick_cv_score": 0.91355,
+        "fit_diagnosis": "INSUFFICIENT_DATA",
+        "model_selection_score": 93.43,
+        "status": "TRAINED",
+        "error_message": null
+      },
+      {
+        "id": "881987e9-1d84-4136-9c4c-6a20ffd35eae",
+        "algorithm_name": "GradientBoostingClassifier",
+        "hyperparameters": {},
+        "quick_cv_score": 0.90515,
+        "fit_diagnosis": "INSUFFICIENT_DATA",
+        "model_selection_score": 93.51,
+        "status": "TRAINED",
+        "error_message": null
+      }
+    ]
+  }
+}

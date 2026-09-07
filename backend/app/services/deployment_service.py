@@ -6,17 +6,18 @@ from sqlalchemy.orm import Session
 
 from app.models.deployment import Deployment
 from app.models.trained_model import TrainedModel
+from app.config.state_machines import DeploymentState
 from app.services.deployment_gate_service import DeploymentGateService
 
 
 class DeploymentService:
     """
-    Model Deployment Lifecycle Service (Day 10).
+    Model Deployment Lifecycle Service (Day 10 / SRS v9 §2).
     
-    ARCHITECTURAL NOTE (SRS §2.14 / §2.16):
+    ARCHITECTURAL NOTE (SRS §2.14 / §2.16 / SRS v9 §2):
     - Enforces gate-controlled deployment.
-    - Lifecycle state machine: LIVE -> PAUSED -> RETIRED.
-    - Invariant: A RETIRED deployment is immutable and cannot be transitioned back to LIVE or PAUSED.
+    - Lifecycle state machine: CREATED -> GATE_PENDING -> GATE_PASSED -> APPROVED -> DEPLOYED (LIVE) <-> PAUSED -> RETIRED.
+    - Invariant: A RETIRED deployment is immutable and cannot be transitioned back to LIVE/DEPLOYED or PAUSED.
     """
 
     def __init__(self, db: Session):

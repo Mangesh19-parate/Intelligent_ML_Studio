@@ -9,11 +9,11 @@ import { DeploymentMonitoring } from './pages/DeploymentMonitoring';
 import DataStage from './pages/DataStage';
 import { DataAnalysisStage } from './pages/DataAnalysisStage';
 import { FeatureEngineeringStage } from './pages/FeatureEngineeringStage';
+import { MLStage } from './pages/MLStage';
 import {
   AnalysisStage,
   TransformationStage,
   DiagnosticsStage,
-  MLStage,
   ProductionStage,
 } from './pages/StagePlaceholders';
 import { AdminConsole } from './pages/AdminConsole';
@@ -132,9 +132,17 @@ export default function App() {
             }
           />
 
-          {/* Stage 7: Machine Learning */}
+          {/* Stage 7: Machine Learning & Leaderboard */}
           <Route
             path="/machine-learning"
+            element={
+              <ProtectedRoute>
+                <MLStage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/leaderboard"
             element={
               <ProtectedRoute>
                 <MLStage />

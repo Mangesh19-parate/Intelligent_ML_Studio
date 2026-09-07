@@ -875,6 +875,11 @@ class ExperimentService:
             fold_baselines: list[dict[str, float]] = []
             min_val_fold_size = n_samples
 
+            # Out-of-fold probability tracking for binary threshold selection (SRS v9 §5 / §2.11)
+            is_binary_clf = (task_type == "CLASSIFICATION" and len(np.unique(y_raw)) == 2)
+            oof_val_probas: dict[str, np.ndarray] = {alg: np.zeros(n_samples, dtype=np.float64) for alg in canonical_algs}
+            oof_fold_origin: dict[str, np.ndarray] = {alg: -np.ones(n_samples, dtype=int) for alg in canonical_algs}
+
             algorithm_errors: dict[str, str] = {}
             algorithm_hyperparams: dict[str, dict[str, Any]] = {}
 
@@ -1128,6 +1133,17 @@ class ExperimentService:
                                 y_val_eval, y_val_pred, y_proba=y_val_proba
                             )
 
+                            # Record strictly out-of-fold validation probabilities for binary threshold search (SRS v9 §5)
+                            if is_binary_clf and y_val_proba is not None:
+                                if y_val_proba.ndim == 2 and y_val_proba.shape[1] >= 2:
+                                    val_pos_p = y_val_proba[:, 1]
+                                elif y_val_proba.ndim == 1:
+                                    val_pos_p = y_val_proba
+                                else:
+                                    val_pos_p = y_val_proba[:, 0]
+                                oof_val_probas[alg_name][val_idx] = val_pos_p
+                                oof_fold_origin[alg_name][val_idx] = fold_idx
+
                         fold_train_metrics[alg_name].append(train_metrics)
                         fold_val_metrics[alg_name].append(val_metrics)
 
@@ -1200,6 +1216,24 @@ class ExperimentService:
 
                     # Quick CV score = primary selection metric mean
                     primary_val = cv_mean_metrics.get(eff_metric)
+                    if primary_val is None:
+                        if eff_metric in ["macro_f1", "f1_macro"]:
+                            primary_val = cv_mean_metrics.get("macro_f1", cv_mean_metrics.get("f1_macro"))
+                        elif eff_metric in ["weighted_f1", "f1_weighted"]:
+                            primary_val = cv_mean_metrics.get("weighted_f1", cv_mean_metrics.get("f1_weighted"))
+
+                    # Out-of-fold decision threshold selection for binary classification (SRS §2.11 / SRS v9 §5)
+                    optimal_threshold = 0.5
+                    if is_binary_clf and alg_name not in algorithm_errors:
+                        try:
+                            optimal_threshold, _ = EvaluationService.select_optimal_binary_threshold(
+                                y_true=y_raw.values,
+                                y_proba=oof_val_probas[alg_name],
+                                metric_name=eff_metric,
+                            )
+                        except Exception as t_err:
+                            logger.warning(f"OOF threshold search failed for {alg_name}: {t_err}, defaulting to 0.5")
+                            optimal_threshold = 0.5
 
                     model_rec = self.exp_repo.add_trained_model(
                         experiment_id=experiment.id,
@@ -1208,6 +1242,7 @@ class ExperimentService:
                         quick_cv_score=primary_val,
                         fit_diagnosis=fit_diag,
                         model_selection_score=sel_score,
+                        decision_threshold=optimal_threshold,
                         status=ModelState.TRAINED.value,
                         error_message=None,
                     )
@@ -1373,7 +1408,14 @@ class ExperimentService:
         model_scores = []
         for model in completed_models:
             cv_metric = next(
-                (m for m in model.metrics if m.split == "CV_MEAN" and m.metric_name == metric_name),
+                (
+                    m for m in model.metrics
+                    if m.split == "CV_MEAN" and (
+                        m.metric_name == metric_name
+                        or (metric_name in ["macro_f1", "f1_macro"] and m.metric_name in ["macro_f1", "f1_macro"])
+                        or (metric_name in ["weighted_f1", "f1_weighted"] and m.metric_name in ["weighted_f1", "f1_weighted"])
+                    )
+                ),
                 None
             )
             val = float(cv_metric.metric_value) if cv_metric and cv_metric.metric_value is not None else float(model.quick_cv_score or 0.0)
@@ -1534,13 +1576,30 @@ class ExperimentService:
         self.db.commit()
 
         # Evaluate final refit on Development partition
-        y_dev_pred = trainer.predict(X_dev_selected)
         if task_type == "REGRESSION":
+            y_dev_pred = trainer.predict(X_dev_selected)
             refit_train_metrics = EvaluationService.evaluate_regression(
                 y_dev_fit, y_dev_pred, n=len(y_dev_fit), p=len(final_selected)
             )
         else:
             y_dev_proba = trainer.predict_proba(X_dev_selected)
+            unique_dev_classes = np.unique(y_dev_fit)
+            if len(unique_dev_classes) == 2 and winning_model.decision_threshold is not None:
+                t_thresh = float(winning_model.decision_threshold)
+                if y_dev_proba.ndim == 2 and y_dev_proba.shape[1] >= 2:
+                    p_dev = y_dev_proba[:, 1]
+                elif y_dev_proba.ndim == 1:
+                    p_dev = y_dev_proba
+                else:
+                    p_dev = y_dev_proba[:, 0]
+                if pd.api.types.is_numeric_dtype(unique_dev_classes):
+                    y_dev_pred = (p_dev >= t_thresh).astype(unique_dev_classes.dtype)
+                else:
+                    pos_c = unique_dev_classes[1]
+                    neg_c = unique_dev_classes[0]
+                    y_dev_pred = np.where(p_dev >= t_thresh, pos_c, neg_c)
+            else:
+                y_dev_pred = trainer.predict(X_dev_selected)
             refit_train_metrics = EvaluationService.evaluate_classification(
                 y_dev_fit, y_dev_pred, y_proba=y_dev_proba
             )
@@ -1611,14 +1670,30 @@ class ExperimentService:
             y_test_eval = y_test_raw.astype(float)
 
         # Predict on Locked Test data (predict ONLY, NEVER fit)
-        y_test_pred = trainer.predict(X_test_selected)
-
         if task_type == "REGRESSION":
+            y_test_pred = trainer.predict(X_test_selected)
             locked_test_metrics = EvaluationService.evaluate_regression(
                 y_test_eval, y_test_pred, n=len(y_test_eval), p=len(final_selected)
             )
         else:
             y_test_proba = trainer.predict_proba(X_test_selected)
+            unique_test_classes = np.unique(y_test_eval)
+            if len(unique_test_classes) == 2 and winning_model.decision_threshold is not None:
+                t_thresh = float(winning_model.decision_threshold)
+                if y_test_proba.ndim == 2 and y_test_proba.shape[1] >= 2:
+                    p_test = y_test_proba[:, 1]
+                elif y_test_proba.ndim == 1:
+                    p_test = y_test_proba
+                else:
+                    p_test = y_test_proba[:, 0]
+                if pd.api.types.is_numeric_dtype(unique_test_classes):
+                    y_test_pred = (p_test >= t_thresh).astype(unique_test_classes.dtype)
+                else:
+                    pos_c = unique_test_classes[1]
+                    neg_c = unique_test_classes[0]
+                    y_test_pred = np.where(p_test >= t_thresh, pos_c, neg_c)
+            else:
+                y_test_pred = trainer.predict(X_test_selected)
             locked_test_metrics = EvaluationService.evaluate_classification(
                 y_test_eval, y_test_pred, y_proba=y_test_proba
             )
@@ -1644,6 +1719,7 @@ class ExperimentService:
 
         # 4. Mark Locked Test as Permanently Consumed & Experiment Registered
         now = datetime.now(timezone.utc)
+        self.exp_repo.update_status(experiment.id, ExperimentState.TEST_CONSUMED.value)
         self.exp_repo.mark_locked_test_consumed(experiment.id, consumed_at=now)
         winning_model.status = ModelState.DEPLOYABLE.value
         self.db.add(winning_model)

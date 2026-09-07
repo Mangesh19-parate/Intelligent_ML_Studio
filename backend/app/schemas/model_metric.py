@@ -30,6 +30,7 @@ class LeaderboardEntryResponse(BaseModel):
     hyperparameters: dict[str, Any] = Field(default_factory=dict)
     fit_diagnosis: str | None = None
     model_selection_score: float | None = None
+    decision_threshold: float | None = 0.5
     primary_metric_name: str
     primary_metric_value: float | None = None
     secondary_metric_name: str | None = None

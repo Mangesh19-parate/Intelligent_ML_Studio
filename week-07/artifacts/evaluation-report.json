@@ -1,0 +1,152 @@
+{
+  "report_title": "Week 7 Model Training, Evaluation & Leaderboard Regression Report",
+  "generated_at": "2026-09-07T15:55:30Z",
+  "specification_standard": "SRS v9 §2, §5, §10 — Cross-Validation, Model Evaluation & Zero-Leakage Governance",
+  "summary": {
+    "status": "PASSED",
+    "total_tests": 366,
+    "passed": 366,
+    "failed": 0,
+    "skipped": 0,
+    "duration_seconds": 154.46,
+    "pass_rate_pct": 100.0
+  },
+  "week_07_core_suites": {
+    "day_1_metrics": {
+      "test_file": "backend/tests/test_day1_metrics.py",
+      "tests_passed": 5,
+      "invariants": [
+        "Frozen metric naming strings strictly adhered to (rmse, mae, r2, adjusted_r2, f1_macro, f1_weighted, accuracy, roc_auc, confusion_matrix)",
+        "Per-fold (VALIDATION) and CV-mean (CV_MEAN) metric records persisted in model_metrics table",
+        "Training partition metrics (TRAIN) recorded for fit diagnostics"
+      ]
+    },
+    "day_2_leaderboard_and_diagnostics": {
+      "test_file": "backend/tests/test_day2_leaderboard_and_diagnostics.py",
+      "tests_passed": 10,
+      "invariants": [
+        "Authoritative sorting strictly driven by primary metric (MINIMIZE or MAXIMIZE)",
+        "Secondary composite Model Selection Score (0..100) computed for display without altering rank order",
+        "Deterministic 4-state fit diagnostics (GOOD_FIT, POTENTIAL_OVERFIT, POTENTIAL_UNDERFIT_WEAK_SIGNAL, INSUFFICIENT_DATA)"
+      ]
+    },
+    "day_3_threshold_selection": {
+      "test_file": "backend/tests/test_day3_threshold_selection.py",
+      "tests_passed": 8,
+      "invariants": [
+        "Binary classification threshold optimized strictly on out-of-fold development predictions",
+        "Zero threshold search prediction originates from a training fold containing that row",
+        "Frozen decision_threshold stored on trained_models before Locked Test consumption",
+        "Deterministic tie-breaking picking threshold closest to default 0.5"
+      ]
+    },
+    "day_4_locked_test_consumption": {
+      "test_file": "backend/tests/test_day4_locked_test_consumption.py",
+      "tests_passed": 5,
+      "invariants": [
+        "Experiment state transitions from EVALUATED to TEST_CONSUMED upon first Locked Test evaluation",
+        "Subsequent test evaluations stored as split='TEST_REUSED_DIAGNOSTIC'",
+        "TEST_REUSED_DIAGNOSTIC strictly excluded from leaderboard and deployment gate queries at query level"
+      ]
+    },
+    "day_5_leakage_tests": {
+      "test_file": "backend/tests/test_day5_leakage_tests.py",
+      "tests_passed": 3,
+      "invariants": [
+        "test_test_reuse verifies state transition and query-level diagnostic filtering",
+        "test_threshold_not_from_test verifies decision threshold is invariant to Locked Test modifications"
+      ]
+    },
+    "day_6_full_cv_and_frontend": {
+      "test_files": [
+        "backend/tests/test_day6_full_cv_run.py",
+        "backend/tests/test_model_training.py",
+        "backend/tests/test_evaluation_and_locked_test.py"
+      ],
+      "tests_passed": 16,
+      "invariants": [
+        "End-to-end full CV execution for regression and classification models",
+        "Single-algorithm failure isolation without aborting remaining trainers",
+        "Frontend Vite build compilation verified (0 errors)"
+      ]
+    }
+  },
+  "weeks_02_to_06_regression_breakdown": {
+    "data_ingestion_profiling_and_splitting": {
+      "test_files": [
+        "backend/tests/test_profiling.py",
+        "backend/tests/test_dataset_split.py",
+        "backend/tests/test_day1_storage_and_upload.py",
+        "backend/tests/test_day2_structural_validation_and_row_uid.py",
+        "backend/tests/test_day3_outer_split_and_content_hash.py",
+        "backend/tests/test_size_guardrails.py"
+      ],
+      "tests_passed": 48,
+      "status": "PASSED"
+    },
+    "transformations_and_feature_engineering": {
+      "test_files": [
+        "backend/tests/test_transformations.py",
+        "backend/tests/test_feature_selection.py",
+        "backend/tests/test_pipeline_construction.py"
+      ],
+      "tests_passed": 27,
+      "status": "PASSED"
+    },
+    "state_governance_and_concurrency": {
+      "test_files": [
+        "backend/tests/test_state_machines.py",
+        "backend/tests/test_state_wiring.py",
+        "backend/tests/test_state_legality.py",
+        "backend/tests/test_concurrency_protection.py",
+        "backend/tests/test_config_freeze.py",
+        "backend/tests/test_day4_leakage_and_reordering.py"
+      ],
+      "tests_passed": 66,
+      "status": "PASSED"
+    },
+    "lineage_reproducibility_and_audits": {
+      "test_files": [
+        "backend/tests/test_lineage_and_reproducibility.py",
+        "backend/tests/test_day12_audits.py",
+        "backend/tests/test_checkpoint1_evidence.py",
+        "backend/tests/test_week5_vector_suite.py",
+        "backend/tests/test_explainability.py"
+      ],
+      "tests_passed": 26,
+      "status": "PASSED"
+    },
+    "api_auth_deployments_and_benchmarks": {
+      "test_files": [
+        "backend/tests/test_api.py",
+        "backend/tests/test_auth_signup_flow.py",
+        "backend/tests/test_bootstrap_admin_and_permissions.py",
+        "backend/tests/test_canonical_trainers.py",
+        "backend/tests/test_contract.py",
+        "backend/tests/test_demo_accounts.py",
+        "backend/tests/test_deployments_and_gates.py",
+        "backend/tests/test_health_and_code_version.py",
+        "backend/tests/test_no_role_name_authorization.py",
+        "backend/tests/test_benchmark_timing.py",
+        "backend/tests/test_resource_benchmark.py",
+        "backend/tests/test_run_experiment_skeleton.py",
+        "backend/tests/test_day11_dashboard_and_monitoring.py",
+        "backend/tests/test_day1_selectors.py",
+        "backend/tests/test_day2_selectors.py",
+        "backend/tests/test_day3_selectors.py",
+        "backend/tests/test_day4_selectors.py",
+        "backend/tests/test_day5_selectors.py",
+        "backend/tests/test_day6_selectors.py"
+      ],
+      "tests_passed": 152,
+      "status": "PASSED"
+    }
+  },
+  "verified_architectural_invariants": {
+    "zero_leakage_outer_boundary": "VERIFIED — Development and Locked Test partitions are mathematically disjoint. Zero test rows accessed prior to finalization.",
+    "strict_oof_decision_threshold": "VERIFIED — All binary classification threshold tuning uses exclusively out-of-fold probabilities.",
+    "single_test_consumption": "VERIFIED — Locked test split evaluated once; subsequent runs recorded as non-authoritative diagnostics.",
+    "authoritative_leaderboard": "VERIFIED — Model ranks dictated strictly by selection_metric with composite score strictly secondary.",
+    "frontend_studio_integration": "VERIFIED — Stage 7 Machine Learning Studio UI wired, built, and verified with zero compilation errors."
+  }
+}

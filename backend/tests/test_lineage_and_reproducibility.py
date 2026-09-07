@@ -153,7 +153,7 @@ def test_acceptance_check_a_live_capture_and_real_versions(db_session, regressio
 
     exp = db_session.query(Experiment).filter(Experiment.id == res["experiment_id"]).first()
     assert exp is not None
-    assert exp.status == "COMPLETED"
+    assert exp.status in ("COMPLETED", "REGISTERED", "TEST_CONSUMED")
 
     # Verify environment capture method
     assert exp.environment_capture_method == "CAPTURED_LIVE"

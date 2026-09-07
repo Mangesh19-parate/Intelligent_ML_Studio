@@ -27,6 +27,7 @@ import {
   HelpCircle,
   FileCode,
   BrainCircuit,
+  Download,
 } from 'lucide-react';
 
 const REGRESSION_ALGORITHMS = [
@@ -246,33 +247,61 @@ export const ModelTraining = ({ projectId, taskType, targetColumn, onExperimentC
     }
   };
 
+  const handleDownloadModel = async (modelId, algorithmName) => {
+    try {
+      const resp = await modelApi.download(modelId, 'joblib');
+      const url = window.URL.createObjectURL(new Blob([resp.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `${algorithmName}_pipeline.joblib`);
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      setError(err.response?.data?.detail || 'Failed to download model artifact');
+    }
+  };
+
   const renderFitBadge = (diagnosis) => {
     if (!diagnosis) return <span className="text-slate-500 text-[10px]">N/A</span>;
 
     if (diagnosis === 'GOOD_FIT') {
       return (
-        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
-          Good Fit
+        <span
+          className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 border border-emerald-500/25 text-emerald-400"
+          title="Generalization gap is within tolerance and model significantly outperforms baseline"
+        >
+          ✓ Good Fit
         </span>
       );
     }
     if (diagnosis === 'POTENTIAL_OVERFIT') {
       return (
-        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/10 border border-amber-500/20 text-amber-400">
-          Potential Overfit
+        <span
+          className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/10 border border-amber-500/25 text-amber-400"
+          title="High training score but lower CV validation score indicates generalization gap"
+        >
+          ⚠ Overfit Gap
         </span>
       );
     }
     if (diagnosis === 'POTENTIAL_UNDERFIT_WEAK_SIGNAL') {
       return (
-        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/10 border border-amber-500/20 text-amber-400">
-          Weak Signal / Underfit
+        <span
+          className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/10 border border-rose-500/25 text-rose-400"
+          title="CV validation performance is near naive baseline — weak predictive signal detected"
+        >
+          ⚠ Weak Signal
         </span>
       );
     }
     return (
-      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-800 border border-slate-700 text-slate-400">
-        Insufficient Data
+      <span
+        className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-800 border border-slate-700 text-slate-400"
+        title="Validation sample count < 20 — insufficient data for reliable diagnosis"
+      >
+        ℹ Low Data (&lt;20)
       </span>
     );
   };
@@ -550,6 +579,14 @@ export const ModelTraining = ({ projectId, taskType, targetColumn, onExperimentC
                         <span>
                           Fit: {renderFitBadge(winningModel.fit_diagnosis)}
                         </span>
+                        {winningModel.decision_threshold !== null && winningModel.decision_threshold !== undefined && (
+                          <>
+                            <span>•</span>
+                            <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30" title="Binary classification decision threshold optimized on out-of-fold predictions">
+                              <span>τ = {Number(winningModel.decision_threshold).toFixed(4)}</span>
+                            </span>
+                          </>
+                        )}
                       </div>
                     </div>
 
@@ -679,6 +716,11 @@ export const ModelTraining = ({ projectId, taskType, targetColumn, onExperimentC
                                     Winner
                                   </span>
                                 )}
+                                {model.decision_threshold !== null && model.decision_threshold !== undefined && (
+                                  <span className="px-1.5 py-0.2 rounded text-[9px] font-mono font-bold bg-indigo-500/15 text-indigo-300 border border-indigo-500/25" title="Optimized decision threshold">
+                                    τ={Number(model.decision_threshold).toFixed(3)}
+                                  </span>
+                                )}
                               </div>
                               <div className="text-[10px] text-slate-500 font-mono truncate max-w-[160px]">
                                 {model.status === 'FAILED' ? (
@@ -732,6 +774,7 @@ export const ModelTraining = ({ projectId, taskType, targetColumn, onExperimentC
                                 <button
                                   onClick={() => handleOpenModelMetrics(model.id)}
                                   className="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition-colors inline-flex items-center space-x-1 cursor-pointer"
+                                  title="View complete cross-validation and fold metric records"
                                 >
                                   <Eye className="w-3.5 h-3.5" />
                                   <span>Metrics</span>
@@ -756,7 +799,23 @@ export const ModelTraining = ({ projectId, taskType, targetColumn, onExperimentC
                                   <BrainCircuit className="w-3.5 h-3.5" />
                                   <span>Explain</span>
                                 </button>
-
+                                <button
+                                  onClick={() => handleDownloadModel(model.id, model.algorithm_name)}
+                                  disabled={!isWin && !model.artifact_path}
+                                  title={
+                                    !isWin && !model.artifact_path
+                                      ? 'Artifact download is only available for persisted models'
+                                      : 'Download serialized joblib model pipeline artifact'
+                                  }
+                                  className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-colors inline-flex items-center space-x-1 ${
+                                    isWin || model.artifact_path
+                                      ? 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 cursor-pointer'
+                                      : 'bg-slate-900/50 text-slate-600 border border-slate-800/40 cursor-not-allowed opacity-50'
+                                  }`}
+                                >
+                                  <Download className="w-3.5 h-3.5" />
+                                  <span>Artifact</span>
+                                </button>
                                 <button
                                   onClick={() => {
                                     setSelectedDeploymentModel(model);

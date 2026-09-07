@@ -210,6 +210,7 @@ class ExperimentRepository(BaseRepository[Experiment]):
         quick_cv_score: float | None = None,
         fit_diagnosis: str | None = None,
         model_selection_score: float | None = None,
+        decision_threshold: float | None = None,
         status: str = "TRAINED",
         error_message: str | None = None,
     ) -> TrainedModel:
@@ -225,6 +226,7 @@ class ExperimentRepository(BaseRepository[Experiment]):
             quick_cv_score=quick_cv_score,
             fit_diagnosis=fit_diagnosis,
             model_selection_score=model_selection_score,
+            decision_threshold=decision_threshold,
             status=status,
             error_message=error_message,
         )
@@ -306,6 +308,7 @@ class ExperimentRepository(BaseRepository[Experiment]):
         self,
         model_id: PyUUID | str,
         split: str | None = None,
+        exclude_diagnostic: bool = False,
     ) -> list[ModelMetric]:
         if isinstance(model_id, str):
             try:
@@ -315,6 +318,8 @@ class ExperimentRepository(BaseRepository[Experiment]):
         q = self.db.query(ModelMetric).filter(ModelMetric.model_id == model_id)
         if split:
             q = q.filter(ModelMetric.split == split)
+        elif exclude_diagnostic:
+            q = q.filter(ModelMetric.split != "TEST_REUSED_DIAGNOSTIC")
         return q.order_by(ModelMetric.created_at.asc()).all()
 
     def create_transformation_snapshot(

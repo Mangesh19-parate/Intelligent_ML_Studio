@@ -30,7 +30,7 @@ class OutlierCapper(BaseEstimator, TransformerMixin):
         winsorize_lower: float = 5.0,
         winsorize_upper: float = 95.0,
     ):
-        self.strategy = strategy.lower() if strategy else "none"
+        self.strategy = strategy
         self.z_threshold = z_threshold
         self.iqr_multiplier = iqr_multiplier
         self.percentile_lower = percentile_lower

@@ -11,6 +11,7 @@ from sklearn.metrics import (
     recall_score,
     f1_score,
     roc_auc_score,
+    log_loss,
     confusion_matrix,
 )
 
@@ -28,8 +29,8 @@ class EvaluationService:
     """
 
     HIGHER_IS_BETTER_METRICS = {
-        "r2", "adjusted_r2", "accuracy", "f1", "f1_macro", "f1_weighted",
-        "precision", "recall", "roc_auc"
+        "r2", "adjusted_r2", "accuracy", "f1", "macro_f1", "weighted_f1",
+        "f1_macro", "f1_weighted", "precision", "recall", "roc_auc"
     }
 
     LOWER_IS_BETTER_METRICS = {
@@ -40,6 +41,8 @@ class EvaluationService:
         "r2": 0.15,
         "adjusted_r2": 0.15,
         "accuracy": 0.10,
+        "macro_f1": 0.10,
+        "weighted_f1": 0.10,
         "f1_macro": 0.10,
         "f1_weighted": 0.10,
         "precision": 0.10,
@@ -48,6 +51,7 @@ class EvaluationService:
         "rmse": 0.15,
         "mae": 0.15,
         "mse": 0.20,
+        "log_loss": 0.20,
     }
 
     @staticmethod
@@ -78,9 +82,9 @@ class EvaluationService:
             adj_r2 = r2
 
         return {
+            "rmse": round(rmse, 5),
             "mae": round(mae, 5),
             "mse": round(mse, 5),
-            "rmse": round(rmse, 5),
             "r2": round(r2, 5),
             "adjusted_r2": round(adj_r2, 5),
         }
@@ -93,8 +97,8 @@ class EvaluationService:
     ) -> dict[str, Any]:
         """
         Computes the complete classification metric suite:
-        - Accuracy, Precision (weighted), Recall (weighted), F1 (weighted + macro),
-          ROC-AUC (one-vs-rest / binary if proba available), Confusion Matrix (as JSON structure).
+        - Accuracy, Precision (weighted), Recall (weighted), F1 (macro + weighted),
+          ROC-AUC (one-vs-rest / binary if proba available), Log Loss, Confusion Matrix (as JSON structure).
         """
         y_true_arr = np.asarray(y_true)
         y_pred_arr = np.asarray(y_pred)
@@ -102,25 +106,26 @@ class EvaluationService:
         acc = float(accuracy_score(y_true_arr, y_pred_arr))
         prec = float(precision_score(y_true_arr, y_pred_arr, average="weighted", zero_division=0))
         rec = float(recall_score(y_true_arr, y_pred_arr, average="weighted", zero_division=0))
-        f1_w = float(f1_score(y_true_arr, y_pred_arr, average="weighted", zero_division=0))
         f1_m = float(f1_score(y_true_arr, y_pred_arr, average="macro", zero_division=0))
+        f1_w = float(f1_score(y_true_arr, y_pred_arr, average="weighted", zero_division=0))
 
         # Confusion Matrix
         cm = confusion_matrix(y_true_arr, y_pred_arr).tolist()
 
         # ROC-AUC (optional depending on proba availability and class support)
-        roc_auc = None
+        roc_auc_val = None
+        loss_val = None
         if y_proba is not None:
             try:
                 unique_classes = np.unique(y_true_arr)
                 if len(unique_classes) == 2:
                     if y_proba.ndim == 2 and y_proba.shape[1] >= 2:
-                        roc_auc = float(roc_auc_score(y_true_arr, y_proba[:, 1]))
+                        roc_auc_val = float(roc_auc_score(y_true_arr, y_proba[:, 1]))
                     elif y_proba.ndim == 1:
-                        roc_auc = float(roc_auc_score(y_true_arr, y_proba))
+                        roc_auc_val = float(roc_auc_score(y_true_arr, y_proba))
                 elif len(unique_classes) > 2:
                     if y_proba.ndim == 2 and y_proba.shape[1] == len(unique_classes):
-                        roc_auc = float(
+                        roc_auc_val = float(
                             roc_auc_score(
                                 y_true_arr,
                                 y_proba,
@@ -130,20 +135,37 @@ class EvaluationService:
                         )
             except Exception as e:
                 logger.debug(f"ROC-AUC computation skipped: {str(e)}")
-                roc_auc = None
+                roc_auc_val = None
+
+            try:
+                # Log Loss computation
+                if y_proba.ndim == 2:
+                    loss_val = float(log_loss(y_true_arr, y_proba))
+                elif y_proba.ndim == 1:
+                    loss_val = float(log_loss(y_true_arr, np.column_stack([1.0 - y_proba, y_proba])))
+            except Exception as e:
+                logger.debug(f"Log loss computation skipped: {str(e)}")
+                loss_val = None
 
         res: dict[str, Any] = {
+            "macro_f1": round(f1_m, 5),
+            "weighted_f1": round(f1_w, 5),
+            "f1_macro": round(f1_m, 5),
+            "f1_weighted": round(f1_w, 5),
             "accuracy": round(acc, 5),
             "precision": round(prec, 5),
             "recall": round(rec, 5),
-            "f1_weighted": round(f1_w, 5),
-            "f1_macro": round(f1_m, 5),
             "confusion_matrix": cm,
         }
-        if roc_auc is not None and not np.isnan(roc_auc):
-            res["roc_auc"] = round(roc_auc, 5)
+        if roc_auc_val is not None and not np.isnan(roc_auc_val):
+            res["roc_auc"] = round(roc_auc_val, 5)
         else:
             res["roc_auc"] = None
+
+        if loss_val is not None and not np.isnan(loss_val):
+            res["log_loss"] = round(loss_val, 5)
+        else:
+            res["log_loss"] = None
 
         return res
 
@@ -169,11 +191,11 @@ class EvaluationService:
             rmse = float(np.sqrt(mse))
 
             return {
-                "r2": 0.0,
-                "adjusted_r2": 0.0,
+                "rmse": round(rmse, 5),
                 "mae": round(mae, 5),
                 "mse": round(mse, 5),
-                "rmse": round(rmse, 5),
+                "r2": 0.0,
+                "adjusted_r2": 0.0,
             }
         else:
             series = pd.Series(y_arr)
@@ -187,13 +209,97 @@ class EvaluationService:
             rec = float(recall_score(y_arr, y_pred_base, average="weighted", zero_division=0))
 
             return {
-                "accuracy": round(acc, 5),
+                "macro_f1": round(f1_m, 5),
+                "weighted_f1": round(f1_w, 5),
                 "f1_macro": round(f1_m, 5),
                 "f1_weighted": round(f1_w, 5),
+                "accuracy": round(acc, 5),
                 "precision": round(prec, 5),
                 "recall": round(rec, 5),
                 "roc_auc": 0.5,
             }
+
+    @staticmethod
+    def select_optimal_binary_threshold(
+        y_true: np.ndarray | list[Any] | pd.Series,
+        y_proba: np.ndarray | list[float],
+        metric_name: str = "macro_f1",
+        min_threshold: float = 0.01,
+        max_threshold: float = 0.99,
+        n_steps: int = 99,
+    ) -> tuple[float, float]:
+        """
+        Selects optimal decision threshold for binary classification (SRS §2.11 / SRS v9 §5):
+        - Evaluates objective metric across candidate thresholds in [min_threshold, max_threshold].
+        - Evaluates candidates and resolves ties with deterministic tie-break rule:
+          Select candidate threshold achieving max score with minimum absolute distance to 0.5.
+        - Returns (optimal_threshold, best_score).
+        """
+        y_arr = np.asarray(y_true)
+        p_arr = np.asarray(y_proba, dtype=np.float64)
+
+        if len(y_arr) == 0 or len(p_arr) == 0:
+            return 0.5, 0.0
+
+        norm_metric = metric_name.lower().replace("-", "_").strip()
+        supported_metrics = {
+            "macro_f1", "f1_macro", "f1",
+            "weighted_f1", "f1_weighted",
+            "precision", "recall", "accuracy"
+        }
+        if norm_metric not in supported_metrics:
+            return 0.5, 0.0
+
+        if p_arr.ndim == 2:
+            p_pos = p_arr[:, 1]
+        else:
+            p_pos = p_arr
+
+        # Form candidate grid
+        candidates = np.linspace(min_threshold, max_threshold, n_steps)
+        if 0.5 not in candidates:
+            candidates = np.sort(np.unique(np.append(candidates, 0.5)))
+
+        best_score = -1.0
+        candidate_scores: list[tuple[float, float]] = []
+
+        # Convert y_arr to 0/1 integers
+        unique_labels = np.unique(y_arr)
+        if len(unique_labels) == 2:
+            pos_label = unique_labels[1]
+            y_binary = (y_arr == pos_label).astype(int)
+        else:
+            try:
+                y_binary = y_arr.astype(int)
+            except Exception:
+                return 0.5, 0.0
+
+        for t in candidates:
+            y_pred = (p_pos >= t).astype(int)
+            if norm_metric in ["macro_f1", "f1_macro", "f1"]:
+                score = float(f1_score(y_binary, y_pred, average="macro", zero_division=0))
+            elif norm_metric in ["weighted_f1", "f1_weighted"]:
+                score = float(f1_score(y_binary, y_pred, average="weighted", zero_division=0))
+            elif norm_metric == "precision":
+                score = float(precision_score(y_binary, y_pred, average="weighted", zero_division=0))
+            elif norm_metric == "recall":
+                score = float(recall_score(y_binary, y_pred, average="weighted", zero_division=0))
+            else:
+                score = float(accuracy_score(y_binary, y_pred))
+
+            candidate_scores.append((float(t), score))
+            if score > best_score:
+                best_score = score
+
+        # Find all tied thresholds achieving max score
+        eps = 1e-6
+        tied_candidates = [t for t, s in candidate_scores if abs(s - best_score) < eps]
+
+        # Deterministic tie-break: closest to 0.5
+        tied_candidates.sort(key=lambda t: (abs(t - 0.5), t))
+        optimal_threshold = round(tied_candidates[0], 4)
+
+        return optimal_threshold, round(best_score, 5)
 
     @classmethod
     def diagnose_fit(
@@ -226,6 +332,24 @@ class EvaluationService:
         train_val = train_metrics.get(norm_metric)
         cv_val = cv_mean_metrics.get(norm_metric)
         base_val = baseline_metrics.get(norm_metric)
+
+        if train_val is None:
+            if norm_metric in ["macro_f1", "f1_macro"]:
+                train_val = train_metrics.get("macro_f1", train_metrics.get("f1_macro"))
+            elif norm_metric in ["weighted_f1", "f1_weighted"]:
+                train_val = train_metrics.get("weighted_f1", train_metrics.get("f1_weighted"))
+
+        if cv_val is None:
+            if norm_metric in ["macro_f1", "f1_macro"]:
+                cv_val = cv_mean_metrics.get("macro_f1", cv_mean_metrics.get("f1_macro"))
+            elif norm_metric in ["weighted_f1", "f1_weighted"]:
+                cv_val = cv_mean_metrics.get("weighted_f1", cv_mean_metrics.get("f1_weighted"))
+
+        if base_val is None:
+            if norm_metric in ["macro_f1", "f1_macro"]:
+                base_val = baseline_metrics.get("macro_f1", baseline_metrics.get("f1_macro"))
+            elif norm_metric in ["weighted_f1", "f1_weighted"]:
+                base_val = baseline_metrics.get("weighted_f1", baseline_metrics.get("f1_weighted"))
 
         if train_val is None or cv_val is None:
             return "GOOD_FIT"
@@ -306,7 +430,7 @@ class EvaluationService:
             else:
                 score = norm_r2 * 100.0
         else:
-            f1_w = cv_mean_metrics.get("f1_weighted", cv_mean_metrics.get("f1_macro", 0.0))
+            f1_w = cv_mean_metrics.get("weighted_f1", cv_mean_metrics.get("f1_weighted", cv_mean_metrics.get("macro_f1", cv_mean_metrics.get("f1_macro", 0.0))))
             roc_auc = cv_mean_metrics.get("roc_auc")
             if roc_auc is not None and not np.isnan(roc_auc):
                 score = (float(f1_w) * 0.6 + float(roc_auc) * 0.4) * 100.0

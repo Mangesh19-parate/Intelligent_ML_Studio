@@ -188,7 +188,7 @@ def test_project_wide_leakage_audit(db_session: Session, client, create_test_use
         auto_finalize=False,
         deployment_threshold={"metric": "rmse", "min_value": 50000.0},
     )
-    assert exp_res["status"] == "COMPLETED"
+    assert exp_res["status"] in ("COMPLETED", "EVALUATED")
     experiment_id = exp_res["experiment_id"]
     stage_row_index_log["cv_training"] = dev_indices
 

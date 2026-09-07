@@ -242,6 +242,7 @@ def get_project_leaderboard(
                 hyperparameters=model.hyperparameters or {},
                 fit_diagnosis=model.fit_diagnosis,
                 model_selection_score=float(model.model_selection_score) if model.model_selection_score is not None else None,
+                decision_threshold=float(model.decision_threshold) if model.decision_threshold is not None else 0.5,
                 primary_metric_name=selection_metric,
                 primary_metric_value=prim_val,
                 secondary_metric_name=secondary_metric_name,
@@ -259,7 +260,7 @@ def get_project_leaderboard(
 
     # Sort strictly by primary metric
     def sort_key(item):
-        is_completed = item["status"] == "COMPLETED"
+        is_completed = item["status"] in ["COMPLETED", "TRAINED", "DEPLOYABLE", "ARTIFACT_VERIFIED"]
         score = item["primary_sort_key"]
         if not is_completed or score is None:
             return (1, 0)

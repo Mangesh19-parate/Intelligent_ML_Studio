@@ -31,6 +31,9 @@ class TrainedModel(Base):
     # Day 7: Fit diagnosis and composite model selection score
     fit_diagnosis = Column(String(30), nullable=True)
     model_selection_score = Column(Numeric(5, 2), nullable=True)
+    
+    # Day 3 / SRS v9 §5 / §2.11: Frozen decision threshold for binary classification
+    decision_threshold = Column(Numeric(6, 4), nullable=True, default=0.5)
 
     # Day 8: Model artifact serialization & snapshot links
     artifact_path = Column(Text, nullable=True)

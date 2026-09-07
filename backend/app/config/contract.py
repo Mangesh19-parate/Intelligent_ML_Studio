@@ -81,6 +81,14 @@ class TechniqueStatus(str, Enum):
     FAILED = "FAILED"
 
 
+class EvidenceStrength(str, Enum):
+    """Evidence strength bands based on contributing selector count (§2.7, §8)."""
+    STRONG = "STRONG"                   # 4 of 4 techniques applied
+    MODERATE = "MODERATE"               # 3 of 4 techniques applied
+    LIMITED = "LIMITED"                 # 2 of 4 techniques applied (meets min_applied_methods)
+    INSUFFICIENT_EVIDENCE = "INSUFFICIENT_EVIDENCE"  # < 2 techniques applied (aborted)
+
+
 class FitDiagnosis(str, Enum):
     """Overfitting/Underfitting diagnostic categories (§2.10)."""
     GOOD_FIT = "GOOD_FIT"

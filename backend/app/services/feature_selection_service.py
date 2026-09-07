@@ -25,6 +25,20 @@ from app.repositories.feature_importance_repository import FeatureImportanceRepo
 from app.services.transformation_service import TransformationService
 from app.services.dataset_split_service import DatasetSplitService
 from app.services.storage_service import StorageService, get_storage_service
+from app.services.selectors import (
+    calculate_srs_rank_scores,
+    aggregate_ensemble_scores,
+    resolve_top_k,
+    apply_top_k_percent_selection,
+    CORRELATION_SELECTOR,
+    LASSO_SELECTOR,
+    RANDOM_FOREST_IMPORTANCE_SELECTOR,
+    PERMUTATION_IMPORTANCE_SELECTOR,
+    CorrelationSelector,
+    LassoSelector,
+    RandomForestImportanceSelector,
+    PermutationImportanceSelector,
+)
 
 class FeatureSelectionService:
     """
@@ -64,159 +78,36 @@ class FeatureSelectionService:
         X: np.ndarray, y: np.ndarray, task_type: str
     ) -> np.ndarray:
         """
-        Computes absolute correlation between each feature and the target.
-        - Numeric / Binary / Regression: Absolute Pearson correlation.
-        - Multiclass: Mean absolute Pearson correlation against one-hot target classes.
+        Computes absolute correlation between each feature and the target using CORRELATION_SELECTOR.
         """
-        n_samples, p = X.shape
-        scores = np.zeros(p, dtype=np.float64)
-
-        if n_samples < 2 or p == 0:
-            return scores
-
-        y_arr = np.asarray(y)
-
-        # Handle multiclass or non-numeric target
-        if task_type == "CLASSIFICATION" and len(np.unique(y_arr)) > 2:
-            # One-hot indicator matrix for classes
-            classes = np.unique(y_arr)
-            one_hot_y = np.column_stack([(y_arr == c).astype(float) for c in classes])
-            
-            for j in range(p):
-                col = X[:, j]
-                col_std = np.std(col)
-                if col_std == 0 or np.isnan(col_std):
-                    scores[j] = 0.0
-                    continue
-                
-                corrs = []
-                for k in range(one_hot_y.shape[1]):
-                    yk = one_hot_y[:, k]
-                    yk_std = np.std(yk)
-                    if yk_std == 0 or np.isnan(yk_std):
-                        continue
-                    r = np.corrcoef(col, yk)[0, 1]
-                    if not np.isnan(r):
-                        corrs.append(abs(float(r)))
-                scores[j] = float(np.mean(corrs)) if corrs else 0.0
-        else:
-            # Binary classification or numeric regression
-            y_numeric = y_arr.astype(float)
-            y_std = np.std(y_numeric)
-            if y_std == 0 or np.isnan(y_std):
-                return scores
-
-            for j in range(p):
-                col = X[:, j]
-                col_std = np.std(col)
-                if col_std == 0 or np.isnan(col_std):
-                    scores[j] = 0.0
-                    continue
-                r = np.corrcoef(col, y_numeric)[0, 1]
-                scores[j] = abs(float(r)) if not np.isnan(r) else 0.0
-
-        return scores
+        return CORRELATION_SELECTOR.compute_raw_scores(X, y, task_type)
 
     @staticmethod
     def compute_lasso_scores(
         X: np.ndarray, y: np.ndarray, task_type: str, seed: int = 42
     ) -> np.ndarray:
         """
-        Computes L1 (Lasso) feature importance = abs(coefficients).
-        - Regression: Lasso(alpha=0.01)
-        - Classification: LogisticRegression(penalty='l1', solver='liblinear'/'saga')
+        Computes L1 (Lasso) feature importance = abs(coefficients) using LASSO_SELECTOR.
         """
-        n_samples, p = X.shape
-        if p == 0:
-            return np.zeros(0, dtype=np.float64)
-
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            if task_type == "REGRESSION":
-                model = Lasso(alpha=0.01, max_iter=2000, random_state=seed)
-                model.fit(X, y)
-                coefs = np.abs(model.coef_)
-                if coefs.ndim == 0:
-                    coefs = np.array([float(coefs)])
-                return coefs.astype(np.float64)
-            else:
-                n_classes = len(np.unique(y))
-                solver = "liblinear" if n_classes <= 2 else "saga"
-                model = LogisticRegression(
-                    penalty="l1",
-                    solver=solver,
-                    max_iter=1000,
-                    random_state=seed,
-                    tol=1e-3,
-                )
-                model.fit(X, y)
-                coefs = np.abs(model.coef_)
-                if coefs.ndim == 2:
-                    # Average magnitude across classes
-                    return np.mean(coefs, axis=0).astype(np.float64)
-                return coefs.flatten().astype(np.float64)
+        return LASSO_SELECTOR.compute_raw_scores(X, y, task_type, seed=seed)
 
     @staticmethod
     def compute_random_forest_scores(
         X: np.ndarray, y: np.ndarray, task_type: str, seed: int = 42
     ) -> np.ndarray:
         """
-        Computes Random Forest Gini / Impurity feature importances.
+        Computes Random Forest Gini / Impurity feature importances using RANDOM_FOREST_IMPORTANCE_SELECTOR.
         """
-        p = X.shape[1]
-        if p == 0:
-            return np.zeros(0, dtype=np.float64)
-
-        if task_type == "REGRESSION":
-            rf = RandomForestRegressor(
-                n_estimators=50,
-                max_depth=10,
-                random_state=seed,
-                n_jobs=1,
-            )
-        else:
-            rf = RandomForestClassifier(
-                n_estimators=50,
-                max_depth=10,
-                random_state=seed,
-                n_jobs=1,
-            )
-
-        rf.fit(X, y)
-        return rf.feature_importances_.astype(np.float64)
+        return RANDOM_FOREST_IMPORTANCE_SELECTOR.compute_raw_scores(X, y, task_type, seed=seed)
 
     @staticmethod
     def compute_permutation_scores(
         X: np.ndarray, y: np.ndarray, task_type: str, seed: int = 42
     ) -> np.ndarray:
         """
-        Computes Permutation Feature Importance using a fast baseline estimator.
+        Computes Permutation Feature Importance using PERMUTATION_IMPORTANCE_SELECTOR.
         """
-        p = X.shape[1]
-        if p == 0:
-            return np.zeros(0, dtype=np.float64)
-
-        if task_type == "REGRESSION":
-            estimator = Ridge(alpha=1.0, random_state=seed)
-        else:
-            estimator = LogisticRegression(
-                max_iter=500,
-                random_state=seed,
-                tol=1e-3,
-            )
-
-        estimator.fit(X, y)
-        res = permutation_importance(
-            estimator,
-            X,
-            y,
-            n_repeats=5,
-            random_state=seed,
-            n_jobs=1,
-        )
-        # Importance is non-negative magnitude
-        scores = np.maximum(0.0, res.importances_mean)
-        return scores.astype(np.float64)
+        return PERMUTATION_IMPORTANCE_SELECTOR.compute_raw_scores(X, y, task_type, seed=seed)
 
     # -------------------------------------------------------------------------
     # 2. Rank Aggregation Mathematical Engine (SRS §2.7)
@@ -227,29 +118,10 @@ class FeatureSelectionService:
         cls, raw_scores: np.ndarray
     ) -> tuple[np.ndarray, np.ndarray]:
         """
-        Given raw importance scores for p features:
-        - Ranks features 1 (most important) to p (least important) based on |score|.
-        - Ties receive the average rank.
-        - Special case: p = 1 -> rank = 1.0, rank_score = 1.0 (avoids p - 1 = 0 division).
-        - Normalized rank score: r_j,T = 1.0 - (rank_j,T - 1.0) / (p - 1.0).
-        
-        Returns:
-            (ranks, normalized_rank_scores)
+        Given raw importance scores for p features, compute ranks and normalized rank scores
+        using calculate_srs_rank_scores (SRS §2.7).
         """
-        p = len(raw_scores)
-        if p == 0:
-            return np.array([]), np.array([])
-        if p == 1:
-            return np.array([1.0]), np.array([1.0])
-
-        abs_scores = np.abs(raw_scores)
-        # rankdata with negative values assigns rank 1 to the highest score
-        # method='average' assigns average rank to ties (e.g. 2 tied at rank 2 and 3 get 2.5)
-        ranks = rankdata(-abs_scores, method="average")
-        
-        # r_j,T = 1 - (rank_j,T - 1) / (p - 1)
-        normalized_scores = 1.0 - (ranks - 1.0) / (p - 1.0)
-        return ranks, normalized_scores
+        return calculate_srs_rank_scores(raw_scores)
 
     @classmethod
     def aggregate_technique_scores_for_fold(
@@ -300,13 +172,7 @@ class FeatureSelectionService:
                 technique_scores_payload[tech_name] = tech_feature_map
 
         # Calculate Ensemble Scores across applied techniques
-        t_applied = len(applied_rank_scores)
-        if t_applied > 0 and p > 0:
-            sum_r = np.sum(np.vstack(applied_rank_scores), axis=0)
-            ensemble_arr = sum_r / float(t_applied)
-        else:
-            ensemble_arr = np.zeros(p, dtype=np.float64)
-
+        ensemble_arr = aggregate_ensemble_scores(applied_rank_scores, p)
         ensemble_scores_dict = {
             col: float(ensemble_arr[i]) for i, col in enumerate(feature_names)
         }
@@ -349,6 +215,8 @@ class FeatureSelectionService:
         cv_strategy: str | None = None,
         seed: int = 42,
         threshold: float = 0.0,
+        method: str | None = "RANK_AGGREGATION",
+        selection_method: str | None = None,
     ) -> dict[str, Any]:
         """
         Executes the Day 5 Rank-Aggregation Feature Selection Ensemble within a 5-fold CV harness.
@@ -359,7 +227,21 @@ class FeatureSelectionService:
         - All 4 selectors evaluate fold-transformed training matrices.
         - Fold results persisted to `feature_selection_fold_results`.
         - Overall aggregate scores persisted to `feature_importance_scores`.
+        - Rejects research-only stability scoring methods (SRS v9 §1).
         """
+        effective_method = selection_method or method or "RANK_AGGREGATION"
+        norm_method = effective_method.strip().upper()
+        if "STABILITY" in norm_method or norm_method == "RANK_AGGREGATION_STABILITY":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="research-only method, not available in platform experiments.",
+            )
+        if norm_method not in ["RANK_AGGREGATION", "RANK_AGGREGATION_ENSEMBLE"]:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Unsupported feature selection method '{effective_method}'. Only 'RANK_AGGREGATION' is supported in the platform.",
+            )
+
         project = self.project_repo.get_by_id(project_id)
         if not project:
             raise HTTPException(
@@ -563,14 +445,21 @@ class FeatureSelectionService:
                 )
                 fold_ensemble_scores.append(fold_ensemble)
 
-                # Determine fold selected features based on threshold
-                fold_selected = [
-                    feat for feat, sc in fold_ensemble.items() if sc >= threshold
-                ]
-                if not fold_selected:
-                    # If threshold selects none, default to top feature
-                    top_col = max(fold_ensemble.items(), key=lambda x: x[1])[0]
-                    fold_selected = [top_col]
+                # Count applied techniques to verify evidence strength (min_applied_methods = 2)
+                applied_count = sum(
+                    1 for res in technique_results.values() if res.get("status") == "APPLIED"
+                )
+                if applied_count < 2:
+                    # Insufficient evidence (< 2 applied methods): no feature subset returned
+                    fold_selected = []
+                else:
+                    fold_selected = [
+                        feat for feat, sc in fold_ensemble.items() if sc >= threshold
+                    ]
+                    if not fold_selected and threshold <= 0.0:
+                        # If threshold <= 0 selects none, default to top feature
+                        top_col = max(fold_ensemble.items(), key=lambda x: x[1])[0]
+                        fold_selected = [top_col]
 
                 # Persist fold record
                 self.exp_repo.add_fold_result(
@@ -595,7 +484,20 @@ class FeatureSelectionService:
             # Apply initial threshold filtering
             self.importance_repo.update_selection(project.id, threshold=threshold)
 
-            # 7. Finalize Experiment & Update Project Stage
+            # 7. Create FeatureSelectionSnapshot & Finalize Experiment
+            final_selected = [
+                item.column_name
+                for item in self.importance_repo.get_by_project(project.id)
+                if item.is_selected
+            ]
+            fs_snapshot = self.exp_repo.create_feature_selection_snapshot(
+                experiment_id=experiment.id,
+                final_selected_features=final_selected,
+                final_selection_method="rank_aggregation_ensemble",
+            )
+            experiment.feature_selection_snapshot_id = fs_snapshot.id
+            self.db.add(experiment)
+
             self.exp_repo.update_status(experiment.id, "COMPLETED")
             if project.pipeline_stage in ["DATA", "DATA_UPLOADED", "SPLIT", "SPLIT_LOCKED", "PROFILED", "TRANSFORMED"]:
                 project.pipeline_stage = "FEATURE_SELECTED"

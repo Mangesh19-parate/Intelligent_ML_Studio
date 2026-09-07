@@ -8,10 +8,10 @@ import { ProjectDetail } from './pages/ProjectDetail';
 import { DeploymentMonitoring } from './pages/DeploymentMonitoring';
 import DataStage from './pages/DataStage';
 import { DataAnalysisStage } from './pages/DataAnalysisStage';
+import { FeatureEngineeringStage } from './pages/FeatureEngineeringStage';
 import {
   AnalysisStage,
   TransformationStage,
-  FeatureEngineeringStage,
   DiagnosticsStage,
   MLStage,
   ProductionStage,

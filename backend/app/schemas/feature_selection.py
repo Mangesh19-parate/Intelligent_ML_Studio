@@ -7,6 +7,8 @@ TechniqueStatus = Literal["APPLIED", "SKIPPED", "FAILED"]
 CVStrategy = Literal["KFOLD", "STRATIFIED_KFOLD"]
 
 class FeatureSelectionRunRequest(BaseModel):
+    method: Optional[str] = Field(default="RANK_AGGREGATION", description="Feature selection ensemble method (default RANK_AGGREGATION)")
+    selection_method: Optional[str] = Field(default=None, description="Alias for method")
     n_splits: int = Field(default=5, ge=2, le=20, description="Number of cross-validation folds")
     cv_strategy: Optional[CVStrategy] = Field(default=None, description="CV split strategy (default STRATIFIED_KFOLD for classification, KFOLD for regression)")
     seed: int = Field(default=42, description="Random seed for fold splitting and estimators")

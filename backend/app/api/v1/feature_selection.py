@@ -1,5 +1,5 @@
 from uuid import UUID
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.dependencies import require_permission
@@ -26,6 +26,20 @@ def run_feature_selection(
     current_user: User = Depends(require_permission("TRAIN")),
     db: Session = Depends(get_db),
 ):
+    method_val = payload.selection_method or payload.method
+    if method_val is not None:
+        norm_method = method_val.strip().upper()
+        if "STABILITY" in norm_method or norm_method == "RANK_AGGREGATION_STABILITY":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="research-only method, not available in platform experiments.",
+            )
+        if norm_method not in ["RANK_AGGREGATION", "RANK_AGGREGATION_ENSEMBLE"]:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Unsupported feature selection method '{method_val}'. Only 'RANK_AGGREGATION' is supported in the platform.",
+            )
+
     service = FeatureSelectionService(db)
     return service.run_cv_feature_selection(
         project_id=id,
@@ -33,6 +47,8 @@ def run_feature_selection(
         cv_strategy=payload.cv_strategy,
         seed=payload.seed,
         threshold=payload.threshold,
+        method=payload.method,
+        selection_method=payload.selection_method,
     )
 
 @router.get(

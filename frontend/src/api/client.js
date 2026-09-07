@@ -94,6 +94,17 @@ export const transformationApi = {
     }),
 };
 
+export const featureSelectionApi = {
+  run: (projectId, payload = {}) =>
+    apiClient.post(`/projects/${projectId}/feature-selection/run`, payload),
+  getImportance: (projectId) =>
+    apiClient.get(`/projects/${projectId}/feature-importance`),
+  getFolds: (projectId, experimentId) =>
+    apiClient.get(`/projects/${projectId}/experiments/${experimentId}/folds`),
+  updateThreshold: (projectId, payload) =>
+    apiClient.put(`/projects/${projectId}/feature-selection/threshold`, payload),
+};
+
 export const experimentApi = {
   create: (projectId, payload) => apiClient.post(`/projects/${projectId}/experiments`, payload),
   get: (experimentId) => apiClient.get(`/experiments/${experimentId}`),

@@ -515,3 +515,90 @@ def test_acceptance_check_f_tampered_artifact_rejection(db_session, regression_s
         expl_service.local_shap_explanation(winning_model_id, {"sqft": 1500, "bedrooms": 3, "noise_feat": 0.5})
     assert exc_local.value.status_code == 422
     assert "Artifact integrity check failed: SHA-256 checksum mismatch" in exc_local.value.detail
+
+
+def test_global_shap_caching_and_budget_prechecks(db_session, regression_setup):
+    """
+    Day 5 (P1) Verification:
+    1. Tests global SHAP schema-level caching in explainability_summaries.
+    2. Tests hard pre-check rejecting background sample size > 500.
+    3. Tests hard pre-check rejecting feature dimension > 250.
+    4. Tests hard pre-check rejecting evaluation cells > 50,000.
+    """
+    project = regression_setup["project"]
+    exp_service = ExperimentService(db_session)
+    expl_service = ExplainabilityService(db_session)
+
+    # 1. Run and finalize experiment
+    exp_res = exp_service.run_experiment(
+        project_id=project.id,
+        algorithms=["RandomForestRegressor"],
+        folds=3,
+        seed=42,
+        selection_metric="rmse",
+        selection_direction="MINIMIZE",
+        auto_finalize=True,
+    )
+    winning_model_id = exp_res["selected_model_id"]
+
+    # --- Pre-check 1: Background sample size > 500 rejected before artifact load ---
+    with pytest.raises(HTTPException) as exc_bg:
+        expl_service.global_shap_summary(winning_model_id, background_sample_size=600)
+    assert exc_bg.value.status_code == 422
+    assert "requested background sample size (600 samples) exceeds the maximum policy cap of 500 samples (risk of SHAP time budget breach)" in exc_bg.value.detail
+
+    # --- Initial computation & Cache persistence ---
+    summary_1 = expl_service.global_shap_summary(winning_model_id, background_sample_size=100)
+    assert summary_1.is_cached is False
+    assert len(summary_1.shap_values) > 0
+
+    # Verify cached row in database
+    cached_db_row = db_session.query(ExplainabilitySummary).filter(ExplainabilitySummary.model_id == winning_model_id).first()
+    assert cached_db_row is not None
+    assert cached_db_row.shap_values == summary_1.shap_values
+
+    # --- Subsequent call hits Schema-level Cache ---
+    with patch.object(expl_service, "_load_artifact") as mock_load:
+        summary_2 = expl_service.global_shap_summary(winning_model_id)
+        assert summary_2.is_cached is True
+        assert summary_2.shap_values == summary_1.shap_values
+        mock_load.assert_not_called()
+
+
+def test_global_shap_feature_dimension_and_cell_budget_rejections(db_session, regression_setup):
+    """
+    Day 5 (P1) Verification:
+    Tests that when feature dimension (>250) or evaluation cells (>50,000) exceed policy budget,
+    SHAP calculation is blocked with HTTP 422 and exact named reasons.
+    """
+    project = regression_setup["project"]
+    exp_service = ExperimentService(db_session)
+    expl_service = ExplainabilityService(db_session)
+
+    exp_res = exp_service.run_experiment(
+        project_id=project.id,
+        algorithms=["LinearRegression"],
+        folds=3,
+        seed=42,
+        selection_metric="rmse",
+        selection_direction="MINIMIZE",
+        auto_finalize=True,
+    )
+    winning_model_id = exp_res["selected_model_id"]
+
+    # Test feature dimension > 250
+    mock_wide_background = (np.zeros((50, 260)), [f"feat_{i}" for i in range(260)], 50)
+    with patch.object(expl_service, "_get_background_sample_selected", return_value=mock_wide_background):
+        with pytest.raises(HTTPException) as exc_feat:
+            expl_service.global_shap_summary(winning_model_id, background_sample_size=50)
+        assert exc_feat.value.status_code == 422
+        assert "feature dimension (260 features) exceeds the maximum policy cap of 250 features (risk of memory budget breach)" in exc_feat.value.detail
+
+    # Test evaluation cells > 50,000 (e.g. 300 samples * 200 features = 60,000 cells)
+    mock_dense_background = (np.zeros((300, 200)), [f"feat_{i}" for i in range(200)], 300)
+    with patch.object(expl_service, "_get_background_sample_selected", return_value=mock_dense_background):
+        with pytest.raises(HTTPException) as exc_cells:
+            expl_service.global_shap_summary(winning_model_id, background_sample_size=300)
+        assert exc_cells.value.status_code == 422
+        assert "evaluation cells (60,000 cells = 300 samples × 200 features) exceeds the maximum policy budget of 50,000 evaluation cells" in exc_cells.value.detail
+

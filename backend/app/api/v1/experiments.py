@@ -16,6 +16,7 @@ from app.schemas.experiment import (
     ExperimentCreateResponse,
     TrainedModelResponse,
     ExperimentLineageResponse,
+    ExperimentReproduceResponse,
 )
 from app.schemas.model_metric import SelectionRecordResponse, ModelMetricResponse
 from app.services.experiment_service import ExperimentService
@@ -455,5 +456,21 @@ def get_experiment_lineage_endpoint(
 ):
     service = ExperimentService(db)
     return service.get_experiment_lineage(id)
+
+
+@router.post(
+    "/experiments/{id}/reproduce",
+    response_model=ExperimentReproduceResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Reproduce experiment with frozen config and evaluate against frozen tolerances (TRAIN permission required)",
+)
+def reproduce_experiment_endpoint(
+    id: UUID,
+    current_user: User = Depends(require_permission("TRAIN")),
+    db: Session = Depends(get_db),
+):
+    service = ExperimentService(db)
+    return service.reproduce_experiment(id)
+
 
 

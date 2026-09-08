@@ -49,6 +49,7 @@ from app.schemas.deployment import (
     PredictResponse,
     PredictExplainResponse,
 )
+from app.schemas.model_passport import ModelPassportResponse
 
 __all__ = [
     "PermissionResponse",

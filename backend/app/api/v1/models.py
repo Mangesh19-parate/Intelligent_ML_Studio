@@ -17,9 +17,11 @@ from app.schemas.deployment import (
     DeploymentGateApproveResponse,
     DeploymentResponse,
 )
+from app.schemas.model_passport import ModelPassportResponse
 from app.repositories.experiment_repository import ExperimentRepository
 from app.services.explainability_service import ExplainabilityService
 from app.services.model_registry_service import ModelRegistryService
+from app.services.model_passport_service import ModelPassportService
 from app.services.deployment_gate_service import DeploymentGateService
 from app.services.deployment_service import DeploymentService
 
@@ -181,3 +183,23 @@ def deploy_model(
     """
     deploy_service = DeploymentService(db)
     return deploy_service.deploy(model_id=id, user_id=current_user.id)
+
+
+@router.get(
+    "/{id}/passport",
+    response_model=ModelPassportResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Retrieve immutable Model Technical Passport (SRS v9 §13) (READ permission required)",
+)
+def get_model_passport(
+    id: UUID,
+    current_user: User = Depends(require_permission("READ")),
+    db: Session = Depends(get_db),
+):
+    """
+    Assembles and renders the complete Model Technical Passport exclusively via
+    direct SELECT queries from stored records. Never triggers retraining, metric
+    recomputation, or disk artifact loading (zero joblib/pickle IO).
+    """
+    passport_service = ModelPassportService(db)
+    return passport_service.get_passport(model_id=id)

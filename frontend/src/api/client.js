@@ -111,6 +111,7 @@ export const experimentApi = {
   listByProject: (projectId) => apiClient.get(`/projects/${projectId}/experiments`),
   getSelection: (experimentId) => apiClient.get(`/experiments/${experimentId}/selection`),
   getLineage: (experimentId) => apiClient.get(`/experiments/${experimentId}/lineage`),
+  reproduce: (experimentId) => apiClient.post(`/experiments/${experimentId}/reproduce`),
   finalize: (experimentId) => apiClient.post(`/experiments/${experimentId}/finalize`),
   diagnosticRerun: (experimentId) => apiClient.post(`/experiments/${experimentId}/diagnostic-rerun`),
 };
@@ -119,6 +120,7 @@ export const modelApi = {
   getLeaderboard: (projectId, experimentId = null) =>
     apiClient.get(`/projects/${projectId}/leaderboard${experimentId ? `?experiment_id=${experimentId}` : ''}`),
   getMetrics: (modelId) => apiClient.get(`/models/${modelId}/metrics`),
+  getPassport: (modelId) => apiClient.get(`/models/${modelId}/passport`),
   getExplainability: (modelId, backgroundSampleSize = 200) =>
     apiClient.get(`/models/${modelId}/explainability?background_sample_size=${backgroundSampleSize}`),
   getLocalExplainability: (modelId, inputRow) =>

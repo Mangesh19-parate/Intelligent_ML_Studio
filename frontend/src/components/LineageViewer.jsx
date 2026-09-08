@@ -15,6 +15,10 @@ import {
   GitCommit,
   Sparkles,
   Lock,
+  Boxes,
+  Sliders,
+  Split,
+  RefreshCw,
 } from 'lucide-react';
 
 export const LineageViewer = ({ experimentId, onClose }) => {
@@ -22,6 +26,11 @@ export const LineageViewer = ({ experimentId, onClose }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [copiedKey, setCopiedKey] = useState(null);
+
+  // Reproducibility verification state
+  const [reproducing, setReproducing] = useState(false);
+  const [reproduceResult, setReproduceResult] = useState(null);
+  const [reproduceError, setReproduceError] = useState('');
 
   useEffect(() => {
     if (!experimentId) return;
@@ -40,8 +49,23 @@ export const LineageViewer = ({ experimentId, onClose }) => {
     fetchLineage();
   }, [experimentId]);
 
+  const handleReproduce = async () => {
+    try {
+      setReproducing(true);
+      setReproduceError('');
+      setReproduceResult(null);
+      const res = await experimentApi.reproduce(experimentId);
+      setReproduceResult(res.data);
+    } catch (err) {
+      setReproduceError(err.response?.data?.detail || 'Failed to reproduce experiment.');
+    } finally {
+      setReproducing(false);
+    }
+  };
+
   const copyToClipboard = (text, key) => {
-    navigator.clipboard.writeText(text);
+    if (!text) return;
+    navigator.clipboard.writeText(String(text));
     setCopiedKey(key);
     setTimeout(() => setCopiedKey(null), 2000);
   };
@@ -49,12 +73,12 @@ export const LineageViewer = ({ experimentId, onClose }) => {
   if (!experimentId) return null;
 
   return (
-    <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-4xl w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-4xl w-full max-h-[92vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
         {/* Header */}
-        <div className="p-5 border-b border-slate-800 flex items-center justify-between bg-slate-950/50">
+        <div className="p-5 border-b border-slate-800 flex items-center justify-between bg-slate-950/60 backdrop-blur">
           <div className="flex items-center space-x-3">
-            <div className="p-2 bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 rounded-xl">
+            <div className="p-2.5 bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 rounded-xl shadow-inner">
               <ShieldCheck className="w-5 h-5" />
             </div>
             <div>
@@ -69,21 +93,23 @@ export const LineageViewer = ({ experimentId, onClose }) => {
           <button
             onClick={onClose}
             className="p-1.5 text-slate-400 hover:text-white rounded-lg bg-slate-800 hover:bg-slate-700 transition-colors"
+            title="Close"
           >
             ✕
           </button>
         </div>
 
         {/* Content Body */}
-        <div className="p-6 overflow-y-auto space-y-6">
+        <div className="p-6 overflow-y-auto space-y-6 custom-scrollbar">
           {loading ? (
             <div className="p-12 text-center text-slate-400 space-y-3">
               <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto" />
               <p className="text-xs">Loading lineage and reproducibility records...</p>
             </div>
           ) : error ? (
-            <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs">
-              {error}
+            <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs flex items-center space-x-2">
+              <AlertTriangle className="w-4 h-4 shrink-0 text-rose-400" />
+              <span>{error}</span>
             </div>
           ) : lineage ? (
             <>
@@ -92,9 +118,14 @@ export const LineageViewer = ({ experimentId, onClose }) => {
                 <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-start space-x-3 text-amber-200">
                   <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
                   <div className="space-y-1 text-xs">
-                    <div className="font-bold text-amber-300">Environment Metadata Backfilled</div>
-                    <p>
-                      Environment metadata for this experiment was backfilled after the fact and may not exactly reflect what was running at training time.
+                    <div className="font-bold text-amber-300 flex items-center space-x-2">
+                      <span>Environment Metadata Backfilled (Historical Experiment)</span>
+                      <span className="px-2 py-0.5 bg-amber-500/20 text-amber-300 rounded text-[10px] font-mono">
+                        BACKFILLED_APPROXIMATE
+                      </span>
+                    </div>
+                    <p className="text-slate-300">
+                      Environment metadata for this experiment was backfilled post-run to maintain complete records. Values reflect runtime environment at backfill time.
                     </p>
                   </div>
                 </div>
@@ -104,13 +135,166 @@ export const LineageViewer = ({ experimentId, onClose }) => {
                     <CheckCircle2 className="w-4 h-4 text-emerald-400" />
                     <span className="font-semibold">Captured Live at Experiment Creation (Zero Drift Lineage)</span>
                   </div>
-                  <span className="px-2 py-0.5 bg-emerald-500/20 rounded-full font-mono text-[10px] font-bold text-emerald-300">
+                  <span className="px-2.5 py-0.5 bg-emerald-500/20 rounded-full font-mono text-[10px] font-bold text-emerald-300 border border-emerald-500/30">
                     CAPTURED_LIVE
                   </span>
                 </div>
               )}
 
-              {/* Hashes & Integrity Grid */}
+              {/* Reproducibility Verification Action & Result Card (Day 4 P0) */}
+              <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <RefreshCw className={`w-4 h-4 text-cyan-400 ${reproducing ? 'animate-spin' : ''}`} />
+                    <h4 className="text-xs font-bold text-white">
+                      Automated Reproducibility Verification
+                    </h4>
+                  </div>
+                  <button
+                    onClick={handleReproduce}
+                    disabled={reproducing}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-1.5 transition-all shadow-sm ${
+                      reproducing
+                        ? 'bg-slate-800 text-slate-400 cursor-not-allowed border border-slate-700'
+                        : 'bg-gradient-to-r from-cyan-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 text-white border border-cyan-400/30 shadow-cyan-500/10'
+                    }`}
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${reproducing ? 'animate-spin' : ''}`} />
+                    <span>{reproducing ? 'Re-running Experiment...' : 'Verify Reproducibility'}</span>
+                  </button>
+                </div>
+
+                {reproduceError && (
+                  <div className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs flex items-center space-x-2">
+                    <AlertTriangle className="w-4 h-4 shrink-0 text-rose-400" />
+                    <span>{reproduceError}</span>
+                  </div>
+                )}
+
+                {reproduceResult && (
+                  <div className={`p-4 rounded-xl border ${
+                    reproduceResult.status === 'REPRODUCED'
+                      ? 'bg-emerald-950/30 border-emerald-500/30 text-emerald-200'
+                      : 'bg-rose-950/30 border-rose-500/30 text-rose-200'
+                  } space-y-3 animate-in fade-in zoom-in-95 duration-150`}>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        {reproduceResult.status === 'REPRODUCED' ? (
+                          <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                        ) : (
+                          <AlertTriangle className="w-5 h-5 text-rose-400" />
+                        )}
+                        <span className="font-bold text-sm">
+                          {reproduceResult.status === 'REPRODUCED' ? 'Reproducibility Verified' : 'Reproducibility Discrepancy Detected'}
+                        </span>
+                      </div>
+                      <span className={`px-2.5 py-0.5 rounded-full font-mono text-[10px] font-bold border ${
+                        reproduceResult.status === 'REPRODUCED'
+                          ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                          : 'bg-rose-500/20 text-rose-300 border-rose-500/40'
+                      }`}>
+                        {reproduceResult.status}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs font-mono">
+                      <div className="p-2 bg-slate-900/80 rounded border border-slate-800">
+                        <div className="text-slate-400 text-[10px]">Expected ({reproduceResult.metric_name})</div>
+                        <div className="font-bold text-slate-100 mt-0.5">{reproduceResult.expected.toFixed(6)}</div>
+                      </div>
+                      <div className="p-2 bg-slate-900/80 rounded border border-slate-800">
+                        <div className="text-slate-400 text-[10px]">Observed ({reproduceResult.metric_name})</div>
+                        <div className="font-bold text-slate-100 mt-0.5">{reproduceResult.observed.toFixed(6)}</div>
+                      </div>
+                      <div className="p-2 bg-slate-900/80 rounded border border-slate-800">
+                        <div className="text-slate-400 text-[10px]">Absolute Diff</div>
+                        <div className="font-bold text-slate-100 mt-0.5">{reproduceResult.difference.toExponential(3)}</div>
+                      </div>
+                      <div className="p-2 bg-slate-900/80 rounded border border-slate-800">
+                        <div className="text-slate-400 text-[10px]">Relative Diff</div>
+                        <div className="font-bold text-slate-100 mt-0.5">{(reproduceResult.relative_difference * 100).toFixed(4)}%</div>
+                      </div>
+                    </div>
+
+                    <div className="text-[11px] text-slate-400 flex items-center justify-between pt-1 border-t border-slate-800/60 font-mono">
+                      <span>Contract Tolerances: abs ≤ {reproduceResult.tolerance?.metric_absolute_tolerance} | rel ≤ {(reproduceResult.tolerance?.metric_relative_tolerance * 100)}%</span>
+                      <span className="text-[10px] text-slate-500">Run ID: {reproduceResult.reproduced_experiment_id?.slice(0, 8)}</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+
+              {/* Deterministic Tuple (Seeds, Strategy, Task) */}
+              <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-bold text-white flex items-center space-x-2">
+                    <Split className="w-3.5 h-3.5 text-indigo-400" />
+                    <span>Deterministic Partitioning & Seeds</span>
+                  </h4>
+                  <span className="text-[10px] font-mono text-slate-400">
+                    Architecture Contract §9
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                  {/* Split Seed */}
+                  <div className="p-2.5 bg-slate-900 rounded-lg border border-slate-800 space-y-1">
+                    <div className="text-slate-400 text-[10px] flex items-center justify-between">
+                      <span>Split Seed (Outer)</span>
+                      {lineage.split_seed !== undefined && lineage.split_seed !== null && (
+                        <button
+                          onClick={() => copyToClipboard(lineage.split_seed, 'split_seed')}
+                          className="text-slate-400 hover:text-white"
+                          title="Copy Seed"
+                        >
+                          {copiedKey === 'split_seed' ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                        </button>
+                      )}
+                    </div>
+                    <div className="font-mono font-bold text-indigo-300 text-sm">
+                      {lineage.split_seed !== undefined && lineage.split_seed !== null ? lineage.split_seed : '42'}
+                    </div>
+                  </div>
+
+                  {/* CV Seed */}
+                  <div className="p-2.5 bg-slate-900 rounded-lg border border-slate-800 space-y-1">
+                    <div className="text-slate-400 text-[10px] flex items-center justify-between">
+                      <span>CV Seed (Inner)</span>
+                      {lineage.cv_seed !== undefined && lineage.cv_seed !== null && (
+                        <button
+                          onClick={() => copyToClipboard(lineage.cv_seed, 'cv_seed')}
+                          className="text-slate-400 hover:text-white"
+                          title="Copy Seed"
+                        >
+                          {copiedKey === 'cv_seed' ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                        </button>
+                      )}
+                    </div>
+                    <div className="font-mono font-bold text-indigo-300 text-sm">
+                      {lineage.cv_seed !== undefined && lineage.cv_seed !== null ? lineage.cv_seed : '42'}
+                    </div>
+                  </div>
+
+                  {/* CV Strategy */}
+                  <div className="p-2.5 bg-slate-900 rounded-lg border border-slate-800 space-y-1">
+                    <div className="text-slate-400 text-[10px]">CV Strategy</div>
+                    <div className="font-mono font-bold text-slate-200 text-xs truncate">
+                      {lineage.cv_strategy || (lineage.task_type === 'CLASSIFICATION' ? 'STRATIFIED_KFOLD' : 'KFOLD')}
+                    </div>
+                  </div>
+
+                  {/* Fold Count */}
+                  <div className="p-2.5 bg-slate-900 rounded-lg border border-slate-800 space-y-1">
+                    <div className="text-slate-400 text-[10px]">Folds / Partitions</div>
+                    <div className="font-mono font-bold text-slate-200 text-sm">
+                      {lineage.fold_count || 5} Folds
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Cryptographic Hashes & Integrity Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Dataset Content Hash */}
                 <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
@@ -169,7 +353,7 @@ export const LineageViewer = ({ experimentId, onClose }) => {
                   <span>Software & Environment Versions</span>
                 </h4>
 
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 text-xs">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
                   <div className="p-2.5 bg-slate-900 rounded-lg border border-slate-800">
                     <div className="text-slate-400 text-[10px]">Python</div>
                     <div className="font-mono font-bold text-slate-200 mt-0.5">{lineage.python_version || 'N/A'}</div>
@@ -198,6 +382,7 @@ export const LineageViewer = ({ experimentId, onClose }) => {
                     <button
                       onClick={() => copyToClipboard(lineage.code_version, 'commit')}
                       className="text-slate-400 hover:text-white p-1 rounded transition-colors"
+                      title="Copy Commit Hash"
                     >
                       {copiedKey === 'commit' ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
                     </button>
@@ -218,7 +403,7 @@ export const LineageViewer = ({ experimentId, onClose }) => {
                 )}
               </div>
 
-              {/* Snapshots & Frozen Config Tabs */}
+              {/* Snapshots & Frozen Config Section */}
               <div className="space-y-4">
                 {/* Frozen Experiment Config */}
                 <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-2">

@@ -3,6 +3,7 @@ import { experimentApi, modelApi } from '../api/client';
 import { LineageViewer } from './LineageViewer';
 import { ExplainabilityViewer } from './ExplainabilityViewer';
 import DeploymentGateModal from './DeploymentGateModal';
+import ModelPassportModal from './ModelPassportModal';
 import {
   Cpu,
   Play,
@@ -28,6 +29,7 @@ import {
   FileCode,
   BrainCircuit,
   Download,
+  FileText,
 } from 'lucide-react';
 
 const REGRESSION_ALGORITHMS = [
@@ -104,6 +106,8 @@ export const ModelTraining = ({ projectId, taskType, targetColumn, onExperimentC
   const [selectedExplainModel, setSelectedExplainModel] = useState(null);
   const [deploymentModalOpen, setDeploymentModalOpen] = useState(false);
   const [selectedDeploymentModel, setSelectedDeploymentModel] = useState(null);
+  const [passportModalOpen, setPassportModalOpen] = useState(false);
+  const [selectedPassportModelId, setSelectedPassportModelId] = useState(null);
   const [rerunningDiagnostic, setRerunningDiagnostic] = useState(false);
 
   const pollingTimerRef = useRef(null);
@@ -800,6 +804,17 @@ export const ModelTraining = ({ projectId, taskType, targetColumn, onExperimentC
                                   <span>Explain</span>
                                 </button>
                                 <button
+                                  onClick={() => {
+                                    setSelectedPassportModelId(model.id);
+                                    setPassportModalOpen(true);
+                                  }}
+                                  title="View technical model passport, lineage provenance & governance records"
+                                  className="px-2.5 py-1.5 rounded-lg bg-indigo-950/40 hover:bg-indigo-900/60 text-indigo-300 border border-indigo-500/30 text-xs font-semibold transition-colors inline-flex items-center space-x-1 cursor-pointer"
+                                >
+                                  <FileText className="w-3.5 h-3.5" />
+                                  <span>Passport</span>
+                                </button>
+                                <button
                                   onClick={() => handleDownloadModel(model.id, model.algorithm_name)}
                                   disabled={!isWin && !model.artifact_path}
                                   title={
@@ -953,6 +968,18 @@ export const ModelTraining = ({ projectId, taskType, targetColumn, onExperimentC
           }}
           onDeploymentSuccess={(dep) => {
             setSuccessMsg(`Model successfully deployed into production at ${dep.endpoint_path}`);
+          }}
+        />
+      )}
+
+      {/* Model Passport Governance Modal */}
+      {passportModalOpen && selectedPassportModelId && (
+        <ModelPassportModal
+          modelId={selectedPassportModelId}
+          isOpen={passportModalOpen}
+          onClose={() => {
+            setPassportModalOpen(false);
+            setSelectedPassportModelId(null);
           }}
         />
       )}

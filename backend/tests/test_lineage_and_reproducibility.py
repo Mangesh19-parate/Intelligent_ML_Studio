@@ -426,7 +426,7 @@ def test_lineage_api_endpoint(client, create_test_user, db_session, regression_s
     token = login_res.json()["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
 
-    project, _, _ = regression_setup
+    project, dataset, _ = regression_setup
     service = ExperimentService(db_session)
     exp_res = service.run_experiment(
         project_id=project.id,
@@ -443,10 +443,419 @@ def test_lineage_api_endpoint(client, create_test_user, db_session, regression_s
 
     assert data["experiment_id"] == str(exp_id)
     assert data["environment_capture_method"] == "CAPTURED_LIVE"
+    assert data["dataset_content_hash"] == dataset.content_hash
+    assert data["split_seed"] == 42
+    assert data["cv_seed"] == 101
+    assert data["fold_count"] == 3
+    assert data["cv_strategy"] == "KFOLD"
+    assert data["task_type"] == "REGRESSION"
     assert data["code_version"] is not None
     assert data["python_version"] is not None
     assert data["sklearn_version"] is not None
+    assert data["numpy_version"] is not None
+    assert data["pandas_version"] is not None
     assert data["transformation_snapshot"] is not None
     assert data["feature_selection_snapshot"] is not None
     assert data["winning_model"] is not None
     assert data["winning_model"]["artifact_checksum"] is not None
+
+
+def test_lineage_api_endpoint_backfilled_experiment(client, create_test_user, db_session, regression_setup):
+    """
+    Tests GET /api/v1/experiments/{id}/lineage for a historical experiment backfilled with BACKFILLED_APPROXIMATE.
+    """
+    user = create_test_user("ml_auditor@test.com", "ADMIN")
+    login_res = client.post("/api/v1/auth/login", json={"email": "ml_auditor@test.com", "password": "password123"})
+    token = login_res.json()["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
+
+    project, dataset, _ = regression_setup
+    legacy_exp = Experiment(
+        id=uuid4(),
+        project_id=project.id,
+        status="COMPLETED",
+        task_type="REGRESSION",
+        fold_count=5,
+        cv_seed=77,
+        selection_metric="rmse",
+        selection_direction="MINIMIZE",
+        environment_capture_method=None,
+        experiment_config=None,
+    )
+    db_session.add(legacy_exp)
+    db_session.commit()
+
+    # Backfill historical experiment
+    backfill_experiments(db_session)
+
+    response = client.get(f"/api/v1/experiments/{legacy_exp.id}/lineage", headers=headers)
+    assert response.status_code == 200
+    data = response.json()
+
+    assert data["experiment_id"] == str(legacy_exp.id)
+    assert data["environment_capture_method"] == "BACKFILLED_APPROXIMATE"
+    assert data["dataset_content_hash"] == dataset.content_hash
+    assert data["split_seed"] == 42
+    assert data["cv_seed"] == 77
+    assert data["fold_count"] == 5
+    assert data["python_version"] is not None
+    assert data["sklearn_version"] is not None
+    assert data["code_version"] is not None
+
+
+def test_artifact_write_then_commit_lifecycle(db_session, regression_setup):
+    """
+    Day 2 (P0) Verification:
+    Ordering: write artifact -> verify checksum -> commit trained_models row (ModelState.TRAINED -> ModelState.ARTIFACT_VERIFIED).
+    """
+    project, _, _ = regression_setup
+    service = ExperimentService(db_session)
+
+    # 1. Run experiment without auto-finalize
+    res = service.run_experiment(
+        project_id=project.id,
+        algorithms=["LinearRegression", "Ridge"],
+        folds=3,
+        seed=101,
+        auto_finalize=False,
+    )
+    exp_id = res["experiment_id"]
+    exp = db_session.query(Experiment).filter(Experiment.id == exp_id).first()
+    assert exp.status == "EVALUATED"
+
+    # All models should initially be in TRAINED state
+    for model in exp.trained_models:
+        assert model.status == "TRAINED"
+        assert model.artifact_path is None
+        assert model.artifact_checksum is None
+
+    # 2. Finalize experiment: triggers atomic write -> verify checksum -> commit (ARTIFACT_VERIFIED -> DEPLOYABLE)
+    finalize_res = service.finalize_experiment(exp_id)
+    assert finalize_res["status"] in ("REGISTERED", "TEST_CONSUMED", "COMPLETED")
+
+    db_session.expire_all()
+    winning_model_id = exp.selected_model_id
+    winning_model = db_session.query(TrainedModel).filter(TrainedModel.id == winning_model_id).first()
+    assert winning_model is not None
+    # Transitioned from TRAINED -> ARTIFACT_VERIFIED and then DEPLOYABLE after locked test evaluation
+    assert winning_model.status in ("ARTIFACT_VERIFIED", "DEPLOYABLE")
+    assert winning_model.artifact_path is not None
+    assert os.path.exists(winning_model.artifact_path)
+    assert winning_model.artifact_checksum is not None
+    assert len(winning_model.artifact_checksum) == 64
+
+    # Independently compute checksum from disk and verify exact match
+    with open(winning_model.artifact_path, "rb") as f:
+        actual_hash = hashlib.sha256(f.read()).hexdigest()
+    assert actual_hash == winning_model.artifact_checksum
+
+
+def test_artifact_write_failure_leaves_no_dangling_db_row(db_session, regression_setup):
+    """
+    Day 2 (P0) Verification:
+    Simulates an I/O disk failure during artifact serialization.
+    Confirms DB rollback occurs, model status does NOT transition to ARTIFACT_VERIFIED,
+    experiment is marked ARTIFACT_WRITE_FAILED, and no dangling artifact or corrupted state remains.
+    """
+    import joblib
+    project, _, _ = regression_setup
+    service = ExperimentService(db_session)
+
+    # 1. Run experiment without auto-finalize
+    res = service.run_experiment(
+        project_id=project.id,
+        algorithms=["LinearRegression"],
+        folds=3,
+        seed=101,
+        auto_finalize=False,
+    )
+    exp_id = res["experiment_id"]
+    exp = db_session.query(Experiment).filter(Experiment.id == exp_id).first()
+    winning_model_id = exp.trained_models[0].id
+
+    # 2. Mock joblib.dump to raise simulated disk write failure
+    with patch.object(joblib, "dump", side_effect=IOError("Simulated disk full / permission error writing artifact")):
+        with pytest.raises(Exception) as exc_info:
+            service.finalize_experiment(exp_id)
+
+        assert "Artifact write and checksum verification failed" in str(exc_info.value) or "500" in str(exc_info.value)
+
+    # 3. Verify DB state: no dangling/corrupted model committed with ARTIFACT_VERIFIED
+    db_session.expire_all()
+    reloaded_model = db_session.query(TrainedModel).filter(TrainedModel.id == winning_model_id).first()
+    assert reloaded_model.status != "ARTIFACT_VERIFIED"
+    assert reloaded_model.artifact_path is None or not os.path.exists(reloaded_model.artifact_path or "")
+    assert reloaded_model.artifact_checksum is None
+
+    # Verify experiment transitioned to ARTIFACT_WRITE_FAILED
+    reloaded_exp = db_session.query(Experiment).filter(Experiment.id == exp_id).first()
+    assert reloaded_exp.status == "ARTIFACT_WRITE_FAILED"
+
+
+def test_db_commit_failure_orphaned_file_cleaned_up(db_session, regression_setup):
+    """
+    Day 3 (P0) Verification - Branch 1:
+    DB commit fails AFTER the artifact file was written to disk.
+    Confirms cleanup deletes the orphaned file from disk, rolls back the DB transaction,
+    and transitions experiment to ARTIFACT_WRITE_FAILED.
+    """
+    from pathlib import Path
+    project, _, _ = regression_setup
+    service = ExperimentService(db_session)
+
+    res = service.run_experiment(
+        project_id=project.id,
+        algorithms=["LinearRegression"],
+        folds=3,
+        seed=101,
+        auto_finalize=False,
+    )
+    exp_id = res["experiment_id"]
+    exp = db_session.query(Experiment).filter(Experiment.id == exp_id).first()
+    winning_model_id = exp.trained_models[0].id
+
+    # Track written artifact path
+    written_paths = []
+    original_dump = __import__("joblib").dump
+
+    def wrapped_dump(val, path, *args, **kwargs):
+        written_paths.append(Path(path))
+        return original_dump(val, path, *args, **kwargs)
+
+    real_commit = service.db.commit
+    commit_failed = False
+    def failing_commit(*args, **kwargs):
+        nonlocal commit_failed
+        # Fail strictly once on the commit immediately after joblib.dump writes the artifact file
+        if len(written_paths) > 0 and not commit_failed:
+            commit_failed = True
+            raise Exception("Simulated DB commit timeout / connection drop")
+        return real_commit(*args, **kwargs)
+
+    # Patch joblib.dump to track path and patch db.commit to raise an error during finalization commit
+    with patch("joblib.dump", side_effect=wrapped_dump), \
+         patch.object(service.db, "commit", side_effect=failing_commit):
+        with pytest.raises(Exception) as exc_info:
+            service.finalize_experiment(exp_id)
+
+        err_str = str(exc_info.value)
+        assert "Artifact write/commit failed" in err_str or "500" in err_str or "Simulated DB commit" in err_str
+
+    # Confirm the artifact was originally written
+    assert len(written_paths) == 1
+    orphaned_file = written_paths[0]
+
+    # Confirm Branch 1: Orphaned file was cleanly DELETED from disk
+    assert not orphaned_file.exists(), f"Orphaned file '{orphaned_file}' should have been deleted."
+
+    # Confirm DB rollback: model status is not ARTIFACT_VERIFIED
+    db_session.expire_all()
+    reloaded_model = db_session.query(TrainedModel).filter(TrainedModel.id == winning_model_id).first()
+    assert reloaded_model.status != "ARTIFACT_VERIFIED"
+    assert reloaded_model.artifact_path is None or not os.path.exists(reloaded_model.artifact_path or "")
+
+    # Confirm experiment is ARTIFACT_WRITE_FAILED
+    reloaded_exp = db_session.query(Experiment).filter(Experiment.id == exp_id).first()
+    assert reloaded_exp.status == "ARTIFACT_WRITE_FAILED"
+
+
+def test_db_commit_failure_cleanup_fails_marked_orphaned_recoverable(db_session, regression_setup):
+    """
+    Day 3 (P0) Verification - Branch 2:
+    DB commit fails AFTER artifact write, AND the attempt to delete the orphaned file also fails.
+    Confirms the file is explicitly logged and marked as ORPHANED_RECOVERABLE for background scavenger.
+    """
+    from pathlib import Path
+    from app.services.experiment_service import (
+        get_orphaned_recoverable_registry,
+        clear_orphaned_recoverable_registry,
+    )
+    clear_orphaned_recoverable_registry()
+
+    project, _, _ = regression_setup
+    service = ExperimentService(db_session)
+
+    res = service.run_experiment(
+        project_id=project.id,
+        algorithms=["LinearRegression"],
+        folds=3,
+        seed=101,
+        auto_finalize=False,
+    )
+    exp_id = res["experiment_id"]
+
+    written_paths = []
+    original_dump = __import__("joblib").dump
+
+    def wrapped_dump(val, path, *args, **kwargs):
+        written_paths.append(Path(path))
+        return original_dump(val, path, *args, **kwargs)
+
+    real_commit = service.db.commit
+    commit_failed = False
+    def failing_commit(*args, **kwargs):
+        nonlocal commit_failed
+        if len(written_paths) > 0 and not commit_failed:
+            commit_failed = True
+            raise Exception("Simulated DB connection failure on artifact commit")
+        return real_commit(*args, **kwargs)
+
+    # Patch Path.unlink to simulate file lock / permission failure on delete
+    with patch("joblib.dump", side_effect=wrapped_dump), \
+         patch.object(service.db, "commit", side_effect=failing_commit), \
+         patch.object(Path, "unlink", side_effect=PermissionError("Simulated file lock on Windows / permission denied")):
+        with pytest.raises(Exception) as exc_info:
+            service.finalize_experiment(exp_id)
+
+        err_str = str(exc_info.value)
+        assert "ORPHANED_RECOVERABLE" in err_str or "500" in err_str
+
+    # Confirm Branch 2: Registered in ORPHANED_RECOVERABLE scavenger registry
+    orphaned_set = get_orphaned_recoverable_registry()
+    assert len(orphaned_set) > 0, "Orphaned artifact path must be present in ORPHANED_RECOVERABLE registry."
+
+    # Clean up test artifacts
+    for p in list(orphaned_set):
+        path_obj = Path(p)
+        if path_obj.exists():
+            try:
+                os.remove(path_obj)
+            except Exception:
+                pass
+    clear_orphaned_recoverable_registry()
+
+
+def test_reproduce_experiment_frozen_tolerances_success(db_session, regression_setup):
+    """
+    Day 4 (P0) Verification:
+    Re-runs run_experiment with identical frozen configuration.
+    Compares newly observed primary metric against original using frozen contract tolerance
+    (metric_absolute_tolerance=1e-3, metric_relative_tolerance=0.01 per SRS v9 §3).
+    Confirms status == 'REPRODUCED' and return payload format {status, expected, observed, difference}.
+    """
+    project, _, _ = regression_setup
+    service = ExperimentService(db_session)
+
+    # 1. Run original experiment
+    orig_res = service.run_experiment(
+        project_id=project.id,
+        algorithms=["LinearRegression", "Ridge"],
+        folds=3,
+        seed=42,
+        selection_metric="rmse",
+        selection_direction="MINIMIZE",
+        auto_finalize=True,
+    )
+    orig_exp_id = orig_res["experiment_id"]
+
+    # 2. Call service.reproduce_experiment
+    reproduce_res = service.reproduce_experiment(orig_exp_id)
+
+    # 3. Assert return contract
+    assert reproduce_res["status"] == "REPRODUCED"
+    assert "expected" in reproduce_res
+    assert "observed" in reproduce_res
+    assert "difference" in reproduce_res
+    assert "relative_difference" in reproduce_res
+    assert reproduce_res["metric_name"] == "rmse"
+    assert reproduce_res["original_experiment_id"] == orig_exp_id
+    assert reproduce_res["reproduced_experiment_id"] != orig_exp_id
+
+    # 4. Assert frozen tolerance values from Week 1 contract (not ad hoc)
+    tol = reproduce_res["tolerance"]
+    assert tol["metric_absolute_tolerance"] == 1e-3
+    assert tol["metric_relative_tolerance"] == 0.01
+
+    # 5. Numerical check: deterministic seeds yield identical or within-tolerance metric
+    assert reproduce_res["difference"] <= 1e-3
+    assert reproduce_res["relative_difference"] <= 0.01
+
+
+def test_reproduce_experiment_discrepancy_exceeding_tolerance(db_session, regression_setup):
+    """
+    Day 4 (P0) Verification:
+    Simulates a discrepancy where observed metric deviates beyond frozen tolerance.
+    Confirms status == 'REPRODUCIBILITY_FAILED'.
+    """
+    project, _, _ = regression_setup
+    service = ExperimentService(db_session)
+
+    orig_res = service.run_experiment(
+        project_id=project.id,
+        algorithms=["LinearRegression"],
+        folds=3,
+        seed=42,
+        selection_metric="rmse",
+        selection_direction="MINIMIZE",
+        auto_finalize=True,
+    )
+    orig_exp_id = orig_res["experiment_id"]
+
+    # Intercept run_experiment inside reproduce_experiment to simulate non-reproducible run
+    real_run_experiment = service.run_experiment
+
+    def simulated_divergent_run(*args, **kwargs):
+        res = real_run_experiment(*args, **kwargs)
+        # Artificially alter the reproduced metric in DB
+        reproduced_exp = service.exp_repo.get_with_models(res["experiment_id"])
+        for m in reproduced_exp.trained_models:
+            for metric in m.metrics:
+                if metric.split == "CV_MEAN":
+                    metric.metric_value = float(metric.metric_value) * 2.0 + 10.0  # Cleanly exceeds 1.0% relative tolerance
+                    service.db.add(metric)
+            m.quick_cv_score = float(m.quick_cv_score or 0.0) * 2.0 + 10.0
+            service.db.add(m)
+        service.db.commit()
+        return res
+
+    with patch.object(service, "run_experiment", side_effect=simulated_divergent_run):
+        reproduce_res = service.reproduce_experiment(orig_exp_id)
+
+    assert reproduce_res["status"] == "REPRODUCIBILITY_FAILED"
+    assert reproduce_res["difference"] > 1e-3
+    assert reproduce_res["relative_difference"] > 0.01
+
+
+def test_reproduce_experiment_endpoint_api(client, db_session, regression_setup, create_test_user, auth_headers):
+    """
+    Day 4 (P0) Verification:
+    Tests POST /api/v1/experiments/{id}/reproduce HTTP endpoint with auth permissions.
+    """
+    user = create_test_user("reproduce_engineer@test.com", "ML_ENGINEER")
+    headers = auth_headers(user)
+
+    project, _, _ = regression_setup
+    service = ExperimentService(db_session)
+
+    orig_res = service.run_experiment(
+        project_id=project.id,
+        algorithms=["LinearRegression"],
+        folds=3,
+        seed=77,
+        selection_metric="rmse",
+        selection_direction="MINIMIZE",
+        auto_finalize=True,
+    )
+    orig_exp_id = orig_res["experiment_id"]
+
+    response = client.post(
+        f"/api/v1/experiments/{orig_exp_id}/reproduce",
+        headers=headers,
+    )
+
+    assert response.status_code == 200, response.text
+    data = response.json()
+    assert data["status"] == "REPRODUCED"
+    assert data["original_experiment_id"] == str(orig_exp_id)
+    assert data["expected"] is not None
+    assert data["observed"] is not None
+    assert data["difference"] <= 1e-3
+    assert data["tolerance"]["metric_absolute_tolerance"] == 1e-3
+    assert data["tolerance"]["metric_relative_tolerance"] == 0.01
+
+
+
+
+
+
+

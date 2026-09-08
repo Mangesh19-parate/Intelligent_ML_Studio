@@ -135,5 +135,20 @@ def test_shap_guardrail_blocks_over_250_features():
     """
     Asserts that ExplainabilityService blocks SHAP when feature dimension exceeds 250.
     """
+    from app.services.explainability_service import (
+        MAX_SHAP_FEATURES,
+        MAX_SHAP_BACKGROUND_SAMPLE_SIZE,
+        MAX_SHAP_EVALUATION_CELLS,
+    )
+
+    assert MAX_SHAP_FEATURES == 250
+    assert MAX_SHAP_BACKGROUND_SAMPLE_SIZE == 500
+    assert MAX_SHAP_EVALUATION_CELLS == 50_000
+
     X_background = np.zeros((50, 260))
-    assert X_background.shape[1] > 250
+    assert X_background.shape[1] > MAX_SHAP_FEATURES
+
+    # Verify evaluation cells policy
+    X_dense = np.zeros((300, 200))
+    assert X_dense.shape[0] * X_dense.shape[1] > MAX_SHAP_EVALUATION_CELLS
+

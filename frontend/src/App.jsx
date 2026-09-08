@@ -10,10 +10,10 @@ import DataStage from './pages/DataStage';
 import { DataAnalysisStage } from './pages/DataAnalysisStage';
 import { FeatureEngineeringStage } from './pages/FeatureEngineeringStage';
 import { MLStage } from './pages/MLStage';
+import { DiagnosticsStage } from './pages/DiagnosticsStage';
 import {
   AnalysisStage,
   TransformationStage,
-  DiagnosticsStage,
   ProductionStage,
 } from './pages/StagePlaceholders';
 import { AdminConsole } from './pages/AdminConsole';

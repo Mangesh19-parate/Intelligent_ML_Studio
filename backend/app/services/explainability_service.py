@@ -27,6 +27,12 @@ from app.schemas.explainability import (
 )
 
 
+# Week 4 Policy Resource Budget Constants for SHAP Explainability (SRS §2.14, §2.18; Benchmark Report)
+MAX_SHAP_FEATURES = 250
+MAX_SHAP_BACKGROUND_SAMPLE_SIZE = 500
+MAX_SHAP_EVALUATION_CELLS = 50_000
+
+
 class ExplainabilityService:
     """
     Model Explainability Service (Day 9).
@@ -220,6 +226,11 @@ class ExplainabilityService:
         
         Enforces schema-level caching: if a record exists in `explainability_summaries`,
         returns it immediately without loading artifact or recomputing SHAP.
+        
+        Enforces Week 4 Policy Resource Budget as hard pre-checks before computation:
+        - Max background sample size: 500
+        - Max feature dimension: 250
+        - Max evaluation cells: 50,000
         """
         # 1. Schema-level Cache Lookup
         cached_summary = (
@@ -238,7 +249,14 @@ class ExplainabilityService:
                 is_cached=True,
             )
 
-        # 2. Load Artifact (with SHA-256 verification)
+        # 2a. Pre-check: Background Sample Size Policy Budget Cap
+        if background_sample_size > MAX_SHAP_BACKGROUND_SAMPLE_SIZE:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"SHAP Explainability blocked: requested background sample size ({background_sample_size} samples) exceeds the maximum policy cap of {MAX_SHAP_BACKGROUND_SAMPLE_SIZE} samples (risk of SHAP time budget breach).",
+            )
+
+        # 2b. Load Artifact (with SHA-256 verification)
         artifact, model = self._load_artifact(model_id)
 
         # 3. Draw seeded Development background sample and transform into estimator feature space
@@ -249,11 +267,19 @@ class ExplainabilityService:
             seed=42,
         )
 
-        # 3b. Size Guardrail Check (Day 5 Policy Cap: 250 features)
-        if X_background.shape[1] > 250:
+        # 3b. Pre-check: Feature Dimension Policy Cap (250 features)
+        if X_background.shape[1] > MAX_SHAP_FEATURES:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail=f"SHAP Explainability blocked: feature dimension ({X_background.shape[1]} features) exceeds the maximum policy cap of 250 features (risk of memory budget breach)."
+                detail=f"SHAP Explainability blocked: feature dimension ({X_background.shape[1]} features) exceeds the maximum policy cap of {MAX_SHAP_FEATURES} features (risk of memory budget breach).",
+            )
+
+        # 3c. Pre-check: Total Evaluation Cells Budget Cap (50,000 cells)
+        n_eval_cells = X_background.shape[0] * X_background.shape[1]
+        if n_eval_cells > MAX_SHAP_EVALUATION_CELLS:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"SHAP Explainability blocked: evaluation cells ({n_eval_cells:,} cells = {X_background.shape[0]} samples × {X_background.shape[1]} features) exceeds the maximum policy budget of {MAX_SHAP_EVALUATION_CELLS:,} evaluation cells (risk of SHAP compute budget breach).",
             )
 
         # 4. Instantiate explainer
@@ -330,6 +356,13 @@ class ExplainabilityService:
         selected_feature_names = artifact.get("selected_feature_names", [])
         estimator = artifact.get("estimator")
         task_type = artifact.get("task_type", "REGRESSION")
+
+        # 1b. Pre-check: Feature Dimension Policy Cap (250 features)
+        if len(selected_feature_names) > MAX_SHAP_FEATURES:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"Local SHAP Explainability blocked: model feature dimension ({len(selected_feature_names)} features) exceeds the maximum policy cap of {MAX_SHAP_FEATURES} features (risk of memory budget breach).",
+            )
 
         # 2. Transform Single Input Row
         df_single = pd.DataFrame([input_row])

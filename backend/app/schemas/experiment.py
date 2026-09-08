@@ -139,6 +139,11 @@ class ExperimentLineageResponse(BaseModel):
     experiment_id: UUID
     project_id: UUID
     status: str
+    task_type: str | None = None
+    fold_count: int | None = None
+    cv_seed: int | None = None
+    cv_strategy: str | None = None
+    split_seed: int | None = None
     experiment_config: dict[str, Any] | None = None
     dataset_content_hash: str | None = None
     environment_capture_method: str | None = None
@@ -153,5 +158,23 @@ class ExperimentLineageResponse(BaseModel):
     winning_model: dict[str, Any] | None = None
     created_at: datetime | str | None = None
     completed_at: datetime | str | None = None
+
+
+class ToleranceConfigResponse(BaseModel):
+    metric_absolute_tolerance: float = 1e-3
+    metric_relative_tolerance: float = 0.01
+
+
+class ExperimentReproduceResponse(BaseModel):
+    status: str
+    expected: float
+    observed: float
+    difference: float
+    relative_difference: float
+    metric_name: str
+    original_experiment_id: UUID
+    reproduced_experiment_id: UUID
+    tolerance: ToleranceConfigResponse
+
 
 

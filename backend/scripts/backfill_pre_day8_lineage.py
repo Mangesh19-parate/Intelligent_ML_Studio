@@ -72,6 +72,11 @@ def backfill_experiments(db: Session) -> int:
         if not exp.dataset_content_hash and dataset:
             exp.dataset_content_hash = dataset.content_hash
 
+        if exp.cv_seed is None:
+            exp.cv_seed = 42
+        if exp.fold_count is None:
+            exp.fold_count = 5
+
         # 2. Approximate environment capture
         exp.environment_capture_method = "BACKFILLED_APPROXIMATE"
         exp.code_version = env_info.get("code_version")

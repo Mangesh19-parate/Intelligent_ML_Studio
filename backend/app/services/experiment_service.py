@@ -18,6 +18,7 @@ from sklearn.linear_model import LinearRegression, LogisticRegression
 
 from app.core.config import settings
 from app.core.database import SessionLocal
+from app.config.contract import REPRODUCIBILITY_TOLERANCE
 from app.config.state_machines import (
     ExperimentState,
     ModelState,
@@ -49,6 +50,17 @@ from app.services.trainers import (
 )
 
 logger = logging.getLogger(__name__)
+
+# Scavenger registry tracking orphaned artifacts where immediate deletion failed (Day 3 P0)
+ORPHANED_RECOVERABLE_REGISTRY: set[str] = set()
+
+def get_orphaned_recoverable_registry() -> set[str]:
+    """Returns the set of artifact file paths marked as ORPHANED_RECOVERABLE."""
+    return ORPHANED_RECOVERABLE_REGISTRY
+
+def clear_orphaned_recoverable_registry() -> None:
+    """Clears the in-memory scavenger registry (useful in test teardown)."""
+    ORPHANED_RECOVERABLE_REGISTRY.clear()
 
 class ExperimentService:
     """
@@ -1525,7 +1537,7 @@ class ExperimentService:
         )
         experiment.feature_selection_snapshot_id = fs_snapshot.id
 
-        # Day 8: Serialize fitted pipeline to disk (/data/models/{project_id}/{experiment_id}/{algorithm_name}.joblib)
+        # Day 8 / Day 2 (P0): Atomic Artifact Save: Write Artifact -> Verify Checksum -> Commit trained_models row
         artifact_dir = Path(settings.STORAGE_LOCAL_DIR) / "models" / str(project.id) / str(experiment.id)
         artifact_dir.mkdir(parents=True, exist_ok=True)
         artifact_file = artifact_dir / f"{winning_model.algorithm_name}.joblib"
@@ -1541,39 +1553,96 @@ class ExperimentService:
             "estimator": trainer.estimator if hasattr(trainer, "estimator") else trainer,
             "hyperparameters": winning_model.hyperparameters,
         }
-        joblib.dump(fitted_pipeline, artifact_file)
 
-        # Compute SHA-256 Integrity Checksum
-        hasher = hashlib.sha256()
-        with open(artifact_file, "rb") as f:
-            while chunk := f.read(65536):
-                hasher.update(chunk)
-        artifact_checksum = hasher.hexdigest()
+        try:
+            # 1. WRITE ARTIFACT
+            joblib.dump(fitted_pipeline, artifact_file)
 
-        # Update winning model record with artifact path, checksum, and status ARTIFACT_VERIFIED
-        winning_model.artifact_path = str(artifact_file)
-        winning_model.artifact_checksum = artifact_checksum
-        winning_model.feature_selection_snapshot_id = fs_snapshot.id
-        winning_model.status = ModelState.ARTIFACT_VERIFIED.value
+            if not artifact_file.exists():
+                raise IOError(f"Artifact file '{artifact_file}' was not created on disk.")
 
-        # Retrieve preprocessing snapshot ID
-        trans_snapshot_id = None
-        if experiment.experiment_config and isinstance(experiment.experiment_config, dict):
-            trans_snapshot_id = experiment.experiment_config.get("preprocessing", {}).get("snapshot_id")
-        if not trans_snapshot_id:
-            trans_snapshots = self.exp_repo.get_transformation_snapshots(experiment.id)
-            if trans_snapshots:
-                trans_snapshot_id = str(trans_snapshots[0].id)
-        if trans_snapshot_id:
+            # 2. VERIFY CHECKSUM
+            hasher = hashlib.sha256()
+            with open(artifact_file, "rb") as f:
+                while chunk := f.read(65536):
+                    hasher.update(chunk)
+            artifact_checksum = hasher.hexdigest()
+
+            if not artifact_checksum or len(artifact_checksum) != 64:
+                raise ValueError(f"Computed invalid SHA-256 checksum: {artifact_checksum}")
+
+            # Re-read verification to guarantee disk integrity
+            verify_hasher = hashlib.sha256()
+            with open(artifact_file, "rb") as f:
+                while chunk := f.read(65536):
+                    verify_hasher.update(chunk)
+            if verify_hasher.hexdigest() != artifact_checksum:
+                raise ValueError("Artifact checksum re-verification failed immediately after write.")
+
+            # 3. TRANSITION TO ARTIFACT_VERIFIED AND COMMIT TRAINED_MODELS ROW
+            winning_model.artifact_path = str(artifact_file)
+            winning_model.artifact_checksum = artifact_checksum
+            winning_model.feature_selection_snapshot_id = fs_snapshot.id
+            winning_model.status = ModelState.ARTIFACT_VERIFIED.value
+
+            # Retrieve preprocessing snapshot ID
+            trans_snapshot_id = None
+            if experiment.experiment_config and isinstance(experiment.experiment_config, dict):
+                trans_snapshot_id = experiment.experiment_config.get("preprocessing", {}).get("snapshot_id")
+            if not trans_snapshot_id:
+                trans_snapshots = self.exp_repo.get_transformation_snapshots(experiment.id)
+                if trans_snapshots:
+                    trans_snapshot_id = str(trans_snapshots[0].id)
+            if trans_snapshot_id:
+                try:
+                    from uuid import UUID as PyUUID
+                    winning_model.preprocessing_snapshot_id = PyUUID(trans_snapshot_id) if isinstance(trans_snapshot_id, str) else trans_snapshot_id
+                except Exception:
+                    pass
+
+            self.db.add(experiment)
+            self.db.add(winning_model)
+            self.db.commit()
+
+        except Exception as write_err:
+            logger.error(f"Artifact save / DB commit failure for experiment {experiment.id}: {write_err}")
+            self.db.rollback()
+
+            cleanup_failed = False
+            cleanup_error_msg = None
+
+            # Attempt to clean up orphaned/partial file on disk
+            if artifact_file.exists():
+                try:
+                    artifact_file.unlink()
+                    logger.info(f"Successfully cleaned up orphaned artifact file '{artifact_file}' following DB commit failure.")
+                except Exception as cleanup_err:
+                    cleanup_failed = True
+                    cleanup_error_msg = str(cleanup_err)
+                    ORPHANED_RECOVERABLE_REGISTRY.add(str(artifact_file))
+                    logger.error(
+                        f"[ORPHANED_RECOVERABLE] Failed to delete orphaned artifact file at '{artifact_file}' "
+                        f"after DB commit failure: {cleanup_err}. File marked as ORPHANED_RECOVERABLE for background scavenger."
+                    )
+
+            # Mark experiment as ARTIFACT_WRITE_FAILED
             try:
-                from uuid import UUID as PyUUID
-                winning_model.preprocessing_snapshot_id = PyUUID(trans_snapshot_id) if isinstance(trans_snapshot_id, str) else trans_snapshot_id
+                self.exp_repo.update_status(experiment.id, ExperimentState.ARTIFACT_WRITE_FAILED.value)
             except Exception:
                 pass
 
-        self.db.add(experiment)
-        self.db.add(winning_model)
-        self.db.commit()
+            if cleanup_failed:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=f"DB commit failed and orphaned artifact cleanup failed. Marked as ORPHANED_RECOVERABLE: {str(write_err)} | Cleanup error: {cleanup_error_msg}"
+                )
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=f"Artifact write/commit failed; orphaned file cleaned up: {str(write_err)}"
+                )
+
+
 
         # Evaluate final refit on Development partition
         if task_type == "REGRESSION":
@@ -1804,12 +1873,42 @@ class ExperimentService:
                 "feature_selection_snapshot_id": str(winning_model.feature_selection_snapshot_id) if winning_model.feature_selection_snapshot_id else None,
             }
 
+        # Extract deterministic tuple fields
+        split_seed = None
+        cv_strategy = None
+        if experiment.experiment_config and isinstance(experiment.experiment_config, dict):
+            split_seed = experiment.experiment_config.get("split", {}).get("seed")
+            cv_strategy = experiment.experiment_config.get("cv", {}).get("strategy")
+        if split_seed is None:
+            dataset_splits = (
+                self.db.query(DatasetSplit)
+                .join(Dataset, DatasetSplit.dataset_id == Dataset.id)
+                .filter(Dataset.project_id == experiment.project_id)
+                .all()
+            )
+            if dataset_splits:
+                split_seed = dataset_splits[0].split_seed
+
+        if not cv_strategy:
+            cv_strategy = "STRATIFIED_KFOLD" if (experiment.task_type == "CLASSIFICATION") else "KFOLD"
+
+        dataset_hash = experiment.dataset_content_hash
+        if not dataset_hash:
+            datasets = self.dataset_repo.get_by_project(experiment.project_id)
+            if datasets and datasets[0].content_hash:
+                dataset_hash = datasets[0].content_hash
+
         return {
             "experiment_id": str(experiment.id),
             "project_id": str(experiment.project_id),
             "status": experiment.status,
+            "task_type": experiment.task_type,
+            "fold_count": experiment.fold_count,
+            "cv_seed": experiment.cv_seed,
+            "cv_strategy": cv_strategy,
+            "split_seed": split_seed,
             "experiment_config": experiment.experiment_config,
-            "dataset_content_hash": experiment.dataset_content_hash,
+            "dataset_content_hash": dataset_hash,
             "environment_capture_method": experiment.environment_capture_method,
             "code_version": experiment.code_version,
             "python_version": experiment.python_version,
@@ -1997,6 +2096,158 @@ class ExperimentService:
             top_col = max(ensemble.items(), key=lambda x: x[1])[0]
             selected = [top_col]
         return selected
+
+    def reproduce_experiment(self, experiment_id: UUID | str) -> dict[str, Any]:
+        """
+        Re-runs run_experiment with the identical frozen configuration and compares
+        the newly observed primary metric against the original using the frozen contract
+        tolerance from Week 1 (metric_absolute_tolerance=1e-3, metric_relative_tolerance=0.01).
+        Returns {status, expected, observed, difference, relative_difference, metric_name, ...}.
+        """
+        exp_uuid = UUID(str(experiment_id)) if not isinstance(experiment_id, UUID) else experiment_id
+        original_exp = self.exp_repo.get_with_models(exp_uuid)
+        if not original_exp:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Experiment {exp_uuid} not found."
+            )
+
+        project = self.project_repo.get_by_id(original_exp.project_id)
+        if not project:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Associated project not found."
+            )
+
+        # 1. Determine primary selection metric and expected value from original experiment
+        task_type = original_exp.task_type or project.task_type or "REGRESSION"
+        metric_name = original_exp.selection_metric or ("rmse" if task_type == "REGRESSION" else "f1_macro")
+        direction = original_exp.selection_direction or ("MINIMIZE" if metric_name in ["rmse", "mae", "mse"] else "MAXIMIZE")
+
+        # Find original winning model or best completed model
+        winning_model = None
+        if original_exp.selected_model_id:
+            winning_model = next((m for m in original_exp.trained_models if m.id == original_exp.selected_model_id), None)
+
+        if not winning_model and original_exp.trained_models:
+            completed = [
+                m for m in original_exp.trained_models
+                if m.status in [
+                    ModelState.TRAINED.value,
+                    ModelState.ARTIFACT_VERIFIED.value,
+                    ModelState.DEPLOYABLE.value,
+                    "COMPLETED",
+                    "TRAINED",
+                ]
+            ]
+            if completed:
+                winning_model = completed[0]
+
+        if not winning_model:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Original experiment {exp_uuid} has no completed trained models to reproduce."
+            )
+
+        # Extract expected metric value (CV_MEAN metric or quick_cv_score)
+        expected_metric = next(
+            (
+                m for m in winning_model.metrics
+                if m.split == "CV_MEAN" and (
+                    m.metric_name == metric_name
+                    or (metric_name in ["macro_f1", "f1_macro"] and m.metric_name in ["macro_f1", "f1_macro"])
+                    or (metric_name in ["weighted_f1", "f1_weighted"] and m.metric_name in ["weighted_f1", "f1_weighted"])
+                )
+            ),
+            None
+        )
+        if expected_metric and expected_metric.metric_value is not None:
+            expected_val = float(expected_metric.metric_value)
+        elif winning_model.quick_cv_score is not None:
+            expected_val = float(winning_model.quick_cv_score)
+        else:
+            expected_val = 0.0
+
+        # 2. Extract identical configuration
+        algorithms = [m.algorithm_name for m in original_exp.trained_models] if original_exp.trained_models else None
+        if original_exp.experiment_config and "algorithms" in original_exp.experiment_config:
+            algorithms = original_exp.experiment_config["algorithms"]
+
+        folds = original_exp.fold_count or 5
+        cv_seed = original_exp.cv_seed
+
+        dep_threshold = None
+        if original_exp.experiment_config and "deployment_threshold" in original_exp.experiment_config:
+            dep_threshold = original_exp.experiment_config["deployment_threshold"]
+
+        # 3. Re-run experiment synchronously with identical configuration
+        reproduced_res = self.run_experiment(
+            project_id=original_exp.project_id,
+            algorithms=algorithms,
+            folds=folds,
+            seed=cv_seed,
+            selection_metric=metric_name,
+            selection_direction=direction,
+            auto_finalize=True,
+            deployment_threshold=dep_threshold,
+        )
+
+        reproduced_exp_id = reproduced_res["experiment_id"]
+        self.db.expire_all()
+        reproduced_exp = self.exp_repo.get_with_models(reproduced_exp_id)
+
+        # 4. Extract observed metric value from reproduced experiment
+        reproduced_winning_model = None
+        if reproduced_exp and reproduced_exp.selected_model_id:
+            reproduced_winning_model = next((m for m in reproduced_exp.trained_models if m.id == reproduced_exp.selected_model_id), None)
+
+        if not reproduced_winning_model and reproduced_exp and reproduced_exp.trained_models:
+            reproduced_winning_model = reproduced_exp.trained_models[0]
+
+        observed_val = 0.0
+        if reproduced_winning_model:
+            obs_metric = next(
+                (
+                    m for m in reproduced_winning_model.metrics
+                    if m.split == "CV_MEAN" and (
+                        m.metric_name == metric_name
+                        or (metric_name in ["macro_f1", "f1_macro"] and m.metric_name in ["macro_f1", "f1_macro"])
+                        or (metric_name in ["weighted_f1", "f1_weighted"] and m.metric_name in ["weighted_f1", "f1_weighted"])
+                    )
+                ),
+                None
+            )
+            if obs_metric and obs_metric.metric_value is not None:
+                observed_val = float(obs_metric.metric_value)
+            elif reproduced_winning_model.quick_cv_score is not None:
+                observed_val = float(reproduced_winning_model.quick_cv_score)
+
+        # 5. Compare using Week 1 FROZEN tolerance contract (SRS v9 §3 & Architecture Contract §11)
+        abs_tol = REPRODUCIBILITY_TOLERANCE["metric_absolute_tolerance"]  # 1e-3
+        rel_tol = REPRODUCIBILITY_TOLERANCE["metric_relative_tolerance"]  # 0.01
+
+        diff = abs(observed_val - expected_val)
+        denom = abs(expected_val) + 1e-9
+        rel_diff = diff / denom
+
+        # Tolerant if absolute difference <= abs_tol OR relative difference <= rel_tol
+        is_reproduced = (diff <= abs_tol) or (rel_diff <= rel_tol)
+        reproduce_status = "REPRODUCED" if is_reproduced else "REPRODUCIBILITY_FAILED"
+
+        return {
+            "status": reproduce_status,
+            "expected": expected_val,
+            "observed": observed_val,
+            "difference": diff,
+            "relative_difference": rel_diff,
+            "metric_name": metric_name,
+            "original_experiment_id": original_exp.id,
+            "reproduced_experiment_id": reproduced_exp_id,
+            "tolerance": {
+                "metric_absolute_tolerance": abs_tol,
+                "metric_relative_tolerance": rel_tol,
+            },
+        }
 
     @classmethod
     def run_experiment_background(

@@ -206,43 +206,6 @@ export const FeatureEngineeringStage = () => {
   );
 };
 
-export const DiagnosticsStage = () => {
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between pb-5 border-b border-[var(--color-border)]">
-        <div>
-          <div className="flex items-center space-x-2 text-xs font-semibold text-[var(--color-accent)] uppercase tracking-wider mb-1">
-            <span>Stage 6 of 8</span>
-            <span>&bull;</span>
-            <span>Model Health & Recommendations</span>
-          </div>
-          <h1 className="text-2xl font-black tracking-tight text-text">Diagnostics & Insights</h1>
-          <p className="text-sm text-[var(--color-text-muted)] mt-1">
-            Overfitting/underfitting gap analysis and automated dataset health recommendations.
-          </p>
-        </div>
-        <Link
-          to="/machine-learning"
-          className="px-4 py-2 rounded-xl bg-[var(--color-accent)] hover:opacity-90 text-white text-xs font-bold flex items-center space-x-2 shadow-sm transition"
-        >
-          <span>Next: Machine Learning</span>
-          <ArrowRight className="w-4 h-4" />
-        </Link>
-      </div>
-
-      <div className="p-6 rounded-2xl bg-[var(--color-surface)] border border-[var(--color-border)] space-y-4">
-        <h3 className="text-base font-bold text-text flex items-center space-x-2">
-          <Stethoscope className="w-5 h-5 text-rose-400" />
-          <span>Overfit / Underfit Diagnostics</span>
-        </h3>
-        <p className="text-xs text-[var(--color-text-muted)] leading-relaxed">
-          Direction-aware generalization gap calculations comparing Training vs. CV-mean performance.
-        </p>
-      </div>
-    </div>
-  );
-};
-
 export const MLStage = () => {
   return (
     <div className="space-y-6">

@@ -14,25 +14,30 @@ from app.services.model_registry_service import ModelRegistryService
 
 class DeploymentGateService:
     """
-    Model Deployment Gate Service (Day 10).
+    Model Deployment Gate Service (SRS v9 §2 / Day 10).
     
-    ARCHITECTURAL NOTE (SRS §2.14 / §2.16):
-    Strict pre-deployment gatekeeper verifying 6 conditions:
-    1. locked_test_evaluated: Model has evaluated LOCKED_TEST metrics (never diagnostic)
+    ARCHITECTURAL NOTE (SRS v9 §2.13 / §2.14 / §2.16):
+    Strict pre-deployment gatekeeper verifying 6 substantive business eligibility conditions:
+    1. locked_test_evaluated: Model has evaluated LOCKED_TEST metrics (never TEST_REUSED_DIAGNOSTIC)
     2. schema_locked: Expected input feature schema resolved and non-empty
-    3. artifact_verified: SHA-256 disk checksum matches current artifact
-    4. lineage_complete: Config, snapshots, and environment metadata non-null
-    5. performance_threshold_passed: Tri-state ('PASS', 'FAIL', 'UNVERIFIABLE')
-    6. user_approved: Explicit sign-off by privileged user (DEPLOY permission)
+    3. artifact_verified: SHA-256 disk checksum matches current active artifact on disk
+    4. lineage_complete: Config, transformation snapshot, feature selection snapshot, and environment capture metadata non-null
+    5. performance_threshold_passed: Tri-state ('PASS', 'FAIL', 'UNVERIFIABLE') against frozen deployment threshold
+    6. user_approved: Explicit human sign-off with separation of duties (approved_by != trained_models.created_by)
     
-    Every check creates a persistent audit row in `deployment_gates`.
+    Audit Invariant: Every gate check creates a persistent, immutable audit row in `deployment_gates`.
     """
 
     def __init__(self, db: Session):
         self.db = db
         self.registry_service = ModelRegistryService(db)
 
-    def check_gate(self, model_id: UUID | str, user_approved: bool = False) -> DeploymentGate:
+    def check_gate(
+        self,
+        model_id: UUID | str,
+        user_approved: bool = False,
+        approved_by_user_id: UUID | str | None = None,
+    ) -> DeploymentGate:
         """
         Computes all six gate conditions explicitly, persists an immutable DeploymentGate
         record to the database, and returns it.
@@ -134,7 +139,27 @@ class DeploymentGateService:
                     else:
                         performance_threshold_passed = "PASS" if val >= float(min_val) else "FAIL"
 
-        # 6. User Approval & Overall Gate status
+        # 6. Condition: user_approved & Separation of Duties (Four-Eyes Principle per SRS v9 §2)
+        # approved_by != trained_models.created_by enforced server-side
+        approver_uuid = None
+        if approved_by_user_id:
+            try:
+                approver_uuid = UUID(str(approved_by_user_id))
+            except (ValueError, TypeError):
+                approver_uuid = None
+
+        if user_approved and approved_by_user_id:
+            creator_id = model.created_by
+            if creator_id is None and experiment.project:
+                creator_id = experiment.project.owner_id
+            
+            if creator_id is not None and str(approved_by_user_id) == str(creator_id):
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Self-approval is forbidden: model creator cannot approve their own model for deployment (SRS v9 §2 four-eyes principle).",
+                )
+
+        # Overall Gate status: AND of all six substantive conditions
         gate_passed = bool(
             locked_test_evaluated
             and schema_locked
@@ -152,6 +177,7 @@ class DeploymentGateService:
             lineage_complete=lineage_complete,
             performance_threshold_passed=performance_threshold_passed,
             user_approved=user_approved,
+            approved_by=approver_uuid,
             gate_passed=gate_passed,
             evaluated_at=datetime.now(timezone.utc),
         )
@@ -178,7 +204,29 @@ class DeploymentGateService:
     def approve(self, model_id: UUID | str, approved_by_user_id: UUID | str) -> DeploymentGate:
         """
         Re-computes gate checks fresh against the current system state,
-        sets user_approved = true, persists a new DeploymentGate audit row,
-        and returns the record.
+        enforces separation of duties (approved_by != created_by), sets user_approved = true,
+        persists a new DeploymentGate audit row, and returns the record.
         """
-        return self.check_gate(model_id=model_id, user_approved=True)
+        model = self.db.query(TrainedModel).filter(TrainedModel.id == model_id).first()
+        if not model:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Trained model not found",
+            )
+
+        experiment = self.db.query(Experiment).filter(Experiment.id == model.experiment_id).first()
+        creator_id = model.created_by
+        if creator_id is None and experiment and experiment.project:
+            creator_id = experiment.project.owner_id
+
+        if creator_id is not None and str(approved_by_user_id) == str(creator_id):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Self-approval is forbidden: model creator cannot approve their own model for deployment (SRS v9 §2 four-eyes principle).",
+            )
+
+        return self.check_gate(
+            model_id=model_id,
+            user_approved=True,
+            approved_by_user_id=approved_by_user_id,
+        )

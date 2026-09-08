@@ -105,8 +105,11 @@ def deployed_regression_setup(db_session, tmp_path, create_test_user):
     db_session.add_all([tc1, tc2])
     db_session.commit()
 
+    approver = create_test_user("ml_approver@test.com", "ADMIN")
+
     return {
         "owner": owner,
+        "approver": approver,
         "project": project,
         "dataset": dataset,
         "tmp_path": tmp_path,
@@ -219,7 +222,8 @@ def test_check_b_new_experiment_with_threshold_passes_gate(deployed_regression_s
     assert gate_pre.gate_passed is False
 
     # 3. Call Approval Endpoint (Day 10)
-    app_res = client.post(f"/api/v1/models/{winning_model_id}/deployment-gate/approve", headers=headers)
+    approver_headers = auth_headers(setup["approver"])
+    app_res = client.post(f"/api/v1/models/{winning_model_id}/deployment-gate/approve", headers=approver_headers)
     assert app_res.status_code == status.HTTP_200_OK
     gate_data = app_res.json()["gate"]
     assert gate_data["user_approved"] is True
@@ -246,6 +250,7 @@ def test_check_c_d_e_f_g_h_full_roundtrip_and_edge_cases(deployed_regression_set
     setup = deployed_regression_setup
     project = setup["project"]
     headers = auth_headers(setup["owner"])
+    approver_headers = auth_headers(setup["approver"])
 
     # Train and deploy a model
     exp_service = ExperimentService(db_session)
@@ -262,7 +267,7 @@ def test_check_c_d_e_f_g_h_full_roundtrip_and_edge_cases(deployed_regression_set
     winning_model_id = exp_res["selected_model_id"]
     
     # Approve and deploy
-    client.post(f"/api/v1/models/{winning_model_id}/deployment-gate/approve", headers=headers)
+    client.post(f"/api/v1/models/{winning_model_id}/deployment-gate/approve", headers=approver_headers)
     dep_res = client.post(f"/api/v1/models/{winning_model_id}/deploy", headers=headers)
     dep_id = dep_res.json()["id"]
 
@@ -373,7 +378,7 @@ def test_check_c_d_e_f_g_h_full_roundtrip_and_edge_cases(deployed_regression_set
         deployment_threshold={"metric": "RMSE", "min_value": 50000.0},
     )
     new_model_id = new_exp["selected_model_id"]
-    client.post(f"/api/v1/models/{new_model_id}/deployment-gate/approve", headers=headers)
+    client.post(f"/api/v1/models/{new_model_id}/deployment-gate/approve", headers=approver_headers)
     fresh_dep_res = client.post(f"/api/v1/models/{new_model_id}/deploy", headers=headers)
     fresh_dep_id = fresh_dep_res.json()["id"]
 

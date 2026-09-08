@@ -9,6 +9,7 @@ from app.api.v1.models import router as models_router
 from app.api.v1.deployments import router as deployments_router
 from app.api.v1.predict import router as predict_router
 from app.api.v1.workspace import router as workspace_router
+from app.api.v1.admin import router as admin_router
 
 api_v1_router = APIRouter(prefix="/api/v1")
 api_v1_router.include_router(auth_router)
@@ -21,4 +22,5 @@ api_v1_router.include_router(experiments_router)
 api_v1_router.include_router(models_router)
 api_v1_router.include_router(deployments_router)
 api_v1_router.include_router(predict_router)
+api_v1_router.include_router(admin_router)
 

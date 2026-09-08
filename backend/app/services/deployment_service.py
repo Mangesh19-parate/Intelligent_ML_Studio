@@ -1,4 +1,6 @@
 import uuid
+import hashlib
+from pathlib import Path
 from datetime import datetime, timezone
 from uuid import UUID
 from fastapi import HTTPException, status
@@ -64,6 +66,23 @@ class DeploymentService:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail=f"Deployment gate check failed. Unmet conditions: {', '.join(failed_conditions)}",
+            )
+
+        # Live Disk Artifact Verification at deployment time
+        hasher = hashlib.sha256()
+        artifact_path = Path(model.artifact_path) if model.artifact_path else None
+        if not artifact_path or not artifact_path.exists():
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Model artifact is missing on disk. Cannot deploy unverified model.",
+            )
+        with open(artifact_path, "rb") as f:
+            while chunk := f.read(65536):
+                hasher.update(chunk)
+        if model.artifact_checksum and hasher.hexdigest() != model.artifact_checksum:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Model artifact checksum mismatch on disk. Deployment rejected due to failed artifact integrity.",
             )
 
         deployment_id = uuid.uuid4()
@@ -133,17 +152,17 @@ class DeploymentService:
     def update_status(self, deployment_id: UUID | str, target_status: str) -> Deployment:
         """
         Transitions deployment status respecting the state machine rules:
-        - LIVE -> PAUSED
-        - PAUSED -> LIVE
-        - LIVE -> RETIRED
+        - LIVE / DEPLOYED -> PAUSED
+        - PAUSED -> LIVE / DEPLOYED
+        - LIVE / DEPLOYED -> RETIRED
         - PAUSED -> RETIRED
         - RETIRED -> (ANY) is strictly rejected
         """
         status_norm = target_status.upper().strip()
-        if status_norm not in {"LIVE", "PAUSED", "RETIRED"}:
+        if status_norm not in {"LIVE", "DEPLOYED", "PAUSED", "RETIRED"}:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail=f"Invalid target status '{target_status}'. Allowed values: LIVE, PAUSED, RETIRED.",
+                detail=f"Invalid target status '{target_status}'. Allowed values: LIVE, DEPLOYED, PAUSED, RETIRED.",
             )
 
         deployment = self.db.query(Deployment).filter(Deployment.id == deployment_id).first()

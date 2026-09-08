@@ -166,7 +166,7 @@ class PredictionService:
                 detail="Deployment not found",
             )
 
-        if deployment.status != "LIVE":
+        if deployment.status not in {"LIVE", "DEPLOYED"}:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Deployment is not LIVE (current status: {deployment.status}). Cannot serve predictions.",

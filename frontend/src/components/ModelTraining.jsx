@@ -4,6 +4,7 @@ import { LineageViewer } from './LineageViewer';
 import { ExplainabilityViewer } from './ExplainabilityViewer';
 import DeploymentGateModal from './DeploymentGateModal';
 import ModelPassportModal from './ModelPassportModal';
+import ExperimentHealthModal from './ExperimentHealthModal';
 import {
   Cpu,
   Play,
@@ -30,6 +31,7 @@ import {
   BrainCircuit,
   Download,
   FileText,
+  Activity,
 } from 'lucide-react';
 
 const REGRESSION_ALGORITHMS = [
@@ -108,6 +110,8 @@ export const ModelTraining = ({ projectId, taskType, targetColumn, onExperimentC
   const [selectedDeploymentModel, setSelectedDeploymentModel] = useState(null);
   const [passportModalOpen, setPassportModalOpen] = useState(false);
   const [selectedPassportModelId, setSelectedPassportModelId] = useState(null);
+  const [healthModalOpen, setHealthModalOpen] = useState(false);
+  const [healthExperimentId, setHealthExperimentId] = useState(null);
   const [rerunningDiagnostic, setRerunningDiagnostic] = useState(false);
 
   const pollingTimerRef = useRef(null);
@@ -655,6 +659,17 @@ export const ModelTraining = ({ projectId, taskType, targetColumn, onExperimentC
                   <div className="flex items-center space-x-3">
                     <button
                       onClick={() => {
+                        setHealthExperimentId(activeExperiment.id);
+                        setHealthModalOpen(true);
+                      }}
+                      className="px-3 py-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 text-xs font-semibold flex items-center space-x-1.5 transition-colors cursor-pointer"
+                      title="Inspect Experiment Health Report per SRS v9 §13"
+                    >
+                      <Activity className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>Health Report</span>
+                    </button>
+                    <button
+                      onClick={() => {
                         setLineageExperimentId(activeExperiment.id);
                         setLineageModalOpen(true);
                       }}
@@ -980,6 +995,17 @@ export const ModelTraining = ({ projectId, taskType, targetColumn, onExperimentC
           onClose={() => {
             setPassportModalOpen(false);
             setSelectedPassportModelId(null);
+          }}
+        />
+      )}
+
+      {/* Experiment Health Report Modal (SRS v9 §13) */}
+      {healthModalOpen && healthExperimentId && (
+        <ExperimentHealthModal
+          experimentId={healthExperimentId}
+          onClose={() => {
+            setHealthModalOpen(false);
+            setHealthExperimentId(null);
           }}
         />
       )}

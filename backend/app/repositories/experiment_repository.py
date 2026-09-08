@@ -213,10 +213,16 @@ class ExperimentRepository(BaseRepository[Experiment]):
         decision_threshold: float | None = None,
         status: str = "TRAINED",
         error_message: str | None = None,
+        created_by: PyUUID | str | None = None,
     ) -> TrainedModel:
         if isinstance(experiment_id, str):
             try:
                 experiment_id = PyUUID(experiment_id)
+            except Exception:
+                pass
+        if isinstance(created_by, str):
+            try:
+                created_by = PyUUID(created_by)
             except Exception:
                 pass
         model_rec = TrainedModel(
@@ -229,6 +235,7 @@ class ExperimentRepository(BaseRepository[Experiment]):
             decision_threshold=decision_threshold,
             status=status,
             error_message=error_message,
+            created_by=created_by,
         )
         self.db.add(model_rec)
         self.db.commit()

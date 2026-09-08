@@ -252,7 +252,7 @@ class ModelPassportService:
             gate_evaluated=latest_gate is not None,
             gate_is_passing=bool(latest_gate.gate_passed) if latest_gate else False,
             gate_user_approved=bool(latest_gate.user_approved) if latest_gate else False,
-            gate_approved_by_user_id=None,
+            gate_approved_by_user_id=latest_gate.approved_by if latest_gate else None,
             gate_approved_at=latest_gate.evaluated_at if latest_gate else None,
             gate_checks=gate_checks_list,
             is_deployed=is_deployed,

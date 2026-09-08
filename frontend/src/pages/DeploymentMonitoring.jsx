@@ -505,9 +505,27 @@ export const DeploymentMonitoring = () => {
             </div>
           </div>
 
-          {/* Audit Logs Table */}
+          {/* Audit Logs Table & Privacy Disclosure */}
           <div className="p-6 rounded-2xl bg-[var(--color-surface)] border border-[var(--color-border)] space-y-4">
-            <h3 className="text-sm font-bold text-text">Recent Inference Audit Logs</h3>
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
+              <h3 className="text-sm font-bold text-text">Recent Inference Audit Logs</h3>
+              <div className="flex items-center space-x-2 text-[11px] text-[var(--color-text-muted)] bg-[var(--color-bg)] px-3 py-1.5 rounded-lg border border-[var(--color-border)]">
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                <span>Default Payload Mode: <strong className="text-text font-mono">HASHED</strong></span>
+              </div>
+            </div>
+
+            {/* Privacy Disclaimer (SRS §2.15) */}
+            <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-300/90 flex items-start space-x-2.5">
+              <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+              <div>
+                <strong className="text-amber-300 font-semibold">Privacy Notice: Correlation & Integrity, Not Anonymization.</strong>{' '}
+                <span>
+                  The default <code className="bg-black/30 px-1 py-0.5 rounded font-mono text-[11px]">HASHED</code> mode stores a SHA-256 hash of input feature names to verify schema integrity while keeping input payloads null. Note that structured low-cardinality values can be brute-forced; full payload capture requires explicit admin opt-in.
+                </span>
+              </div>
+            </div>
+
             <div className="overflow-x-auto rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)]">
               <table className="w-full text-left text-xs">
                 <thead className="bg-[var(--color-surface)] border-b border-[var(--color-border)] text-[var(--color-text-muted)] uppercase tracking-wider font-semibold text-[10px]">

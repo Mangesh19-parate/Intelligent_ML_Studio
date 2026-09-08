@@ -15,6 +15,7 @@ class DeploymentGateResponse(BaseModel):
     lineage_complete: bool
     performance_threshold_passed: str
     user_approved: bool
+    approved_by: UUID | None = None
     gate_passed: bool
     evaluated_at: datetime
 

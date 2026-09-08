@@ -51,6 +51,11 @@ class TrainedModel(Base):
     
     status = Column(String(30), nullable=False, default=ModelState.TRAINED.value, server_default="TRAINED")
     error_message = Column(Text, nullable=True)
+    created_by = Column(
+        Uuid(as_uuid=True),
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True
+    )
     
     created_at = Column(
         DateTime(timezone=True),
@@ -70,6 +75,10 @@ class TrainedModel(Base):
         ),
     )
 
+    creator = relationship(
+        "User",
+        foreign_keys=[created_by]
+    )
     experiment = relationship(
         "Experiment",
         back_populates="trained_models",

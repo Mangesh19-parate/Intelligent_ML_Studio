@@ -458,19 +458,23 @@ def get_experiment_lineage_endpoint(
     return service.get_experiment_lineage(id)
 
 
-@router.post(
-    "/experiments/{id}/reproduce",
-    response_model=ExperimentReproduceResponse,
+from app.schemas.experiment_health import ExperimentHealthResponse
+from app.services.experiment_health_service import ExperimentHealthService
+
+
+@router.get(
+    "/experiments/{id}/health",
+    response_model=ExperimentHealthResponse,
     status_code=status.HTTP_200_OK,
-    summary="Reproduce experiment with frozen config and evaluate against frozen tolerances (TRAIN permission required)",
+    summary="Get comprehensive Experiment Health Report per SRS v9 §13 (READ permission required)",
 )
-def reproduce_experiment_endpoint(
+def get_experiment_health_endpoint(
     id: UUID,
-    current_user: User = Depends(require_permission("TRAIN")),
+    current_user: User = Depends(require_permission("READ")),
     db: Session = Depends(get_db),
 ):
-    service = ExperimentService(db)
-    return service.reproduce_experiment(id)
+    service = ExperimentHealthService(db)
+    return service.generate_health_report(id)
 
 
 

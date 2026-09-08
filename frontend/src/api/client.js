@@ -111,6 +111,7 @@ export const experimentApi = {
   listByProject: (projectId) => apiClient.get(`/projects/${projectId}/experiments`),
   getSelection: (experimentId) => apiClient.get(`/experiments/${experimentId}/selection`),
   getLineage: (experimentId) => apiClient.get(`/experiments/${experimentId}/lineage`),
+  getHealth: (experimentId) => apiClient.get(`/experiments/${experimentId}/health`),
   reproduce: (experimentId) => apiClient.post(`/experiments/${experimentId}/reproduce`),
   finalize: (experimentId) => apiClient.post(`/experiments/${experimentId}/finalize`),
   diagnosticRerun: (experimentId) => apiClient.post(`/experiments/${experimentId}/diagnostic-rerun`),
@@ -143,6 +144,25 @@ export const deploymentApi = {
 export const predictApi = {
   predict: (deploymentId, payload) => apiClient.post(`/predict/${deploymentId}`, payload),
   predictExplain: (deploymentId, payload) => apiClient.post(`/predict/${deploymentId}/explain`, payload),
+};
+
+export const adminApi = {
+  getUsers: () => apiClient.get('/admin/users'),
+  createUser: (payload) => apiClient.post('/admin/users', payload),
+  updateUser: (userId, payload) => apiClient.patch(`/admin/users/${userId}`, payload),
+  setPermissionOverride: (userId, permissionKey, isGranted) =>
+    apiClient.put(`/admin/users/${userId}/overrides`, { permission_key: permissionKey, is_granted: isGranted }),
+  deletePermissionOverride: (userId, permissionKey) =>
+    apiClient.delete(`/admin/users/${userId}/overrides/${permissionKey}`),
+  getAlgorithms: () => apiClient.get('/admin/catalog/algorithms'),
+  getMetrics: () => apiClient.get('/admin/catalog/metrics'),
+  getFeatures: () => apiClient.get('/admin/catalog/features'),
+  getAuditLogs: (eventType = '', search = '', limit = 100) => {
+    let url = `/admin/audit-logs?limit=${limit}`;
+    if (eventType) url += `&event_type=${encodeURIComponent(eventType)}`;
+    if (search) url += `&search=${encodeURIComponent(search)}`;
+    return apiClient.get(url);
+  },
 };
 
 export default apiClient;

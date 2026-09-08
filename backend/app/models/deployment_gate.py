@@ -36,6 +36,11 @@ class DeploymentGate(Base):
     lineage_complete = Column(Boolean, nullable=False)
     performance_threshold_passed = Column(String(15), nullable=False)
     user_approved = Column(Boolean, nullable=False, default=False, server_default="false")
+    approved_by = Column(
+        Uuid(as_uuid=True),
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True
+    )
     gate_passed = Column(Boolean, nullable=False)
     evaluated_at = Column(
         DateTime(timezone=True),
@@ -52,6 +57,7 @@ class DeploymentGate(Base):
     )
 
     model = relationship("TrainedModel", back_populates="deployment_gates", foreign_keys=[model_id])
+    approver = relationship("User", foreign_keys=[approved_by])
 
     def __repr__(self) -> str:
         return f"<DeploymentGate id={self.id} model_id={self.model_id} gate_passed={self.gate_passed} perf={self.performance_threshold_passed}>"

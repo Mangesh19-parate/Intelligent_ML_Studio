@@ -3,33 +3,120 @@
 @tailwind utilities;
 
 :root {
-  --color-bg: #F8FAFC;
-  --color-surface: #FFFFFF;
-  --color-surface-hover: #F1F5F9;
-  --color-border: #E2E8F0;
-  --color-text: #0F172A;
-  --color-text-muted: #64748B;
-  --color-accent: #4F46E5;
-  --color-accent-hover: #4338CA;
+  /* Mastercard Light Theme: Putty-Cream Canvas + Signal Orange + Ink Black */
+  --color-bg: #F3F0EE;
+  --color-surface: #FCFBFA;
+  --color-surface-hover: #ECE8E5;
+  --color-surface-card: #FFFFFF;
+  --color-border: #E3DFDC;
+  --color-border-subtle: #ECE8E5;
+  --color-text: #141413;
+  --color-text-muted: #696969;
+  --color-accent: #CF4500;
+  --color-accent-hover: #B83D00;
+  --color-accent-active: #9A3A0A;
+  --color-accent-soft: rgba(207, 69, 0, 0.10);
+  --color-card-shadow: 0 16px 36px rgba(20, 20, 19, 0.05), 0 2px 8px rgba(20, 20, 19, 0.03);
 }
 
 .dark {
-  --color-bg: #0F172A;
-  --color-surface: #1E293B;
-  --color-surface-hover: #334155;
-  --color-border: #334155;
-  --color-text: #F8FAFC;
-  --color-text-muted: #94A3B8;
-  --color-accent: #6366F1;
-  --color-accent-hover: #4F46E5;
+  /* Mastercard Dark Theme: Warm Ink Black + Signal Orange */
+  --color-bg: #141413;
+  --color-surface: #1E1E1C;
+  --color-surface-hover: #282825;
+  --color-surface-card: #222220;
+  --color-border: #333230;
+  --color-border-subtle: #3D3B38;
+  --color-text: #F3F0EE;
+  --color-text-muted: #A8A4A0;
+  --color-accent: #F37338;
+  --color-accent-hover: #CF4500;
+  --color-accent-active: #B83D00;
+  --color-accent-soft: rgba(243, 115, 56, 0.15);
+  --color-card-shadow: 0 16px 36px rgba(0, 0, 0, 0.35);
 }
 
 body {
-  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: 'Sofia Sans', 'Plus Jakarta Sans', Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   background-color: var(--color-bg);
   color: var(--color-text);
+  letter-spacing: -0.015em;
 }
 
-code, pre {
+h1, h2, h3 {
+  font-family: 'Sofia Sans', 'Plus Jakarta Sans', sans-serif;
+  letter-spacing: -0.02em;
+  font-weight: 600;
+}
+
+code, pre, .font-mono {
   font-family: 'JetBrains Mono', monospace;
+}
+
+/* Mastercard Stadium Card Style */
+.mc-card {
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--color-card-shadow);
+  border-radius: 1.25rem;
+}
+
+/* Mastercard Stadium Pill Button */
+.mc-btn-primary {
+  background-color: #141413;
+  color: #F3F0EE;
+  font-weight: 600;
+  border-radius: 9999px;
+  padding: 0.5rem 1.5rem;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.mc-btn-primary:hover {
+  background-color: #262627;
+  transform: translateY(-1px);
+}
+
+.mc-btn-accent {
+  background-color: var(--color-accent);
+  color: #FFFFFF;
+  font-weight: 600;
+  border-radius: 9999px;
+  padding: 0.5rem 1.5rem;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.mc-btn-accent:hover {
+  background-color: var(--color-accent-hover);
+  transform: translateY(-1px);
+}
+
+.mc-btn-secondary {
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+  font-weight: 600;
+  border-radius: 9999px;
+  padding: 0.5rem 1.25rem;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.mc-btn-secondary:hover {
+  background-color: var(--color-surface-hover);
+}
+
+/* Eyebrow Label with Signal Dot */
+.mc-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-accent);
+}
+.mc-eyebrow::before {
+  content: '';
+  display: inline-block;
+  width: 0.375rem;
+  height: 0.375rem;
+  border-radius: 9999px;
+  background-color: var(--color-accent);
 }

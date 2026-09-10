@@ -52,16 +52,23 @@ export const AppLayout = ({ children }) => {
       <header className="sticky top-0 z-40 w-full border-b border-[var(--color-border)] bg-[var(--color-surface)]/90 backdrop-blur-md transition-colors">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center space-x-6">
-            <Link to="/dashboard" className="flex items-center space-x-2.5 group">
-              <div className="w-9 h-9 rounded-xl bg-[var(--color-accent)] flex items-center justify-center text-white shadow-md group-hover:scale-105 transition-transform">
-                <Layers className="w-5 h-5" />
+            <Link to="/dashboard" className="flex items-center space-x-3 group">
+              {/* Mastercard Iconic Overlapping Circles Mark */}
+              <div className="flex items-center relative w-10 h-7 group-hover:scale-105 transition-transform">
+                <div className="w-6 h-6 rounded-full bg-[#EB001B] shadow-sm"></div>
+                <div className="w-6 h-6 rounded-full bg-[#F79E1B] -ml-2.5 mix-blend-multiply dark:mix-blend-screen opacity-90 shadow-sm"></div>
               </div>
               <div className="flex flex-col">
-                <span className="text-lg font-extrabold tracking-tight bg-gradient-to-r from-[var(--color-accent)] to-indigo-400 bg-clip-text text-transparent">
-                  ML Studio
-                </span>
-                <span className="text-[10px] uppercase tracking-wider font-semibold text-[var(--color-text-muted)] -mt-1">
-                  8-Stage Leakage-Safe Workbench
+                <div className="flex items-center space-x-1.5">
+                  <span className="text-xl font-bold tracking-tight text-[var(--color-text)]">
+                    ML Studio
+                  </span>
+                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-[#CF4500]/10 text-[#CF4500] uppercase tracking-wider">
+                    Workbench
+                  </span>
+                </div>
+                <span className="text-[10px] uppercase tracking-wider font-semibold text-[var(--color-text-muted)] -mt-0.5">
+                  8-Stage Leakage-Safe Platform
                 </span>
               </div>
             </Link>
@@ -72,17 +79,17 @@ export const AppLayout = ({ children }) => {
             <div className="flex items-center space-x-4">
               <div className={`hidden sm:flex items-center space-x-2 px-3 py-1 rounded-full border text-xs font-semibold ${
                 isAdmin 
-                  ? 'bg-rose-500/10 border-rose-500/30 text-rose-500' 
-                  : 'bg-[var(--color-bg)] border-[var(--color-border)] text-text'
+                  ? 'bg-rose-500/10 border-rose-500/30 text-rose-600 dark:text-rose-400' 
+                  : 'bg-[var(--color-surface)] border-[var(--color-border)] text-text shadow-sm'
               }`}>
-                {isAdmin ? <ShieldAlert className="w-3.5 h-3.5 text-rose-500" /> : <ShieldCheck className="w-3.5 h-3.5 text-[var(--color-accent)]" />}
-                <span>{roleName}</span>
+                {isAdmin ? <ShieldAlert className="w-3.5 h-3.5 text-rose-500" /> : <ShieldCheck className="w-3.5 h-3.5 text-[#CF4500]" />}
+                <span className="font-bold">{roleName}</span>
                 <span className="text-[var(--color-text-muted)]">({userPerms.size} perms)</span>
               </div>
 
               <button
                 onClick={toggleDarkMode}
-                className="p-2 rounded-lg text-[var(--color-text-muted)] hover:text-text hover:bg-[var(--color-surface-hover)] transition-colors cursor-pointer"
+                className="p-2 rounded-full text-[var(--color-text-muted)] hover:text-text hover:bg-[var(--color-surface-hover)] transition-colors cursor-pointer"
                 title={darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
               >
                 {darkMode ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4" />}
@@ -90,12 +97,12 @@ export const AppLayout = ({ children }) => {
 
               <div className="flex items-center space-x-3 border-l border-[var(--color-border)] pl-4">
                 <div className="text-right hidden md:block">
-                  <div className="text-xs font-semibold text-text">{user.full_name}</div>
-                  <div className="text-[11px] text-[var(--color-text-muted)]">{user.email}</div>
+                  <div className="text-xs font-bold text-text">{user.full_name}</div>
+                  <div className="text-[11px] text-[var(--color-text-muted)] font-mono">{user.email}</div>
                 </div>
                 <button
                   onClick={handleLogout}
-                  className="p-2 rounded-lg text-rose-500 hover:bg-rose-500/10 transition-colors cursor-pointer"
+                  className="p-2 rounded-full text-rose-500 hover:bg-rose-500/10 transition-colors cursor-pointer"
                   title="Sign Out"
                 >
                   <LogOut className="w-4 h-4" />
@@ -105,10 +112,10 @@ export const AppLayout = ({ children }) => {
           )}
         </div>
 
-        {/* 8-Stage Navigation Bar + Conditional Admin Section */}
-        <div className="border-t border-[var(--color-border)]/60 bg-[var(--color-surface)]/50 px-4 sm:px-6 lg:px-8">
-          <div className="max-w-7xl mx-auto flex items-center justify-between overflow-x-auto py-2">
-            <div className="flex items-center space-x-1 sm:space-x-2 shrink-0">
+        {/* 8-Stage Navigation Bar (Floating Stadium Pills) */}
+        <div className="border-t border-[var(--color-border)] bg-[var(--color-surface)]/70 px-4 sm:px-6 lg:px-8">
+          <div className="max-w-7xl mx-auto flex items-center justify-between overflow-x-auto py-2.5">
+            <div className="flex items-center space-x-1.5 sm:space-x-2 shrink-0">
               {STAGES.map((stage) => {
                 const Icon = stage.icon;
                 const isActive = location.pathname === stage.path || (stage.path === '/dashboard' && location.pathname === '/');
@@ -116,13 +123,13 @@ export const AppLayout = ({ children }) => {
                   <NavLink
                     key={stage.id}
                     to={stage.path}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-1.5 transition-all whitespace-nowrap ${
+                    className={`px-3.5 py-1.5 rounded-full text-xs font-semibold flex items-center space-x-1.5 transition-all whitespace-nowrap ${
                       isActive
-                        ? 'bg-[var(--color-accent)] text-white shadow-sm font-bold'
+                        ? 'bg-[#141413] text-[#F3F0EE] dark:bg-[#F3F0EE] dark:text-[#141413] shadow-md'
                         : 'text-[var(--color-text-muted)] hover:text-text hover:bg-[var(--color-surface-hover)]'
                     }`}
                   >
-                    <Icon className="w-3.5 h-3.5" />
+                    <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-[#F79E1B]' : ''}`} />
                     <span>{stage.name}</span>
                   </NavLink>
                 );
@@ -135,10 +142,10 @@ export const AppLayout = ({ children }) => {
                 <NavLink
                   to="/admin"
                   className={({ isActive }) =>
-                    `px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-1.5 transition-all ${
+                    `px-3.5 py-1.5 rounded-full text-xs font-bold flex items-center space-x-1.5 transition-all ${
                       isActive
-                        ? 'bg-rose-600 text-white font-bold shadow-sm'
-                        : 'text-rose-500 hover:bg-rose-500/10 font-bold'
+                        ? 'bg-[#EB001B] text-white shadow-md'
+                        : 'text-[#EB001B] hover:bg-[#EB001B]/10'
                     }`
                   }
                 >

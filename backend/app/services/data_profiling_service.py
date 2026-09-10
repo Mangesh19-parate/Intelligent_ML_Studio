@@ -1,3 +1,4 @@
+import warnings
 from uuid import UUID
 from datetime import datetime, timezone
 import numpy as np
@@ -81,7 +82,9 @@ class DataProfilingService:
 
         # Check if entire column is datetime strings
         try:
-            pd.to_datetime(sample, errors="raise")
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", UserWarning)
+                pd.to_datetime(sample, errors="raise")
             return "datetime", is_mixed
         except Exception:
             pass
@@ -91,7 +94,9 @@ class DataProfilingService:
     def _detect_datetime_granularity(self, dt_series: pd.Series) -> str:
         """Detects dominant temporal granularity of a datetime series."""
         try:
-            converted = pd.to_datetime(dt_series.dropna())
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", UserWarning)
+                converted = pd.to_datetime(dt_series.dropna())
             if len(converted) < 2:
                 return "DAY"
             diffs = converted.sort_values().diff().dropna()
@@ -178,7 +183,9 @@ class DataProfilingService:
 
             elif col_type == "datetime":
                 try:
-                    dt_s = pd.to_datetime(non_null)
+                    with warnings.catch_warnings():
+                        warnings.simplefilter("ignore", UserWarning)
+                        dt_s = pd.to_datetime(non_null)
                     min_dt = dt_s.min()
                     max_dt = dt_s.max()
                     granularity = self._detect_datetime_granularity(dt_s)

@@ -110,7 +110,11 @@ class EvaluationService:
         f1_w = float(f1_score(y_true_arr, y_pred_arr, average="weighted", zero_division=0))
 
         # Confusion Matrix
-        cm = confusion_matrix(y_true_arr, y_pred_arr).tolist()
+        all_labels = np.unique(np.concatenate([y_true_arr, y_pred_arr]))
+        if len(all_labels) == 1 and all_labels[0] in (0, 1):
+            cm = confusion_matrix(y_true_arr, y_pred_arr, labels=[0, 1]).tolist()
+        else:
+            cm = confusion_matrix(y_true_arr, y_pred_arr).tolist()
 
         # ROC-AUC (optional depending on proba availability and class support)
         roc_auc_val = None

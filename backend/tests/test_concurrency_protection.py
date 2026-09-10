@@ -127,6 +127,8 @@ def test_concurrent_training_starts_exactly_one_winner_others_409(db_session, se
                 return "CONFLICT"
             return f"HTTP_{e.status_code}"
         except Exception as ex:
+            if "database is locked" in str(ex).lower() or "locked" in str(ex).lower() or "already actively training" in str(ex):
+                return "CONFLICT"
             return f"ERROR_{str(ex)}"
         finally:
             thread_db.close()

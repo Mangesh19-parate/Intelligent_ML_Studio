@@ -1,5 +1,6 @@
 import io
 import hashlib
+import warnings
 from pathlib import Path
 from uuid import UUID
 from decimal import Decimal
@@ -96,7 +97,9 @@ class DatasetService:
             # Sample up to 50 items to check if all parse as datetime
             sample = non_null_series.head(50)
             try:
-                converted = pd.to_datetime(sample, errors="raise")
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore", UserWarning)
+                    converted = pd.to_datetime(sample, errors="raise")
                 # If sample parsed cleanly, verify entire series or classify as DATETIME
                 return "DATETIME"
             except Exception:

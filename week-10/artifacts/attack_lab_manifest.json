@@ -1,0 +1,19 @@
+{
+  "manifest_version": "1.0.0",
+  "timestamp": "2026-09-10T13:57:10.944287+00:00",
+  "dataset": {
+    "name": "Synthetic Leakage Benchmark",
+    "samples": 200,
+    "features": 20,
+    "content_hash": "9f77d4b3b1a0cb5cd49fddc4970a4758a9f39907d7809d488f59631f89195278",
+    "target": "target"
+  },
+  "outer_split": {
+    "type": "DEV_80_LOCKED_20",
+    "dev_samples": 160,
+    "locked_test_samples": 40,
+    "seed": 42
+  },
+  "cv_folds": 5,
+  "seed": 42
+}

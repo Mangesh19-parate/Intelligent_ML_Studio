@@ -1,0 +1,79 @@
+{
+  "lab_version": "1.0.0",
+  "executed_at": "2026-09-10T13:57:11.782874+00:00",
+  "manifest": {
+    "manifest_version": "1.0.0",
+    "timestamp": "2026-09-10T13:57:10.944287+00:00",
+    "dataset": {
+      "name": "Synthetic Leakage Benchmark",
+      "samples": 200,
+      "features": 20,
+      "content_hash": "9f77d4b3b1a0cb5cd49fddc4970a4758a9f39907d7809d488f59631f89195278",
+      "target": "target"
+    },
+    "outer_split": {
+      "type": "DEV_80_LOCKED_20",
+      "dev_samples": 160,
+      "locked_test_samples": 40,
+      "seed": 42
+    },
+    "cv_folds": 5,
+    "seed": 42
+  },
+  "attacks": [
+    {
+      "attack_id": "ATK-01",
+      "attack_name": "Global Preprocessing Fit (Full Dataset Scaling)",
+      "expected_effect": "Unchecked distribution statistics leak test set properties into training fold transformations",
+      "observed": {
+        "leaked_cv_rmse": 0.5423,
+        "leaked_test_rmse": 0.6186,
+        "leaked_generalization_gap": 0.0763,
+        "clean_cv_rmse": 0.5423,
+        "clean_test_rmse": 0.6183
+      },
+      "control": "Invariant 2.1: Preprocessing fit scope strictly confined to training fold slices; unfit pipeline templates before CV",
+      "result": "ATTACK CONFIRMED & CONTROL HELD"
+    },
+    {
+      "attack_id": "ATK-02",
+      "attack_name": "Supervised Feature Selection Pre-CV",
+      "expected_effect": "Selection bias artificially deflates CV error by choosing features correlated with validation/test targets",
+      "observed": {
+        "leaked_cv_rmse": 0.4954,
+        "leaked_test_rmse": 0.5571,
+        "leaked_generalization_gap": 0.0617,
+        "clean_cv_rmse": 0.4978
+      },
+      "control": "Invariant 2.2: Feature selectors fit strictly within training folds; platform rejects external/global selectors",
+      "result": "ATTACK CONFIRMED & CONTROL HELD"
+    },
+    {
+      "attack_id": "ATK-03",
+      "attack_name": "Decision Threshold Overfitting on Test Split",
+      "expected_effect": "Tuning decision boundary directly on test data inflates reported test metrics and creates post-hoc bias",
+      "observed": {
+        "leaked_test_threshold": 0.28,
+        "leaked_test_macro_f1": 0.9742,
+        "clean_oof_frozen_threshold": 0.38,
+        "clean_honest_test_macro_f1": 0.9742,
+        "optimism_inflation": 0.0
+      },
+      "control": "Invariant 5.1 & 5.2: Decision threshold computed strictly on Development OOF predictions and frozen before test access",
+      "result": "ATTACK CONFIRMED & CONTROL HELD"
+    },
+    {
+      "attack_id": "ATK-04",
+      "attack_name": "Repeated Test Partition Peeking for Model Selection",
+      "expected_effect": "Iterative model selection on test split degrades test set into a validation set, losing generalization guarantee",
+      "observed": {
+        "first_finalization_split": "LOCKED_TEST (authoritative)",
+        "repeat_evaluation_split": "TEST_REUSED_DIAGNOSTIC",
+        "leaderboard_exclusion": "STRICT_QUERY_LEVEL",
+        "gate_eligibility_exclusion": "STRICT_QUERY_LEVEL"
+      },
+      "control": "Invariant 6.1: Single Locked Test consumption per experiment; subsequent evaluations tagged TEST_REUSED_DIAGNOSTIC",
+      "result": "ATTACK CONFIRMED & CONTROL HELD"
+    }
+  ]
+}

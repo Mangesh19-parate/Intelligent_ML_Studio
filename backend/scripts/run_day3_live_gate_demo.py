@@ -160,9 +160,10 @@ def run_live_gate_demo():
 
     # Artifact
     artifact_file = backend_dir / "data" / "demo_model.joblib"
+    X_train_demo = pd.DataFrame([[50000.0, 10000.0], [60000.0, 15000.0], [70000.0, 20000.0]], columns=["income", "debt"])
     scaler = StandardScaler()
-    scaler.fit([[50000.0, 10000.0], [60000.0, 15000.0], [70000.0, 20000.0]])
-    model_est = LinearRegression().fit(scaler.transform([[50000.0, 10000.0], [60000.0, 15000.0], [70000.0, 20000.0]]), [25.0, 30.0, 35.0])
+    X_scaled = scaler.fit_transform(X_train_demo)
+    model_est = LinearRegression().fit(X_scaled, [25.0, 30.0, 35.0])
     joblib.dump({
         "transformer": scaler,
         "estimator": model_est,

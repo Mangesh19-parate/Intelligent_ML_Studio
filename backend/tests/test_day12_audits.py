@@ -229,12 +229,17 @@ def test_project_wide_leakage_audit(db_session: Session, client, create_test_use
         assert local_resp.status_code == 200
         mock_no_locked.assert_not_called()
 
-    # Stage 10: Deployment Gate & Live Deployment
-    app_resp = client.post(f"/api/v1/models/{winning_model_id}/deployment-gate/approve", headers=headers)
+    # Stage 10: Deployment Gate & Live Deployment (Four-Eyes Principle: Approver != Creator)
+    approver_user = create_test_user("deployment_approver@studio.com", "DEPLOYMENT_MANAGER")
+    app_login_res = client.post("/api/v1/auth/login", json={"email": "deployment_approver@studio.com", "password": "password123"})
+    approver_token = app_login_res.json()["access_token"]
+    approver_headers = {"Authorization": f"Bearer {approver_token}"}
+
+    app_resp = client.post(f"/api/v1/models/{winning_model_id}/deployment-gate/approve", headers=approver_headers)
     assert app_resp.status_code == 200
     assert app_resp.json()["gate"]["gate_passed"] is True
 
-    dep_resp = client.post(f"/api/v1/models/{winning_model_id}/deploy", headers=headers)
+    dep_resp = client.post(f"/api/v1/models/{winning_model_id}/deploy", headers=approver_headers)
     assert dep_resp.status_code == 200
     deployment_id = dep_resp.json()["id"]
 

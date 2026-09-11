@@ -11,11 +11,8 @@ import { DataAnalysisStage } from './pages/DataAnalysisStage';
 import { FeatureEngineeringStage } from './pages/FeatureEngineeringStage';
 import { MLStage } from './pages/MLStage';
 import { DiagnosticsStage } from './pages/DiagnosticsStage';
-import {
-  AnalysisStage,
-  TransformationStage,
-  ProductionStage,
-} from './pages/StagePlaceholders';
+import { TransformationStage } from './pages/TransformationStage';
+import { ProductionStage } from './pages/ProductionStage';
 import { AdminConsole } from './pages/AdminConsole';
 
 const ProtectedRoute = ({ children, requiredRole }) => {

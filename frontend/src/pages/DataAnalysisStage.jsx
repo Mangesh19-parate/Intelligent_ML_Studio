@@ -169,8 +169,8 @@ export const DataAnalysisStage = () => {
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
-        <div className="w-10 h-10 border-3 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-        <p className="text-sm text-slate-400 font-medium">Loading Data Analysis & DQI diagnostics...</p>
+        <div className="w-10 h-10 border-3 border-[var(--color-accent)] border-t-transparent rounded-full animate-spin" />
+        <p className="text-xs text-[var(--color-text-muted)] font-medium">Loading Data Analysis & DQI diagnostics...</p>
       </div>
     );
   }
@@ -178,17 +178,17 @@ export const DataAnalysisStage = () => {
   return (
     <div className="space-y-8 max-w-7xl mx-auto pb-12">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-slate-800">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-[var(--color-border)]">
         <div>
-          <div className="flex items-center space-x-2 text-xs font-semibold text-indigo-400 uppercase tracking-wider mb-1">
+          <div className="flex items-center space-x-2 text-xs font-bold text-[var(--color-accent)] uppercase tracking-wider mb-1">
             <span>Stage 3 of 8</span>
             <span>&bull;</span>
             <span>Development Profiling & DQI</span>
           </div>
-          <h1 className="text-2xl font-black tracking-tight text-white flex items-center gap-3">
+          <h1 className="text-2xl font-black tracking-tight text-[var(--color-text)] flex items-center gap-3">
             <span>Data Analysis & Quality Diagnostics</span>
           </h1>
-          <p className="text-sm text-slate-400 mt-1">
+          <p className="text-xs text-[var(--color-text-muted)] mt-1">
             Distributional profiling, Pearson correlations, task-type inference, and the multi-factor Data Quality Index.
           </p>
         </div>
@@ -196,16 +196,16 @@ export const DataAnalysisStage = () => {
         {/* Project Selector & Next Stage Action */}
         <div className="flex items-center gap-3 flex-wrap">
           {projects.length > 0 && (
-            <div className="flex items-center gap-2 bg-slate-900 border border-slate-800 rounded-xl px-3 py-1.5">
-              <FolderOpen className="w-4 h-4 text-slate-400" />
+            <div className="flex items-center gap-2 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl px-3 py-1.5 shadow-xs">
+              <FolderOpen className="w-4 h-4 text-[var(--color-text-muted)]" />
               <select
                 id="project-select"
                 value={selectedProjectId}
                 onChange={(e) => handleSelectProject(e.target.value)}
-                className="bg-transparent text-xs font-medium text-white border-none focus:outline-none cursor-pointer pr-2"
+                className="bg-transparent text-xs font-semibold text-[var(--color-text)] border-none focus:outline-none cursor-pointer pr-2"
               >
                 {projects.map((p) => (
-                  <option key={p.id} value={p.id} className="bg-slate-900 text-white">
+                  <option key={p.id} value={p.id} className="bg-[var(--color-surface)] text-[var(--color-text)]">
                     {p.project_name}
                   </option>
                 ))}
@@ -215,7 +215,7 @@ export const DataAnalysisStage = () => {
 
           <Link
             to={`/transformations?project_id=${selectedProjectId}`}
-            className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold flex items-center space-x-2 shadow-sm transition shadow-indigo-600/20"
+            className="px-4 py-2 rounded-full bg-[var(--color-accent)] hover:bg-[var(--color-accent-hover)] text-white text-xs font-bold flex items-center space-x-2 shadow-sm transition-all"
           >
             <span>Next: Transformations</span>
             <ArrowRight className="w-4 h-4" />
@@ -225,58 +225,58 @@ export const DataAnalysisStage = () => {
 
       {/* Alert Banners */}
       {error && (
-        <div className="p-4 bg-rose-500/10 border border-rose-500/20 text-rose-300 rounded-xl text-xs flex items-center gap-3">
-          <AlertTriangle className="w-5 h-5 shrink-0 text-rose-400" />
-          <p>{error}</p>
+        <div className="p-4 bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 rounded-2xl text-xs flex items-center gap-3">
+          <AlertTriangle className="w-5 h-5 shrink-0 text-rose-500" />
+          <p className="font-medium">{error}</p>
         </div>
       )}
 
       {successMsg && (
-        <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 rounded-xl text-xs flex items-center gap-3">
-          <ShieldCheck className="w-5 h-5 shrink-0 text-emerald-400" />
-          <p>{successMsg}</p>
+        <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-2xl text-xs flex items-center gap-3">
+          <ShieldCheck className="w-5 h-5 shrink-0 text-emerald-500" />
+          <p className="font-medium">{successMsg}</p>
         </div>
       )}
 
       {/* Main Analysis Stage Flow */}
       {!selectedDataset ? (
-        <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-12 text-center space-y-4 max-w-lg mx-auto shadow-xl">
-          <Database className="w-12 h-12 mx-auto text-slate-500" />
-          <h3 className="text-base font-bold text-white">No Dataset Uploaded Yet</h3>
-          <p className="text-xs text-slate-400">
+        <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl p-12 text-center space-y-4 max-w-lg mx-auto shadow-sm">
+          <Database className="w-12 h-12 mx-auto text-[var(--color-text-muted)]" />
+          <h3 className="text-base font-bold text-[var(--color-text)]">No Dataset Uploaded Yet</h3>
+          <p className="text-xs text-[var(--color-text-muted)]">
             Upload your tabular dataset in Stage 2 (Data) to generate schemas and compute data quality diagnostics.
           </p>
           <Link
             to={`/data?project_id=${selectedProjectId}`}
-            className="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-xl"
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-[var(--color-accent)] hover:bg-[var(--color-accent-hover)] text-white text-xs font-bold rounded-full shadow-sm"
           >
             <span>Go to Data Ingestion</span>
             <ArrowRight className="w-4 h-4" />
           </Link>
         </div>
       ) : !splitSummary ? (
-        <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-12 text-center space-y-4 max-w-lg mx-auto shadow-xl">
-          <Split className="w-12 h-12 mx-auto text-amber-400" />
-          <h3 className="text-base font-bold text-white">Outer Split Required Before Profiling</h3>
-          <p className="text-xs text-slate-400">
+        <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl p-12 text-center space-y-4 max-w-lg mx-auto shadow-sm">
+          <Split className="w-12 h-12 mx-auto text-amber-500" />
+          <h3 className="text-base font-bold text-[var(--color-text)]">Outer Split Required Before Profiling</h3>
+          <p className="text-xs text-[var(--color-text-muted)] leading-relaxed">
             To enforce strict leakage prevention (The Sixth Invariant), Data Profiling and DQI operate exclusively on the isolated Development partition.
           </p>
           <Link
             to={`/data?project_id=${selectedProjectId}`}
-            className="inline-flex items-center gap-2 px-5 py-2.5 bg-amber-600 hover:bg-amber-500 text-white text-xs font-semibold rounded-xl"
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold rounded-full shadow-sm"
           >
             <span>Configure Outer Split in Stage 2</span>
             <ArrowRight className="w-4 h-4" />
           </Link>
         </div>
       ) : !profilingReport ? (
-        <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-12 text-center space-y-5 max-w-xl mx-auto shadow-xl">
-          <div className="p-4 bg-indigo-500/10 border border-indigo-500/20 rounded-2xl w-16 h-16 mx-auto flex items-center justify-center text-indigo-400">
+        <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl p-12 text-center space-y-5 max-w-xl mx-auto shadow-sm">
+          <div className="p-4 bg-[var(--color-accent-soft)] border border-[var(--color-accent)]/20 rounded-2xl w-16 h-16 mx-auto flex items-center justify-center text-[var(--color-accent)]">
             <Sparkles className="w-8 h-8" />
           </div>
           <div>
-            <h3 className="text-lg font-bold text-white">Development Partition Ready for Analysis</h3>
-            <p className="text-xs text-slate-400 mt-1 max-w-md mx-auto">
+            <h3 className="text-lg font-bold text-[var(--color-text)]">Development Partition Ready for Analysis</h3>
+            <p className="text-xs text-[var(--color-text-muted)] mt-1 max-w-md mx-auto leading-relaxed">
               Execute Stage B distributional profiling, compute the multi-factor Data Quality Index (DQI), and evaluate task-type confidence.
             </p>
           </div>
@@ -284,7 +284,7 @@ export const DataAnalysisStage = () => {
             onClick={handleTriggerProfile}
             disabled={profilingRunning}
             id="run-profiling-btn"
-            className="px-6 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-emerald-500/20 transition-all cursor-pointer inline-flex items-center gap-2"
+            className="px-6 py-3 bg-[var(--color-accent)] hover:bg-[var(--color-accent-hover)] text-white text-xs font-bold rounded-full shadow-md transition-all cursor-pointer inline-flex items-center gap-2"
           >
             {profilingRunning ? (
               <>

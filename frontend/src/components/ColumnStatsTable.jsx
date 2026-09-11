@@ -16,15 +16,15 @@ export const ColumnStatsTable = ({ columnStats = {} }) => {
   );
 
   return (
-    <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 shadow-xl backdrop-blur-sm">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 mb-4 border-b border-slate-800">
+    <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl p-6 shadow-sm transition-colors">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 mb-4 border-b border-[var(--color-border)]">
         <div className="flex items-center gap-3">
-          <div className="p-2.5 bg-cyan-500/10 border border-cyan-500/20 rounded-xl text-cyan-400">
+          <div className="p-2.5 bg-cyan-500/10 border border-cyan-500/20 rounded-xl text-cyan-500">
             <Table className="w-5 h-5" />
           </div>
           <div>
-            <h4 className="text-lg font-semibold text-white">Feature Profiling & Column Diagnostics</h4>
-            <p className="text-xs text-slate-400">
+            <h4 className="text-lg font-bold text-[var(--color-text)]">Feature Profiling & Column Diagnostics</h4>
+            <p className="text-xs text-[var(--color-text-muted)]">
               Descriptive statistics computed strictly on Development rows
             </p>
           </div>
@@ -32,13 +32,13 @@ export const ColumnStatsTable = ({ columnStats = {} }) => {
 
         {/* Search */}
         <div className="relative">
-          <Search className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
+          <Search className="w-4 h-4 text-[var(--color-text-muted)] absolute left-3 top-1/2 -translate-y-1/2" />
           <input
             type="text"
             placeholder="Filter features..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-9 pr-4 py-1.5 bg-slate-950/80 border border-slate-800 rounded-xl text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500/50"
+            className="pl-9 pr-4 py-1.5 bg-[var(--color-surface-hover)] border border-[var(--color-border)] rounded-xl text-xs text-[var(--color-text)] placeholder-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-accent)]/50"
           />
         </div>
       </div>
@@ -46,7 +46,7 @@ export const ColumnStatsTable = ({ columnStats = {} }) => {
       <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse text-xs">
           <thead>
-            <tr className="border-b border-slate-800 text-slate-400 font-mono">
+            <tr className="border-b border-[var(--color-border)] text-[var(--color-text-muted)] font-mono font-bold">
               <th className="py-2.5 px-3">Column</th>
               <th className="py-2.5 px-3">Type</th>
               <th className="py-2.5 px-3">Missing</th>
@@ -57,57 +57,57 @@ export const ColumnStatsTable = ({ columnStats = {} }) => {
               <th className="py-2.5 px-3">Outliers</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-800/60 font-sans">
+          <tbody className="divide-y divide-[var(--color-border)]/60 font-sans">
             {filteredColumns.map((col) => {
               const isSelected = selectedCol === col.name;
               return (
                 <React.Fragment key={col.name}>
                   <tr
                     onClick={() => setSelectedCol(isSelected ? null : col.name)}
-                    className="hover:bg-slate-800/30 cursor-pointer transition-colors"
+                    className="hover:bg-[var(--color-surface-hover)] cursor-pointer transition-colors"
                   >
-                    <td className="py-3 px-3 font-mono font-medium text-white flex items-center gap-2">
+                    <td className="py-3 px-3 font-mono font-bold text-[var(--color-text)] flex items-center gap-2">
                       {isSelected ? (
-                        <ChevronUp className="w-3.5 h-3.5 text-cyan-400" />
+                        <ChevronUp className="w-3.5 h-3.5 text-[var(--color-accent)]" />
                       ) : (
-                        <ChevronDown className="w-3.5 h-3.5 text-slate-500" />
+                        <ChevronDown className="w-3.5 h-3.5 text-[var(--color-text-muted)]" />
                       )}
                       {col.name}
                     </td>
                     <td className="py-3 px-3">
-                      <span className="px-2 py-0.5 rounded text-[10px] font-mono font-semibold uppercase bg-slate-800 text-slate-300">
+                      <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase bg-[var(--color-surface-hover)] text-[var(--color-text)] border border-[var(--color-border)]">
                         {col.type}
                       </span>
                       {col.is_mixed_type && (
-                        <span className="ml-1 px-1.5 py-0.5 rounded text-[9px] font-mono bg-rose-500/20 text-rose-300">
+                        <span className="ml-1 px-1.5 py-0.5 rounded text-[9px] font-mono bg-rose-500/10 text-rose-600 dark:text-rose-400 font-bold border border-rose-500/20">
                           MIXED
                         </span>
                       )}
                     </td>
                     <td className="py-3 px-3 font-mono">
-                      <span className={col.missing_pct > 0 ? 'text-amber-400 font-medium' : 'text-slate-400'}>
+                      <span className={col.missing_pct > 0 ? 'text-amber-600 dark:text-amber-400 font-bold' : 'text-[var(--color-text-muted)]'}>
                         {col.missing_pct}% ({col.missing_count})
                       </span>
                     </td>
-                    <td className="py-3 px-3 font-mono text-slate-300">{col.unique_count}</td>
-                    <td className="py-3 px-3 font-mono text-slate-300">
+                    <td className="py-3 px-3 font-mono text-[var(--color-text)]">{col.unique_count}</td>
+                    <td className="py-3 px-3 font-mono text-[var(--color-text)] font-medium">
                       {col.type === 'numeric'
                         ? col.mean !== null ? col.mean.toFixed(2) : '-'
                         : col.mode || '-'}
                     </td>
-                    <td className="py-3 px-3 font-mono text-slate-400">
+                    <td className="py-3 px-3 font-mono text-[var(--color-text-muted)]">
                       {col.type === 'numeric'
                         ? col.std !== null ? col.std.toFixed(2) : '-'
                         : col.granularity || '-'}
                     </td>
-                    <td className="py-3 px-3 font-mono text-slate-400">
+                    <td className="py-3 px-3 font-mono text-[var(--color-text-muted)]">
                       {col.type === 'numeric'
                         ? col.skew !== null ? `skew: ${col.skew.toFixed(2)}` : '-'
                         : '-'}
                     </td>
                     <td className="py-3 px-3 font-mono">
                       {col.type === 'numeric' ? (
-                        <span className={col.outlier_pct > 0 ? 'text-rose-400 font-medium' : 'text-slate-400'}>
+                        <span className={col.outlier_pct > 0 ? 'text-rose-600 dark:text-rose-400 font-bold' : 'text-[var(--color-text-muted)]'}>
                           {col.outlier_pct}% ({col.outlier_count})
                         </span>
                       ) : (
@@ -118,41 +118,41 @@ export const ColumnStatsTable = ({ columnStats = {} }) => {
 
                   {/* Expanded detail row */}
                   {isSelected && (
-                    <tr className="bg-slate-950/60">
-                      <td colSpan={8} className="p-4 border-t border-b border-slate-800">
+                    <tr className="bg-[var(--color-surface-hover)]/40">
+                      <td colSpan={8} className="p-4 border-t border-b border-[var(--color-border)]">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
                           {col.type === 'numeric' ? (
-                            <div className="space-y-1.5 font-mono text-slate-300 bg-slate-900/60 p-3 rounded-xl border border-slate-800">
-                              <span className="text-slate-500 text-[10px] uppercase font-bold tracking-wider block mb-1 font-sans">
+                            <div className="space-y-1.5 font-mono text-[var(--color-text)] bg-[var(--color-surface-card)] p-3.5 rounded-xl border border-[var(--color-border)] shadow-2xs">
+                              <span className="text-[var(--color-text-muted)] text-[10px] uppercase font-bold tracking-wider block mb-1 font-sans">
                                 Five-Number Summary & Moments
                               </span>
                               <div className="grid grid-cols-2 gap-2 text-xs">
-                                <div>Min: <strong>{col.min}</strong></div>
-                                <div>Max: <strong>{col.max}</strong></div>
-                                <div>Q25: <strong>{col.q25}</strong></div>
-                                <div>Q75: <strong>{col.q75}</strong></div>
-                                <div>Median: <strong>{col.median}</strong></div>
-                                <div>IQR: <strong>{col.iqr}</strong></div>
+                                <div>Min: <strong className="font-bold text-[var(--color-text)]">{col.min}</strong></div>
+                                <div>Max: <strong className="font-bold text-[var(--color-text)]">{col.max}</strong></div>
+                                <div>Q25: <strong className="font-bold text-[var(--color-text)]">{col.q25}</strong></div>
+                                <div>Q75: <strong className="font-bold text-[var(--color-text)]">{col.q75}</strong></div>
+                                <div>Median: <strong className="font-bold text-[var(--color-accent)]">{col.median}</strong></div>
+                                <div>IQR: <strong className="font-bold text-[var(--color-text)]">{col.iqr}</strong></div>
                               </div>
                             </div>
                           ) : col.frequency_table && col.frequency_table.length > 0 ? (
-                            <div className="bg-slate-900/60 p-3 rounded-xl border border-slate-800">
-                              <span className="text-slate-500 text-[10px] uppercase font-bold tracking-wider block mb-2 font-sans flex items-center gap-1.5">
-                                <BarChart2 className="w-3.5 h-3.5 text-cyan-400" />
+                            <div className="bg-[var(--color-surface-card)] p-3.5 rounded-xl border border-[var(--color-border)] shadow-2xs">
+                              <span className="text-[var(--color-text-muted)] text-[10px] uppercase font-bold tracking-wider block mb-2 font-sans flex items-center gap-1.5">
+                                <BarChart2 className="w-3.5 h-3.5 text-cyan-500" />
                                 Top-10 Frequency Distribution
                               </span>
                               <div className="space-y-1.5">
                                 {col.frequency_table.map((freq, fIdx) => (
                                   <div key={fIdx} className="flex items-center justify-between text-xs">
-                                    <span className="text-slate-300 font-mono truncate max-w-[150px]">{freq.value}</span>
+                                    <span className="text-[var(--color-text)] font-mono truncate max-w-[150px]">{freq.value}</span>
                                     <div className="flex items-center gap-2">
-                                      <div className="w-20 bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                                      <div className="w-20 bg-[var(--color-border)] rounded-full h-1.5 overflow-hidden">
                                         <div
                                           className="bg-cyan-500 h-full rounded-full"
                                           style={{ width: `${freq.percentage}%` }}
                                         />
                                       </div>
-                                      <span className="font-mono text-slate-400 text-[11px] w-12 text-right">
+                                      <span className="font-mono text-[var(--color-text-muted)] text-[11px] w-12 text-right font-medium">
                                         {freq.percentage}%
                                       </span>
                                     </div>
@@ -161,21 +161,21 @@ export const ColumnStatsTable = ({ columnStats = {} }) => {
                               </div>
                             </div>
                           ) : (
-                            <div className="text-slate-500 font-mono">No frequency table available</div>
+                            <div className="text-[var(--color-text-muted)] font-mono">No frequency table available</div>
                           )}
 
-                          <div className="bg-slate-900/60 p-3 rounded-xl border border-slate-800 text-xs text-slate-300">
-                            <span className="text-slate-500 text-[10px] uppercase font-bold tracking-wider block mb-1 font-sans">
+                          <div className="bg-[var(--color-surface-card)] p-3.5 rounded-xl border border-[var(--color-border)] text-xs text-[var(--color-text)] shadow-2xs">
+                            <span className="text-[var(--color-text-muted)] text-[10px] uppercase font-bold tracking-wider block mb-1 font-sans">
                               Data Quality Observations
                             </span>
-                            <ul className="space-y-1 text-slate-400">
-                              <li>• Missing cell count: <strong className="text-slate-200">{col.missing_count}</strong> ({col.missing_pct}%)</li>
-                              <li>• Distinct values count: <strong className="text-slate-200">{col.unique_count}</strong></li>
+                            <ul className="space-y-1 text-[var(--color-text-muted)]">
+                              <li>• Missing cell count: <strong className="text-[var(--color-text)] font-bold">{col.missing_count}</strong> ({col.missing_pct}%)</li>
+                              <li>• Distinct values count: <strong className="text-[var(--color-text)] font-bold">{col.unique_count}</strong></li>
                               {col.type === 'numeric' && (
-                                <li>• IQR Outlier cells: <strong className="text-slate-200">{col.outlier_count}</strong> ({col.outlier_pct}%)</li>
+                                <li>• IQR Outlier cells: <strong className="text-[var(--color-text)] font-bold">{col.outlier_count}</strong> ({col.outlier_pct}%)</li>
                               )}
                               {col.is_mixed_type && (
-                                <li className="text-rose-400">• Mixed data types detected across string/numeric values.</li>
+                                <li className="text-rose-600 dark:text-rose-400 font-bold">• Mixed data types detected across string/numeric values.</li>
                               )}
                             </ul>
                           </div>

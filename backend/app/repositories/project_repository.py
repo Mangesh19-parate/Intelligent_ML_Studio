@@ -12,7 +12,7 @@ class ProjectRepository(BaseRepository[Project]):
             try:
                 owner_id = PyUUID(owner_id)
             except Exception:
-                pass
+                return []
         return (
             self.db.query(Project)
             .filter(Project.owner_id == owner_id)

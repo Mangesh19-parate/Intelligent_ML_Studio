@@ -3,14 +3,17 @@ from pathlib import Path
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import Field
 
+_BACKEND_DIR = Path(__file__).resolve().parent.parent.parent
+_ROOT_DIR = _BACKEND_DIR.parent
+
 class Settings(BaseSettings):
     PROJECT_NAME: str = "ML Studio"
     API_V1_STR: str = "/api/v1"
     
     # Database configuration
     DATABASE_URL: str = Field(
-        default="postgresql://postgres:postgres@localhost:5432/ml_studio",
-        description="PostgreSQL Database connection string"
+        default="sqlite:///./backend/ml_studio.db" if (_BACKEND_DIR / "ml_studio.db").exists() else "sqlite:///./ml_studio.db",
+        description="Database connection string"
     )
     
     # JWT Security configuration
@@ -24,7 +27,7 @@ class Settings(BaseSettings):
     
     # Object Storage configuration
     STORAGE_LOCAL_DIR: str = Field(
-        default="/data",
+        default="./data",
         description="Base directory for local object storage"
     )
     
@@ -35,7 +38,12 @@ class Settings(BaseSettings):
     BACKEND_CORS_ORIGINS: list[str] = ["*"]
     
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=(
+            str(_ROOT_DIR / ".env"),
+            str(_BACKEND_DIR / ".env"),
+            ".env",
+            "backend/.env",
+        ),
         env_file_encoding="utf-8",
         case_sensitive=True,
         extra="ignore"
@@ -46,6 +54,13 @@ class Settings(BaseSettings):
         url = self.DATABASE_URL
         if url.startswith("postgres://"):
             url = url.replace("postgres://", "postgresql://", 1)
+        if url.startswith("sqlite:///"):
+            raw_path = url[len("sqlite:///"):]
+            if raw_path.startswith("./"):
+                clean_rel = raw_path[2:]
+                backend_candidate = _BACKEND_DIR / clean_rel
+                if backend_candidate.exists():
+                    return f"sqlite:///{backend_candidate.as_posix()}"
         return url
 
 settings = Settings()

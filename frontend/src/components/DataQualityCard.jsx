@@ -8,23 +8,23 @@ export const DataQualityCard = ({ dqiData }) => {
   const isRenormalized = effective_weights?.outlier_prevalence === null;
 
   const getScoreColor = (score) => {
-    if (score === null || score === undefined) return 'text-slate-400';
-    if (score >= 90) return 'text-emerald-400';
-    if (score >= 75) return 'text-amber-400';
-    return 'text-rose-400';
+    if (score === null || score === undefined) return 'text-[var(--color-text-muted)]';
+    if (score >= 90) return 'text-emerald-600 dark:text-emerald-400';
+    if (score >= 75) return 'text-amber-600 dark:text-amber-400';
+    return 'text-rose-600 dark:text-rose-400';
   };
 
   const getProgressColor = (score) => {
-    if (score === null || score === undefined) return 'bg-slate-700';
+    if (score === null || score === undefined) return 'bg-[var(--color-border)]';
     if (score >= 90) return 'bg-gradient-to-r from-emerald-500 to-teal-400';
     if (score >= 75) return 'bg-gradient-to-r from-amber-500 to-yellow-400';
     return 'bg-gradient-to-r from-rose-500 to-red-400';
   };
 
   const getScoreBadge = (score) => {
-    if (score >= 90) return { label: 'EXCELLENT', color: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' };
-    if (score >= 75) return { label: 'ACCEPTABLE', color: 'bg-amber-500/10 text-amber-400 border-amber-500/20' };
-    return { label: 'REQUIRES ACTION', color: 'bg-rose-500/10 text-rose-400 border-rose-500/20' };
+    if (score >= 90) return { label: 'EXCELLENT', color: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' };
+    if (score >= 75) return { label: 'ACCEPTABLE', color: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20' };
+    return { label: 'REQUIRES ACTION', color: 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20' };
   };
 
   const badge = getScoreBadge(overall_index);
@@ -66,24 +66,21 @@ export const DataQualityCard = ({ dqiData }) => {
   ];
 
   return (
-    <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 shadow-xl relative overflow-hidden backdrop-blur-sm">
-      {/* Background glow */}
-      <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-500/5 rounded-full blur-3xl pointer-events-none" />
-
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 pb-6 border-b border-slate-800/80">
+    <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl p-6 shadow-sm relative overflow-hidden transition-colors">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 pb-6 border-b border-[var(--color-border)]">
         <div>
           <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-indigo-500/10 border border-indigo-500/20 rounded-xl text-indigo-400">
+            <div className="p-2.5 bg-[var(--color-accent-soft)] border border-[var(--color-accent)]/20 rounded-xl text-[var(--color-accent)]">
               <ShieldCheck className="w-6 h-6" />
             </div>
             <div>
-              <h3 className="text-xl font-semibold text-white tracking-tight flex items-center gap-2">
+              <h3 className="text-xl font-bold text-[var(--color-text)] tracking-tight flex items-center gap-2">
                 Data Quality Index (DQI)
-                <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium border ${badge.color}`}>
+                <span className={`text-xs px-2.5 py-0.5 rounded-full font-bold border ${badge.color}`}>
                   {badge.label}
                 </span>
               </h3>
-              <p className="text-sm text-slate-400 mt-0.5">
+              <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
                 Evaluated exclusively on the isolated Development partition
               </p>
             </div>
@@ -91,13 +88,13 @@ export const DataQualityCard = ({ dqiData }) => {
         </div>
 
         {/* Big Score Display */}
-        <div className="flex items-center gap-4 bg-slate-950/60 border border-slate-800 px-6 py-4 rounded-xl">
+        <div className="flex items-center gap-4 bg-[var(--color-surface-hover)] border border-[var(--color-border)] px-6 py-4 rounded-2xl">
           <div className="text-right">
-            <span className="text-xs font-mono uppercase tracking-wider text-slate-500 block">Overall DQI</span>
+            <span className="text-[11px] font-mono uppercase tracking-wider text-[var(--color-text-muted)] block font-bold">Overall DQI</span>
             <span className={`text-4xl font-black tracking-tight ${getScoreColor(overall_index)}`}>
               {overall_index?.toFixed(1)}
             </span>
-            <span className="text-slate-500 text-sm font-semibold"> / 100</span>
+            <span className="text-[var(--color-text-muted)] text-sm font-bold"> / 100</span>
           </div>
         </div>
       </div>
@@ -112,40 +109,40 @@ export const DataQualityCard = ({ dqiData }) => {
           return (
             <div
               key={item.key}
-              className="bg-slate-950/40 border border-slate-800/60 rounded-xl p-4 transition-all duration-200 hover:border-slate-700/80"
+              className="bg-[var(--color-surface-card)] border border-[var(--color-border)] rounded-xl p-4 transition-all duration-200 hover:border-[var(--color-accent)]/40 shadow-2xs"
             >
               <div className="flex items-center justify-between mb-2">
                 <div>
-                  <span className="text-sm font-medium text-slate-200">{item.name}</span>
-                  <p className="text-xs text-slate-500 font-mono mt-0.5">{item.desc}</p>
+                  <span className="text-xs font-bold text-[var(--color-text)]">{item.name}</span>
+                  <p className="text-[11px] text-[var(--color-text-muted)] font-mono mt-0.5">{item.desc}</p>
                 </div>
                 <div className="text-right">
                   {item.isNA ? (
-                    <span className="text-xs font-semibold px-2 py-1 bg-slate-800 text-slate-400 rounded-md">
+                    <span className="text-xs font-semibold px-2 py-1 bg-[var(--color-surface-hover)] text-[var(--color-text-muted)] rounded-md">
                       N/A (No Numeric)
                     </span>
                   ) : (
-                    <span className={`text-lg font-bold ${getScoreColor(item.score)}`}>
+                    <span className={`text-lg font-black ${getScoreColor(item.score)}`}>
                       {item.score?.toFixed(1)}
                     </span>
                   )}
-                  <span className="text-xs text-slate-500 block">
-                    Weight: <strong className="text-slate-400">{formattedWeight}</strong>
+                  <span className="text-[11px] text-[var(--color-text-muted)] block font-medium">
+                    Weight: <strong className="text-[var(--color-text)]">{formattedWeight}</strong>
                   </span>
                 </div>
               </div>
 
               {/* Bar */}
               {!item.isNA ? (
-                <div className="w-full bg-slate-800/80 rounded-full h-2 overflow-hidden mt-3">
+                <div className="w-full bg-[var(--color-border)] rounded-full h-2 overflow-hidden mt-3">
                   <div
                     className={`h-full rounded-full transition-all duration-500 ${getProgressColor(item.score)}`}
                     style={{ width: `${Math.min(Math.max(item.score || 0, 0), 100)}%` }}
                   />
                 </div>
               ) : (
-                <div className="w-full bg-slate-800/40 rounded-full h-2 overflow-hidden mt-3">
-                  <div className="h-full bg-slate-700/40 rounded-full w-full" />
+                <div className="w-full bg-[var(--color-border)] rounded-full h-2 overflow-hidden mt-3">
+                  <div className="h-full bg-[var(--color-surface-hover)] rounded-full w-full" />
                 </div>
               )}
             </div>
@@ -155,8 +152,8 @@ export const DataQualityCard = ({ dqiData }) => {
 
       {/* Weight Renormalization Notice */}
       {isRenormalized && (
-        <div className="mb-4 p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-center gap-3 text-xs text-amber-300">
-          <Scale className="w-4 h-4 text-amber-400 flex-shrink-0" />
+        <div className="mb-4 p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-center gap-3 text-xs text-amber-700 dark:text-amber-300 font-medium">
+          <Scale className="w-4 h-4 text-amber-500 shrink-0" />
           <span>
             <strong>Adaptive Weight Renormalization:</strong> Since no numeric columns were present, Outlier Prevalence was excluded and remaining weights were renormalized (Missingness: 43.75%, Duplicate: 31.25%, Type Consistency: 25.0%) to preserve 100% total weight distribution.
           </span>
@@ -164,10 +161,10 @@ export const DataQualityCard = ({ dqiData }) => {
       )}
 
       {/* Mandatory SRS §2.3 Disclaimer Caption */}
-      <div className="p-3.5 bg-slate-950/80 border border-slate-800/80 rounded-xl flex items-start gap-3">
-        <Info className="w-4 h-4 text-indigo-400 mt-0.5 flex-shrink-0" />
-        <p className="text-xs text-slate-400 leading-relaxed">
-          <strong className="text-slate-300">Interpretation Guard:</strong> This summarizes data condition, not fitness for a specific modeling task — e.g. high outlier prevalence is not inherently bad for problems like fraud detection.
+      <div className="p-3.5 bg-[var(--color-surface-hover)] border border-[var(--color-border)] rounded-xl flex items-start gap-3">
+        <Info className="w-4 h-4 text-[var(--color-accent)] mt-0.5 shrink-0" />
+        <p className="text-xs text-[var(--color-text-muted)] leading-relaxed">
+          <strong className="text-[var(--color-text)]">Interpretation Guard:</strong> This summarizes data condition, not fitness for a specific modeling task — e.g. high outlier prevalence is not inherently bad for problems like fraud detection.
         </p>
       </div>
     </div>

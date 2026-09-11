@@ -48,7 +48,15 @@ export default function App() {
         <Routes>
           <Route path="/login" element={<Login />} />
           
-          {/* Stage 1: Workspace */}
+          {/* Workspace */}
+          <Route
+            path="/"
+            element={
+              <ProtectedRoute>
+                <Dashboard />
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/dashboard"
             element={
@@ -82,7 +90,7 @@ export default function App() {
             }
           />
 
-          {/* Stage 2: Data */}
+          {/* Data Section */}
           <Route
             path="/data"
             element={
@@ -91,8 +99,40 @@ export default function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/data/upload"
+            element={
+              <ProtectedRoute>
+                <DataStage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/data/datasets"
+            element={
+              <ProtectedRoute>
+                <DataStage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/data/profiling"
+            element={
+              <ProtectedRoute>
+                <DataAnalysisStage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/data/cleaning"
+            element={
+              <ProtectedRoute>
+                <TransformationStage />
+              </ProtectedRoute>
+            }
+          />
 
-          {/* Stage 3: Data Analysis */}
+          {/* Data Analysis Section */}
           <Route
             path="/data-analysis"
             element={
@@ -101,8 +141,46 @@ export default function App() {
               </ProtectedRoute>
             }
           />
-
-          {/* Stage 4: Feature Transformation */}
+          <Route
+            path="/analysis/eda"
+            element={
+              <ProtectedRoute>
+                <DataAnalysisStage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/analysis/outliers"
+            element={
+              <ProtectedRoute>
+                <DataAnalysisStage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/analysis/imputation"
+            element={
+              <ProtectedRoute>
+                <DataAnalysisStage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/analysis/feature-engineering"
+            element={
+              <ProtectedRoute>
+                <FeatureEngineeringStage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/analysis/feature-selection"
+            element={
+              <ProtectedRoute>
+                <FeatureEngineeringStage />
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/transformations"
             element={
@@ -111,8 +189,6 @@ export default function App() {
               </ProtectedRoute>
             }
           />
-
-          {/* Stage 5: Feature Engineering */}
           <Route
             path="/feature-engineering"
             element={
@@ -122,7 +198,7 @@ export default function App() {
             }
           />
 
-          {/* Stage 6: Diagnostics */}
+          {/* Intelligence Section */}
           <Route
             path="/diagnostics"
             element={
@@ -131,10 +207,66 @@ export default function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/intelligence/diagnostics"
+            element={
+              <ProtectedRoute>
+                <DiagnosticsStage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/intelligence/recommendations"
+            element={
+              <ProtectedRoute>
+                <DiagnosticsStage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/intelligence/explainability"
+            element={
+              <ProtectedRoute>
+                <MLStage />
+              </ProtectedRoute>
+            }
+          />
 
-          {/* Stage 7: Machine Learning & Leaderboard */}
+          {/* Machine Learning Section */}
           <Route
             path="/machine-learning"
+            element={
+              <ProtectedRoute>
+                <MLStage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/ml/training"
+            element={
+              <ProtectedRoute>
+                <MLStage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/ml/experiments"
+            element={
+              <ProtectedRoute>
+                <MLStage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/ml/evaluation"
+            element={
+              <ProtectedRoute>
+                <MLStage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/ml/registry"
             element={
               <ProtectedRoute>
                 <MLStage />
@@ -150,7 +282,7 @@ export default function App() {
             }
           />
 
-          {/* Stage 8: Production */}
+          {/* Production Section */}
           <Route
             path="/production"
             element={
@@ -160,7 +292,23 @@ export default function App() {
             }
           />
           <Route
-            path="/deployments/:id/monitoring"
+            path="/validation"
+            element={
+              <ProtectedRoute>
+                <ProductionStage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/production/predictions"
+            element={
+              <ProtectedRoute>
+                <ProductionStage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/production/monitoring"
             element={
               <ProtectedRoute>
                 <DeploymentMonitoring />
@@ -169,6 +317,14 @@ export default function App() {
           />
           <Route
             path="/monitoring"
+            element={
+              <ProtectedRoute>
+                <DeploymentMonitoring />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/deployments/:id/monitoring"
             element={
               <ProtectedRoute>
                 <DeploymentMonitoring />

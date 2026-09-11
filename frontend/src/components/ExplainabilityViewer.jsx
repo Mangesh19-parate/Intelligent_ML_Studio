@@ -18,6 +18,7 @@ import {
   ArrowRight,
   Calculator,
   RefreshCw,
+  X,
 } from 'lucide-react';
 
 const Plot = createPlotlyComponent(Plotly);
@@ -112,34 +113,34 @@ export const ExplainabilityViewer = ({
     : [];
 
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-5xl w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden text-slate-200">
+    <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl max-w-5xl w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden text-[var(--color-text)]">
       {/* Modal Header */}
-      <div className="p-5 border-b border-slate-800 flex items-center justify-between bg-slate-950/60">
-        <div className="flex items-center space-x-3">
-          <div className="p-2 bg-indigo-500/10 border border-indigo-500/20 rounded-xl text-indigo-400">
-            <BrainCircuit className="w-6 h-6" />
+      <div className="p-5 border-b border-[var(--color-border)] flex items-center justify-between bg-[var(--color-surface-card)]">
+        <div className="flex items-center space-x-3.5">
+          <div className="p-2.5 bg-[var(--color-accent-soft)] border border-[var(--color-accent-border)] rounded-xl text-[var(--color-accent)]">
+            <BrainCircuit className="w-5 h-5" />
           </div>
           <div>
             <div className="flex items-center space-x-2">
-              <h3 className="text-lg font-bold text-white">Model Explainability</h3>
+              <h3 className="text-lg font-bold text-[var(--color-text)]">Model Explainability</h3>
               {isWinner && (
-                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 uppercase">
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[var(--color-accent-soft)] text-[var(--color-accent)] uppercase">
                   Winning Model
                 </span>
               )}
             </div>
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
               SHAP Attribution & Global/Local Feature Interpretability for{' '}
-              <strong className="text-slate-200">{algorithmName}</strong>
+              <strong className="text-[var(--color-text)]">{algorithmName}</strong>
             </p>
           </div>
         </div>
 
         <button
           onClick={onClose}
-          className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition-colors cursor-pointer"
+          className="p-2 rounded-full bg-[var(--color-surface-hover)] border border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors cursor-pointer"
         >
-          Close
+          <X className="w-4 h-4" />
         </button>
       </div>
 
@@ -147,8 +148,8 @@ export const ExplainabilityViewer = ({
       <div className="p-6 overflow-y-auto space-y-6">
         {loading ? (
           <div className="py-20 flex flex-col items-center justify-center space-y-3">
-            <div className="w-8 h-8 border-3 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-            <p className="text-xs text-slate-400 font-mono">
+            <div className="w-8 h-8 border-3 border-[var(--color-accent)] border-t-transparent rounded-full animate-spin" />
+            <p className="text-xs text-[var(--color-text-muted)] font-mono">
               Computing SHAP explanations on development background sample...
             </p>
           </div>
@@ -164,76 +165,76 @@ export const ExplainabilityViewer = ({
           <>
             {/* Metadata Badges & Invariant Notice */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-              <div className="p-3.5 bg-slate-950/80 border border-slate-800 rounded-xl space-y-1">
-                <div className="text-[11px] uppercase tracking-wider text-slate-500 font-semibold flex items-center space-x-1">
-                  <Activity className="w-3.5 h-3.5 text-indigo-400" />
+              <div className="p-4 bg-[var(--color-surface-card)] border border-[var(--color-border)] rounded-2xl space-y-1">
+                <div className="text-[11px] uppercase tracking-wider text-[var(--color-text-muted)] font-bold flex items-center space-x-1.5">
+                  <Activity className="w-3.5 h-3.5 text-[var(--color-accent)]" />
                   <span>Explainer Architecture</span>
                 </div>
-                <div className="text-sm font-bold text-white font-mono flex items-center space-x-1.5">
+                <div className="text-sm font-bold text-[var(--color-text)] font-mono flex items-center space-x-1.5 mt-1">
                   <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block" />
                   <span>{summaryData.explainer_type} Explainer</span>
                 </div>
               </div>
 
-              <div className="p-3.5 bg-slate-950/80 border border-slate-800 rounded-xl space-y-1">
-                <div className="text-[11px] uppercase tracking-wider text-slate-500 font-semibold flex items-center space-x-1">
-                  <Database className="w-3.5 h-3.5 text-blue-400" />
+              <div className="p-4 bg-[var(--color-surface-card)] border border-[var(--color-border)] rounded-2xl space-y-1">
+                <div className="text-[11px] uppercase tracking-wider text-[var(--color-text-muted)] font-bold flex items-center space-x-1.5">
+                  <Database className="w-3.5 h-3.5 text-[var(--color-accent)]" />
                   <span>Background Sample</span>
                 </div>
-                <div className="text-sm font-bold text-white font-mono">
+                <div className="text-sm font-bold text-[var(--color-text)] font-mono mt-1">
                   {summaryData.background_sample_size} rows (Dev Split)
                 </div>
               </div>
 
-              <div className="p-3.5 bg-slate-950/80 border border-slate-800 rounded-xl space-y-1">
-                <div className="text-[11px] uppercase tracking-wider text-slate-500 font-semibold flex items-center space-x-1">
+              <div className="p-4 bg-[var(--color-surface-card)] border border-[var(--color-border)] rounded-2xl space-y-1">
+                <div className="text-[11px] uppercase tracking-wider text-[var(--color-text-muted)] font-bold flex items-center space-x-1.5">
                   <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
                   <span>Cache Status</span>
                 </div>
-                <div className="text-sm font-bold text-white font-mono flex items-center space-x-1">
+                <div className="text-sm font-bold text-[var(--color-text)] font-mono flex items-center space-x-1 mt-1">
                   {summaryData.is_cached ? (
                     <span className="text-emerald-400">Schema DB Cache Hit</span>
                   ) : (
-                    <span className="text-indigo-400">Computed & Cached</span>
+                    <span className="text-[var(--color-accent)]">Computed & Cached</span>
                   )}
                 </div>
               </div>
 
-              <div className="p-3.5 bg-slate-950/80 border border-slate-800 rounded-xl space-y-1">
-                <div className="text-[11px] uppercase tracking-wider text-slate-500 font-semibold flex items-center space-x-1">
-                  <Clock className="w-3.5 h-3.5 text-slate-400" />
+              <div className="p-4 bg-[var(--color-surface-card)] border border-[var(--color-border)] rounded-2xl space-y-1">
+                <div className="text-[11px] uppercase tracking-wider text-[var(--color-text-muted)] font-bold flex items-center space-x-1.5">
+                  <Clock className="w-3.5 h-3.5 text-[var(--color-text-muted)]" />
                   <span>Generated At</span>
                 </div>
-                <div className="text-xs font-mono text-slate-300 truncate">
+                <div className="text-xs font-mono text-[var(--color-text-muted)] truncate mt-1">
                   {new Date(summaryData.generated_at).toLocaleString()}
                 </div>
               </div>
             </div>
 
             {/* Leakage Guard Invariant Banner */}
-            <div className="p-3 rounded-xl bg-indigo-950/30 border border-indigo-500/20 text-indigo-300 text-xs flex items-center space-x-2.5 font-mono">
-              <ShieldCheck className="w-4 h-4 text-indigo-400 flex-shrink-0" />
+            <div className="p-4 rounded-2xl bg-[var(--color-accent-soft)] border border-[var(--color-accent-border)] text-[var(--color-text)] text-xs flex items-center space-x-2.5 font-mono">
+              <ShieldCheck className="w-4 h-4 text-[var(--color-accent)] flex-shrink-0" />
               <span>
                 <strong>Leakage-Safe Partitioning:</strong> Explainer background reference is strictly drawn from the Development partition. Locked Test data is never sampled.
               </span>
             </div>
 
             {/* Global SHAP Summary Plotly Bar Chart */}
-            <div className="p-5 bg-slate-950/80 border border-slate-800 rounded-2xl shadow-inner space-y-3">
-              <div className="flex items-center justify-between pb-2 border-b border-slate-800/80">
+            <div className="p-5 bg-[var(--color-surface-card)] border border-[var(--color-border)] rounded-2xl shadow-sm space-y-3">
+              <div className="flex items-center justify-between pb-2 border-b border-[var(--color-border)]">
                 <div>
-                  <h4 className="text-sm font-bold text-white flex items-center space-x-2">
+                  <h4 className="text-sm font-bold text-[var(--color-text)] flex items-center space-x-2">
                     <Sparkles className="w-4 h-4 text-amber-400" />
                     <span>Global Feature Importance (Mean Absolute SHAP)</span>
                   </h4>
-                  <p className="text-[11px] text-slate-400">
+                  <p className="text-[11px] text-[var(--color-text-muted)]">
                     Average magnitude of feature contributions across the reference sample.
                   </p>
                 </div>
                 <button
                   onClick={loadGlobalSummary}
                   title="Reload explainability summary"
-                  className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors cursor-pointer"
+                  className="p-2 rounded-full bg-[var(--color-surface)] hover:bg-[var(--color-surface-hover)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] border border-[var(--color-border)] transition-colors cursor-pointer"
                 >
                   <RefreshCw className="w-3.5 h-3.5" />
                 </button>
@@ -250,10 +251,10 @@ export const ExplainabilityViewer = ({
                       marker: {
                         color: shapVals.map(
                           (v, i) =>
-                            `rgba(99, 102, 241, ${0.45 + 0.55 * (i / (shapVals.length || 1))})`
+                            `rgba(255, 94, 0, ${0.45 + 0.55 * (i / (shapVals.length || 1))})`
                         ),
                         line: {
-                          color: '#818cf8',
+                          color: '#ff5e00',
                           width: 1.5,
                         },
                       },
@@ -268,11 +269,11 @@ export const ExplainabilityViewer = ({
                     xaxis: {
                       title: { text: 'Mean |SHAP value| (Average Impact)', font: { size: 11, color: '#94a3b8' } },
                       tickfont: { color: '#94a3b8', size: 10 },
-                      gridcolor: '#1e293b',
+                      gridcolor: 'rgba(255,255,255,0.06)',
                     },
                     yaxis: {
                       tickfont: { color: '#e2e8f0', size: 11 },
-                      gridcolor: '#1e293b',
+                      gridcolor: 'rgba(255,255,255,0.06)',
                     },
                   }}
                   config={{ responsive: true, displayModeBar: false }}
@@ -281,39 +282,39 @@ export const ExplainabilityViewer = ({
               </div>
             </div>
 
-            {/* Interactive Local Explanation Playground (Day 9 Precursor to Day 10) */}
-            <div className="p-5 bg-slate-950/80 border border-slate-800 rounded-2xl space-y-4">
-              <div className="flex items-center space-x-2 pb-2 border-b border-slate-800">
+            {/* Interactive Local Explanation Playground */}
+            <div className="p-5 bg-[var(--color-surface-card)] border border-[var(--color-border)] rounded-2xl space-y-4">
+              <div className="flex items-center space-x-2 pb-2 border-b border-[var(--color-border)]">
                 <Calculator className="w-4 h-4 text-emerald-400" />
                 <div>
-                  <h4 className="text-sm font-bold text-white">Local Explanation & Additivity Inspector</h4>
-                  <p className="text-[11px] text-slate-400">
-                    Test instance-level feature contribution breakdown and verify exact SHAP additivity ($\sum contributions + base = prediction$).
+                  <h4 className="text-sm font-bold text-[var(--color-text)]">Local Explanation & Additivity Inspector</h4>
+                  <p className="text-[11px] text-[var(--color-text-muted)]">
+                    Test instance-level feature contribution breakdown and verify exact SHAP additivity.
                   </p>
                 </div>
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 {/* JSON Input Area */}
-                <div className="space-y-2">
-                  <label className="text-xs font-semibold text-slate-300 font-mono">
+                <div className="space-y-2.5">
+                  <label className="text-xs font-bold text-[var(--color-text)] font-mono">
                     Input Instance Features (JSON)
                   </label>
                   <textarea
                     rows={6}
                     value={localInput}
                     onChange={(e) => setLocalInput(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-xs font-mono text-indigo-300 focus:outline-none focus:border-indigo-500 transition-colors"
+                    className="w-full bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-3 text-xs font-mono text-[var(--color-accent)] focus:outline-none focus:border-[var(--color-accent)] transition-colors"
                   />
                   <button
                     onClick={handleRunLocalExplanation}
                     disabled={localLoading}
-                    className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-xs font-bold transition-colors flex items-center space-x-2 cursor-pointer"
+                    className="px-5 py-2.5 rounded-full bg-[var(--color-accent)] hover:bg-[var(--color-accent-hover)] disabled:opacity-50 text-white text-xs font-bold transition-all flex items-center space-x-2 cursor-pointer shadow-sm"
                   >
                     {localLoading ? (
                       <RefreshCw className="w-3.5 h-3.5 animate-spin" />
                     ) : (
-                      <Zap className="w-3.5 h-3.5 text-amber-300" />
+                      <Zap className="w-3.5 h-3.5" />
                     )}
                     <span>Compute Local Explanation</span>
                   </button>
@@ -323,23 +324,23 @@ export const ExplainabilityViewer = ({
                 </div>
 
                 {/* Local Explanation Output & Additivity Breakdown */}
-                <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-3">
-                  <h5 className="text-xs font-bold text-slate-300 uppercase tracking-wider">
+                <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-4 space-y-3">
+                  <h5 className="text-xs font-bold text-[var(--color-text)] uppercase tracking-wider">
                     Attribution Breakdown
                   </h5>
 
                   {localResult ? (
                     <div className="space-y-3 font-mono text-xs">
-                      <div className="p-2.5 rounded-lg bg-slate-950 border border-slate-800 space-y-1">
-                        <div className="flex justify-between text-slate-400">
+                      <div className="p-3 rounded-xl bg-[var(--color-surface-card)] border border-[var(--color-border)] space-y-1">
+                        <div className="flex justify-between text-[var(--color-text-muted)]">
                           <span>Base / Expected Value:</span>
-                          <strong className="text-white">{localResult.base_value}</strong>
+                          <strong className="text-[var(--color-text)]">{localResult.base_value}</strong>
                         </div>
-                        <div className="flex justify-between text-slate-400">
+                        <div className="flex justify-between text-[var(--color-text-muted)]">
                           <span>Model Prediction:</span>
-                          <strong className="text-indigo-400">{localResult.prediction ?? 'N/A'}</strong>
+                          <strong className="text-[var(--color-accent)]">{localResult.prediction ?? 'N/A'}</strong>
                         </div>
-                        <div className="flex justify-between text-emerald-400 border-t border-slate-800 pt-1">
+                        <div className="flex justify-between text-emerald-400 border-t border-[var(--color-border)] pt-1">
                           <span>Sum (Contribs + Base):</span>
                           <strong>{localResult.sum_contributions_plus_base}</strong>
                         </div>
@@ -349,16 +350,16 @@ export const ExplainabilityViewer = ({
                         {Object.entries(localResult.contributions).map(([feat, val]) => (
                           <div
                             key={feat}
-                            className="flex items-center justify-between text-[11px] p-1.5 rounded bg-slate-950/60 border border-slate-800/60"
+                            className="flex items-center justify-between text-[11px] p-2 rounded-lg bg-[var(--color-surface-card)] border border-[var(--color-border)]"
                           >
-                            <span className="text-slate-300 truncate max-w-[140px]">{feat}</span>
+                            <span className="text-[var(--color-text)] truncate max-w-[140px]">{feat}</span>
                             <span
                               className={`font-bold ${
                                 val > 0
                                   ? 'text-emerald-400'
                                   : val < 0
                                   ? 'text-rose-400'
-                                  : 'text-slate-500'
+                                  : 'text-[var(--color-text-muted)]'
                               }`}
                             >
                               {val > 0 ? `+${val}` : val}
@@ -368,7 +369,7 @@ export const ExplainabilityViewer = ({
                       </div>
                     </div>
                   ) : (
-                    <p className="text-xs text-slate-500 italic py-6 text-center">
+                    <p className="text-xs text-[var(--color-text-muted)] italic py-6 text-center">
                       Click "Compute Local Explanation" to view instance feature pushes and additivity check.
                     </p>
                   )}
@@ -381,3 +382,5 @@ export const ExplainabilityViewer = ({
     </div>
   );
 };
+
+export default ExplainabilityViewer;

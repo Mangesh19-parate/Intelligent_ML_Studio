@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
-from app.core.database import engine, Base, SessionLocal
+from app.core.database import engine, Base, SessionLocal, sync_database_schema
 from app.core.seeder import seed_rbac_data
 from app.core.versioning import get_code_version
 from app.api.v1.router import api_v1_router
@@ -16,6 +16,7 @@ async def lifespan(app: FastAPI):
     # Initialize database tables and seed canonical RBAC permissions on startup
     try:
         Base.metadata.create_all(bind=engine)
+        sync_database_schema(engine)
         with SessionLocal() as db:
             seed_rbac_data(db)
         logger.info("Database initialized and RBAC seeded successfully.")

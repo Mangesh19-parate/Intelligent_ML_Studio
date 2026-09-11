@@ -24,6 +24,7 @@ import {
   Info,
   ExternalLink,
   FileText,
+  FolderOpen,
 } from 'lucide-react';
 
 export const DiagnosticsStage = () => {
@@ -105,17 +106,17 @@ export const DiagnosticsStage = () => {
           const latestExp = expList[0];
           setSelectedExperimentId(latestExp.id);
           setCurrentExperiment(latestExp);
+
+          // Get leaderboard for latest experiment
+          try {
+            const lbRes = await modelApi.getLeaderboard(selectedProjectId, latestExp.id);
+            setLeaderboard(lbRes.data?.leaderboard || lbRes.data || []);
+          } catch (lbErr) {
+            setLeaderboard([]);
+          }
         } else {
           setSelectedExperimentId('');
           setCurrentExperiment(null);
-        }
-
-        // Get leaderboard
-        try {
-          const lbRes = await modelApi.getLeaderboard(selectedProjectId);
-          setLeaderboard(lbRes.data || []);
-        } catch (lbErr) {
-          console.warn('Could not load leaderboard', lbErr);
           setLeaderboard([]);
         }
       } catch (err) {
@@ -191,35 +192,35 @@ export const DiagnosticsStage = () => {
     switch (diagnosis) {
       case 'GOOD_FIT':
         return (
-          <span className="px-2.5 py-1 rounded-full font-mono text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 flex items-center space-x-1">
-            <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+          <span className="px-3 py-1 rounded-full font-mono text-[11px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 flex items-center space-x-1.5">
+            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
             <span>GOOD_FIT</span>
           </span>
         );
       case 'POTENTIAL_OVERFIT':
         return (
-          <span className="px-2.5 py-1 rounded-full font-mono text-[10px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/30 flex items-center space-x-1">
-            <Flame className="w-3 h-3 text-amber-400" />
+          <span className="px-3 py-1 rounded-full font-mono text-[11px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/30 flex items-center space-x-1.5">
+            <Flame className="w-3.5 h-3.5 text-amber-400" />
             <span>POTENTIAL_OVERFIT</span>
           </span>
         );
       case 'POTENTIAL_UNDERFIT_WEAK_SIGNAL':
         return (
-          <span className="px-2.5 py-1 rounded-full font-mono text-[10px] font-bold bg-purple-500/10 text-purple-400 border border-purple-500/30 flex items-center space-x-1">
-            <TrendingUp className="w-3 h-3 text-purple-400" />
+          <span className="px-3 py-1 rounded-full font-mono text-[11px] font-bold bg-purple-500/10 text-purple-400 border border-purple-500/30 flex items-center space-x-1.5">
+            <TrendingUp className="w-3.5 h-3.5 text-purple-400" />
             <span>UNDERFIT_WEAK_SIGNAL</span>
           </span>
         );
       case 'INSUFFICIENT_DATA':
         return (
-          <span className="px-2.5 py-1 rounded-full font-mono text-[10px] font-bold bg-slate-500/10 text-slate-400 border border-slate-500/30 flex items-center space-x-1">
-            <HelpCircle className="w-3 h-3 text-slate-400" />
+          <span className="px-3 py-1 rounded-full font-mono text-[11px] font-bold bg-slate-500/10 text-[var(--color-text-muted)] border border-[var(--color-border)] flex items-center space-x-1.5">
+            <HelpCircle className="w-3.5 h-3.5 text-[var(--color-text-muted)]" />
             <span>INSUFFICIENT_DATA</span>
           </span>
         );
       default:
         return (
-          <span className="px-2.5 py-1 rounded-full font-mono text-[10px] font-bold bg-slate-800 text-slate-400 border border-slate-700">
+          <span className="px-3 py-1 rounded-full font-mono text-[11px] font-bold bg-[var(--color-surface-hover)] text-[var(--color-text-muted)] border border-[var(--color-border)]">
             {diagnosis || 'UNCLASSIFIED'}
           </span>
         );
@@ -262,19 +263,18 @@ export const DiagnosticsStage = () => {
   };
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-200">
+    <div className="space-y-6 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-in fade-in duration-200">
       {/* Top Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between pb-5 border-b border-slate-800 gap-4">
+      <div className="flex flex-col md:flex-row md:items-center justify-between pb-6 border-b border-[var(--color-border)] gap-4">
         <div>
-          <div className="flex items-center space-x-2 text-xs font-semibold text-cyan-400 uppercase tracking-wider mb-1">
-            <span>Stage 6 of 8</span>
-            <span>&bull;</span>
-            <span>Diagnostics & Model Insights</span>
+          <div className="inline-flex items-center space-x-2 text-xs font-bold uppercase tracking-wider text-[var(--color-accent)] bg-[var(--color-accent-soft)] border border-[var(--color-accent-border)] rounded-full px-3 py-1 mb-2">
+            <Stethoscope className="w-3.5 h-3.5" />
+            <span>Stage 6 of 8 • Diagnostics & Model Insights</span>
           </div>
-          <h1 className="text-2xl font-black tracking-tight text-white flex items-center space-x-2">
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[var(--color-text)] flex items-center space-x-3">
             <span>Model Health & Decision Trace</span>
           </h1>
-          <p className="text-sm text-slate-400 mt-1">
+          <p className="text-sm text-[var(--color-text-muted)] mt-1.5 max-w-3xl">
             Direction-aware generalization gap analysis, traceable dataset recommendations, and why-not model selection comparison.
           </p>
         </div>
@@ -283,7 +283,7 @@ export const DiagnosticsStage = () => {
         <div className="flex items-center space-x-3">
           <Link
             to={`/machine-learning?project_id=${selectedProjectId}`}
-            className="px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 text-white text-xs font-bold flex items-center space-x-2 shadow-sm transition"
+            className="px-5 py-2.5 rounded-full bg-[var(--color-accent)] hover:bg-[var(--color-accent-hover)] text-white text-xs font-bold flex items-center space-x-2 shadow-sm transition-all"
           >
             <span>Next: Leaderboard</span>
             <ArrowRight className="w-4 h-4" />
@@ -292,14 +292,15 @@ export const DiagnosticsStage = () => {
       </div>
 
       {/* Project & Experiment Selector Bar */}
-      <div className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="p-4 rounded-2xl bg-[var(--color-surface)] border border-[var(--color-border)] shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex flex-wrap items-center gap-4">
-          <div className="flex items-center space-x-2">
-            <span className="text-xs font-semibold text-slate-400">Project:</span>
+          <div className="flex items-center space-x-2.5">
+            <FolderOpen className="w-4 h-4 text-[var(--color-text-muted)]" />
+            <span className="text-xs font-semibold text-[var(--color-text-muted)]">Project:</span>
             <select
               value={selectedProjectId}
               onChange={handleProjectChange}
-              className="bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-xs font-medium text-white focus:outline-none focus:border-cyan-500"
+              className="bg-[var(--color-bg)] border border-[var(--color-border)] rounded-full px-3.5 py-1.5 text-xs font-semibold text-[var(--color-text)] focus:outline-none focus:border-[var(--color-accent)] cursor-pointer"
             >
               {projects.map((p) => (
                 <option key={p.id} value={p.id}>
@@ -310,12 +311,13 @@ export const DiagnosticsStage = () => {
           </div>
 
           {experiments.length > 0 && (
-            <div className="flex items-center space-x-2">
-              <span className="text-xs font-semibold text-slate-400">Experiment:</span>
+            <div className="flex items-center space-x-2.5">
+              <Layers className="w-4 h-4 text-[var(--color-text-muted)]" />
+              <span className="text-xs font-semibold text-[var(--color-text-muted)]">Experiment:</span>
               <select
                 value={selectedExperimentId}
                 onChange={(e) => setSelectedExperimentId(e.target.value)}
-                className="bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-xs font-mono text-cyan-300 focus:outline-none focus:border-cyan-500"
+                className="bg-[var(--color-bg)] border border-[var(--color-border)] rounded-full px-3.5 py-1.5 text-xs font-mono font-medium text-[var(--color-accent)] focus:outline-none focus:border-[var(--color-accent)] cursor-pointer"
               >
                 {experiments.map((exp, idx) => (
                   <option key={exp.id} value={exp.id}>
@@ -328,31 +330,33 @@ export const DiagnosticsStage = () => {
         </div>
 
         {currentProject && (
-          <div className="flex items-center space-x-2 text-xs text-slate-400 font-mono">
-            <span className="px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-bold">
+          <div className="flex flex-wrap items-center gap-2 text-xs font-mono">
+            <span className="px-3 py-1 rounded-full bg-[var(--color-surface-hover)] border border-[var(--color-border)] text-[var(--color-text)] font-semibold">
               Target: {currentProject.target_column || 'None'}
             </span>
-            <span className="px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-300 border border-cyan-500/20 font-bold">
+            <span className="px-3 py-1 rounded-full bg-[var(--color-accent-soft)] text-[var(--color-accent)] border border-[var(--color-accent-border)] font-bold">
               Metric: {primaryMetricName.toUpperCase()} ({selectionDirection})
             </span>
           </div>
         )}
       </div>
 
-      {/* Navigation Tabs */}
-      <div className="flex border-b border-slate-800 space-x-2">
+      {/* Segmented Navigation Tabs */}
+      <div className="flex flex-wrap gap-2 p-1.5 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-full w-fit shadow-sm">
         <button
           onClick={() => setActiveTab('fit_diagnosis')}
-          className={`pb-3 px-4 text-xs font-bold flex items-center space-x-2 border-b-2 transition-all ${
+          className={`px-4 py-2 rounded-full text-xs font-bold flex items-center space-x-2 transition-all ${
             activeTab === 'fit_diagnosis'
-              ? 'border-cyan-500 text-cyan-400 bg-cyan-500/5'
-              : 'border-transparent text-slate-400 hover:text-slate-200'
+              ? 'bg-[var(--color-accent)] text-white shadow-sm'
+              : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-hover)]'
           }`}
         >
           <Stethoscope className="w-4 h-4" />
           <span>Fit Diagnosis & Generalization Gaps</span>
           {trainedModels.length > 0 && (
-            <span className="px-1.5 py-0.2 rounded-full bg-slate-800 text-[10px] text-slate-300">
+            <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono ${
+              activeTab === 'fit_diagnosis' ? 'bg-white/20 text-white' : 'bg-[var(--color-surface-hover)] text-[var(--color-text-muted)]'
+            }`}>
               {trainedModels.length}
             </span>
           )}
@@ -360,16 +364,18 @@ export const DiagnosticsStage = () => {
 
         <button
           onClick={() => setActiveTab('why_not')}
-          className={`pb-3 px-4 text-xs font-bold flex items-center space-x-2 border-b-2 transition-all ${
+          className={`px-4 py-2 rounded-full text-xs font-bold flex items-center space-x-2 transition-all ${
             activeTab === 'why_not'
-              ? 'border-cyan-500 text-cyan-400 bg-cyan-500/5'
-              : 'border-transparent text-slate-400 hover:text-slate-200'
+              ? 'bg-[var(--color-accent)] text-white shadow-sm'
+              : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-hover)]'
           }`}
         >
-          <Trophy className="w-4 h-4 text-amber-400" />
+          <Trophy className="w-4 h-4" />
           <span>Why-Not Selection Comparison</span>
           {candidateModels.length > 0 && (
-            <span className="px-1.5 py-0.2 rounded-full bg-amber-500/20 text-[10px] text-amber-300 font-mono">
+            <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono ${
+              activeTab === 'why_not' ? 'bg-white/20 text-white' : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+            }`}>
               {candidateModels.length} Rejected
             </span>
           )}
@@ -377,16 +383,18 @@ export const DiagnosticsStage = () => {
 
         <button
           onClick={() => setActiveTab('recommendations')}
-          className={`pb-3 px-4 text-xs font-bold flex items-center space-x-2 border-b-2 transition-all ${
+          className={`px-4 py-2 rounded-full text-xs font-bold flex items-center space-x-2 transition-all ${
             activeTab === 'recommendations'
-              ? 'border-cyan-500 text-cyan-400 bg-cyan-500/5'
-              : 'border-transparent text-slate-400 hover:text-slate-200'
+              ? 'bg-[var(--color-accent)] text-white shadow-sm'
+              : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-hover)]'
           }`}
         >
-          <Sparkles className="w-4 h-4 text-indigo-400" />
+          <Sparkles className="w-4 h-4" />
           <span>Traceable Recommendations</span>
           {recommendations.length > 0 && (
-            <span className="px-1.5 py-0.2 rounded-full bg-indigo-500/20 text-[10px] text-indigo-300">
+            <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono ${
+              activeTab === 'recommendations' ? 'bg-white/20 text-white' : 'bg-[var(--color-accent-soft)] text-[var(--color-accent)]'
+            }`}>
               {recommendations.length}
             </span>
           )}
@@ -395,9 +403,9 @@ export const DiagnosticsStage = () => {
 
       {/* Main Content Area */}
       {loading ? (
-        <div className="p-16 text-center text-slate-400 space-y-3 bg-slate-900/40 rounded-2xl border border-slate-800">
-          <div className="w-8 h-8 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="text-xs">Loading diagnostics and candidate evaluations...</p>
+        <div className="p-16 text-center text-[var(--color-text-muted)] space-y-3 bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] shadow-sm">
+          <div className="w-8 h-8 border-2 border-[var(--color-accent)] border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="text-xs font-medium">Loading diagnostics and candidate evaluations...</p>
         </div>
       ) : error ? (
         <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs flex items-center space-x-2">
@@ -409,12 +417,12 @@ export const DiagnosticsStage = () => {
           {/* TAB 1: FIT DIAGNOSIS & GENERALIZATION GAPS */}
           {activeTab === 'fit_diagnosis' && (
             <div className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                 {trainedModels.length === 0 ? (
-                  <div className="col-span-full p-8 text-center bg-slate-900/40 border border-slate-800 rounded-2xl text-slate-400 space-y-2">
-                    <Activity className="w-8 h-8 mx-auto text-slate-600" />
-                    <p className="text-sm font-semibold text-slate-300">No trained models found for this experiment.</p>
-                    <p className="text-xs text-slate-500">
+                  <div className="col-span-full p-12 text-center bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl text-[var(--color-text-muted)] space-y-2 shadow-sm">
+                    <Activity className="w-8 h-8 mx-auto text-[var(--color-text-muted)] opacity-60" />
+                    <p className="text-sm font-bold text-[var(--color-text)]">No trained models found for this experiment.</p>
+                    <p className="text-xs text-[var(--color-text-muted)]">
                       Run model training in the Machine Learning stage to populate fit diagnostics.
                     </p>
                   </div>
@@ -434,40 +442,40 @@ export const DiagnosticsStage = () => {
                     return (
                       <div
                         key={model.id}
-                        className={`p-5 rounded-2xl border transition-all ${
+                        className={`p-5 rounded-2xl border transition-all space-y-4 shadow-sm ${
                           isWinner
-                            ? 'bg-slate-900/90 border-cyan-500/50 shadow-lg shadow-cyan-500/5'
-                            : 'bg-slate-900/40 border-slate-800 hover:border-slate-700'
-                        } space-y-4`}
+                            ? 'bg-[var(--color-surface)] border-[var(--color-accent)] ring-1 ring-[var(--color-accent)]'
+                            : 'bg-[var(--color-surface)] border-[var(--color-border)] hover:border-[var(--color-border-subtle)]'
+                        }`}
                       >
                         {/* Card Header */}
-                        <div className="flex items-start justify-between">
+                        <div className="flex items-start justify-between gap-2">
                           <div>
                             <div className="flex items-center space-x-2">
-                              <h3 className="text-sm font-bold text-white">{model.algorithm_name}</h3>
+                              <h3 className="text-sm font-bold text-[var(--color-text)]">{model.algorithm_name}</h3>
                               {isWinner && (
-                                <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 flex items-center space-x-1">
+                                <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-[var(--color-accent-soft)] text-[var(--color-accent)] border border-[var(--color-accent-border)] flex items-center space-x-1">
                                   <Trophy className="w-2.5 h-2.5" />
                                   <span>Winner</span>
                                 </span>
                               )}
                             </div>
-                            <span className="text-[10px] font-mono text-slate-500">ID: {model.id.slice(0, 8)}</span>
+                            <span className="text-[10px] font-mono text-[var(--color-text-muted)]">ID: {model.id.slice(0, 8)}</span>
                           </div>
                           {renderFitBadge(model.fit_diagnosis)}
                         </div>
 
                         {/* Scores Grid */}
                         <div className="grid grid-cols-2 gap-2 text-xs font-mono">
-                          <div className="p-2.5 bg-slate-950/80 rounded-xl border border-slate-800">
-                            <span className="text-[10px] text-slate-400 uppercase font-semibold">CV Mean</span>
-                            <div className="text-sm font-bold text-white mt-0.5">
+                          <div className="p-3 bg-[var(--color-surface-card)] rounded-xl border border-[var(--color-border)]">
+                            <span className="text-[10px] text-[var(--color-text-muted)] uppercase font-semibold">CV Mean</span>
+                            <div className="text-sm font-bold text-[var(--color-text)] mt-0.5">
                               {cvScore != null ? cvScore.toFixed(4) : 'N/A'}
                             </div>
                           </div>
-                          <div className="p-2.5 bg-slate-950/80 rounded-xl border border-slate-800">
-                            <span className="text-[10px] text-slate-400 uppercase font-semibold">Train Mean</span>
-                            <div className="text-sm font-bold text-slate-300 mt-0.5">
+                          <div className="p-3 bg-[var(--color-surface-card)] rounded-xl border border-[var(--color-border)]">
+                            <span className="text-[10px] text-[var(--color-text-muted)] uppercase font-semibold">Train Mean</span>
+                            <div className="text-sm font-bold text-[var(--color-text-muted)] mt-0.5">
                               {trainScore != null ? trainScore.toFixed(4) : 'N/A'}
                             </div>
                           </div>
@@ -477,7 +485,7 @@ export const DiagnosticsStage = () => {
                         {gapPercent != null && (
                           <div className="space-y-1.5 pt-1">
                             <div className="flex justify-between text-[11px] font-mono">
-                              <span className="text-slate-400">Generalization Gap:</span>
+                              <span className="text-[var(--color-text-muted)]">Generalization Gap:</span>
                               <span
                                 className={`font-bold ${
                                   gapPercent > 25
@@ -490,7 +498,7 @@ export const DiagnosticsStage = () => {
                                 {gapPercent.toFixed(1)}%
                               </span>
                             </div>
-                            <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                            <div className="w-full bg-[var(--color-surface-hover)] h-1.5 rounded-full overflow-hidden">
                               <div
                                 className={`h-full rounded-full ${
                                   gapPercent > 25
@@ -506,10 +514,10 @@ export const DiagnosticsStage = () => {
                         )}
 
                         {/* Selection Score pill & Passport Button */}
-                        <div className="flex items-center justify-between text-[10px] text-slate-400 font-mono pt-2 border-t border-slate-800/80">
+                        <div className="flex items-center justify-between text-[10px] text-[var(--color-text-muted)] font-mono pt-3 border-t border-[var(--color-border)]">
                           <div>
                             <span>Score: </span>
-                            <span className="font-bold text-slate-200">
+                            <span className="font-bold text-[var(--color-text)]">
                               {model.model_selection_score != null ? Number(model.model_selection_score).toFixed(4) : 'N/A'}
                             </span>
                           </div>
@@ -518,10 +526,10 @@ export const DiagnosticsStage = () => {
                               setSelectedPassportModelId(model.id);
                               setPassportModalOpen(true);
                             }}
-                            className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-cyan-300 font-semibold flex items-center space-x-1 cursor-pointer transition text-[10px]"
+                            className="px-3 py-1 rounded-full bg-[var(--color-surface-hover)] hover:bg-[var(--color-surface-card)] border border-[var(--color-border)] text-[var(--color-text)] font-semibold flex items-center space-x-1.5 cursor-pointer transition text-[11px]"
                             title="View Technical Model Passport"
                           >
-                            <FileText className="w-3 h-3" />
+                            <FileText className="w-3 h-3 text-[var(--color-accent)]" />
                             <span>Passport</span>
                           </button>
                         </div>
@@ -538,41 +546,43 @@ export const DiagnosticsStage = () => {
             <div className="space-y-6">
               {/* Winner Highlight Banner */}
               {winningModel && (
-                <div className="p-5 rounded-2xl bg-gradient-to-r from-cyan-950/40 via-slate-900 to-indigo-950/40 border border-cyan-500/40 shadow-xl space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <div className="p-2 bg-cyan-500/20 text-cyan-300 rounded-xl border border-cyan-500/30 shadow-inner">
+                <div className="p-6 rounded-2xl bg-[var(--color-surface)] border border-[var(--color-accent-border)] shadow-md space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="flex items-center space-x-3.5">
+                      <div className="p-3 bg-[var(--color-accent-soft)] text-[var(--color-accent)] rounded-2xl border border-[var(--color-accent-border)]">
                         <Trophy className="w-6 h-6" />
                       </div>
                       <div>
                         <div className="flex items-center space-x-2">
-                          <h2 className="text-base font-bold text-white">
+                          <h2 className="text-base font-bold text-[var(--color-text)]">
                             Authoritative Winner: {winningModel.algorithm_name}
                           </h2>
-                          <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 font-bold">
+                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono bg-[var(--color-accent-soft)] text-[var(--color-accent)] border border-[var(--color-accent-border)] font-bold">
                             Selected
                           </span>
                         </div>
-                        <p className="text-xs text-slate-400 font-mono mt-0.5">
+                        <p className="text-xs text-[var(--color-text-muted)] font-mono mt-0.5">
                           Artifact SHA-256: {winningModel.artifact_checksum ? winningModel.artifact_checksum.slice(0, 16) + '...' : 'Verified'}
                         </p>
                       </div>
                     </div>
 
-                    <div className="text-right font-mono flex flex-col items-end">
-                      <span className="text-[10px] text-slate-400 uppercase font-semibold">Winning Metric</span>
-                      <div className="text-lg font-black text-cyan-300">
-                        {getPrimaryCvMetric(winningModel, primaryMetricName)?.toFixed(4) || 'N/A'}
+                    <div className="flex items-center space-x-4">
+                      <div className="text-right font-mono">
+                        <span className="text-[10px] text-[var(--color-text-muted)] uppercase font-semibold">Winning Metric</span>
+                        <div className="text-xl font-extrabold text-[var(--color-accent)]">
+                          {getPrimaryCvMetric(winningModel, primaryMetricName)?.toFixed(4) || 'N/A'}
+                        </div>
                       </div>
                       <button
                         onClick={() => {
                           setSelectedPassportModelId(winningModel.id);
                           setPassportModalOpen(true);
                         }}
-                        className="mt-1.5 px-2.5 py-1 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-200 border border-cyan-500/30 text-xs font-semibold flex items-center space-x-1.5 transition cursor-pointer"
+                        className="px-4 py-2 rounded-full bg-[var(--color-accent-soft)] hover:bg-[var(--color-accent)] hover:text-white text-[var(--color-accent)] border border-[var(--color-accent-border)] text-xs font-bold flex items-center space-x-1.5 transition cursor-pointer"
                         title="View Technical Governance Model Passport"
                       >
-                        <FileText className="w-3.5 h-3.5" />
+                        <FileText className="w-4 h-4" />
                         <span>Model Passport</span>
                       </button>
                     </div>
@@ -582,14 +592,14 @@ export const DiagnosticsStage = () => {
 
               {/* Rejected Candidates Why-Not Comparison List */}
               <div className="space-y-4">
-                <h3 className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center space-x-2">
+                <h3 className="text-xs font-bold text-[var(--color-text-muted)] uppercase tracking-wider flex items-center space-x-2">
                   <HelpCircle className="w-4 h-4 text-amber-400" />
                   <span>Why-Not Rationales for Rejected Candidates</span>
                 </h3>
 
                 {candidateModels.length === 0 ? (
-                  <div className="p-8 text-center bg-slate-900/40 border border-slate-800 rounded-2xl text-slate-400 space-y-1">
-                    <p className="text-xs">No competing candidates evaluated in this experiment.</p>
+                  <div className="p-8 text-center bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl text-[var(--color-text-muted)] space-y-1 shadow-sm">
+                    <p className="text-xs font-medium">No competing candidates evaluated in this experiment.</p>
                   </div>
                 ) : (
                   candidateModels.map((candidate) => {
@@ -601,16 +611,16 @@ export const DiagnosticsStage = () => {
                     return (
                       <div
                         key={candidate.id}
-                        className="p-5 rounded-2xl bg-slate-900/50 border border-slate-800 hover:border-slate-700 space-y-4 transition"
+                        className="p-5 rounded-2xl bg-[var(--color-surface)] border border-[var(--color-border)] hover:border-[var(--color-border-subtle)] space-y-4 transition shadow-sm"
                       >
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                           <div className="flex items-center space-x-3">
-                            <span className="p-2 rounded-lg bg-rose-500/10 text-rose-400 border border-rose-500/20 text-xs font-bold">
+                            <span className="px-2.5 py-1 rounded-full bg-rose-500/10 text-rose-400 border border-rose-500/20 text-xs font-bold">
                               Rejected
                             </span>
                             <div>
-                              <h4 className="text-sm font-bold text-white">{candidate.algorithm_name}</h4>
-                              <span className="text-[10px] font-mono text-slate-500">ID: {candidate.id.slice(0, 8)}</span>
+                              <h4 className="text-sm font-bold text-[var(--color-text)]">{candidate.algorithm_name}</h4>
+                              <span className="text-[10px] font-mono text-[var(--color-text-muted)]">ID: {candidate.id.slice(0, 8)}</span>
                             </div>
                           </div>
                           <div className="flex items-center space-x-2">
@@ -620,41 +630,41 @@ export const DiagnosticsStage = () => {
                                 setSelectedPassportModelId(candidate.id);
                                 setPassportModalOpen(true);
                               }}
-                              className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-cyan-300 font-semibold flex items-center space-x-1 cursor-pointer transition text-[10px]"
+                              className="px-3 py-1 rounded-full bg-[var(--color-surface-hover)] hover:bg-[var(--color-surface-card)] border border-[var(--color-border)] text-[var(--color-text)] font-semibold flex items-center space-x-1 cursor-pointer transition text-[11px]"
                               title="View Model Passport"
                             >
-                              <FileText className="w-3 h-3" />
+                              <FileText className="w-3.5 h-3.5 text-[var(--color-accent)]" />
                               <span>Passport</span>
                             </button>
                           </div>
                         </div>
 
                         {/* Why Not Explanation Callout */}
-                        <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800/80 flex items-start space-x-3 text-xs text-slate-300">
+                        <div className="p-3.5 rounded-xl bg-[var(--color-surface-card)] border border-[var(--color-border)] flex items-start space-x-3 text-xs text-[var(--color-text)]">
                           <Info className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
                           <div>
-                            <span className="font-bold text-amber-300">Rejection Rationale: </span>
-                            <span>{whyNotReason}</span>
+                            <span className="font-bold text-amber-400">Rejection Rationale: </span>
+                            <span className="text-[var(--color-text-muted)]">{whyNotReason}</span>
                           </div>
                         </div>
 
                         {/* Head-to-Head Metric Comparison */}
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs font-mono">
-                          <div className="p-2 bg-slate-950/60 rounded-lg border border-slate-800">
-                            <span className="text-[10px] text-slate-400">Candidate CV</span>
-                            <div className="font-bold text-white mt-0.5">{candCv != null ? candCv.toFixed(4) : 'N/A'}</div>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs font-mono">
+                          <div className="p-2.5 bg-[var(--color-surface-card)] rounded-xl border border-[var(--color-border)]">
+                            <span className="text-[10px] text-[var(--color-text-muted)]">Candidate CV</span>
+                            <div className="font-bold text-[var(--color-text)] mt-0.5">{candCv != null ? candCv.toFixed(4) : 'N/A'}</div>
                           </div>
-                          <div className="p-2 bg-slate-950/60 rounded-lg border border-slate-800">
-                            <span className="text-[10px] text-slate-400">Winner CV</span>
-                            <div className="font-bold text-cyan-300 mt-0.5">{winCv != null ? winCv.toFixed(4) : 'N/A'}</div>
+                          <div className="p-2.5 bg-[var(--color-surface-card)] rounded-xl border border-[var(--color-border)]">
+                            <span className="text-[10px] text-[var(--color-text-muted)]">Winner CV</span>
+                            <div className="font-bold text-[var(--color-accent)] mt-0.5">{winCv != null ? winCv.toFixed(4) : 'N/A'}</div>
                           </div>
-                          <div className="p-2 bg-slate-950/60 rounded-lg border border-slate-800">
-                            <span className="text-[10px] text-slate-400">Candidate Score</span>
-                            <div className="font-bold text-slate-300 mt-0.5">{candidate.model_selection_score != null ? Number(candidate.model_selection_score).toFixed(3) : 'N/A'}</div>
+                          <div className="p-2.5 bg-[var(--color-surface-card)] rounded-xl border border-[var(--color-border)]">
+                            <span className="text-[10px] text-[var(--color-text-muted)]">Candidate Score</span>
+                            <div className="font-bold text-[var(--color-text-muted)] mt-0.5">{candidate.model_selection_score != null ? Number(candidate.model_selection_score).toFixed(3) : 'N/A'}</div>
                           </div>
-                          <div className="p-2 bg-slate-950/60 rounded-lg border border-slate-800">
-                            <span className="text-[10px] text-slate-400">Winner Score</span>
-                            <div className="font-bold text-cyan-300 mt-0.5">{winningModel?.model_selection_score != null ? Number(winningModel.model_selection_score).toFixed(3) : 'N/A'}</div>
+                          <div className="p-2.5 bg-[var(--color-surface-card)] rounded-xl border border-[var(--color-border)]">
+                            <span className="text-[10px] text-[var(--color-text-muted)]">Winner Score</span>
+                            <div className="font-bold text-[var(--color-accent)] mt-0.5">{winningModel?.model_selection_score != null ? Number(winningModel.model_selection_score).toFixed(3) : 'N/A'}</div>
                           </div>
                         </div>
                       </div>
@@ -669,33 +679,33 @@ export const DiagnosticsStage = () => {
           {activeTab === 'recommendations' && (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center space-x-2">
-                  <Sparkles className="w-4 h-4 text-indigo-400" />
+                <h3 className="text-xs font-bold text-[var(--color-text-muted)] uppercase tracking-wider flex items-center space-x-2">
+                  <Sparkles className="w-4 h-4 text-[var(--color-accent)]" />
                   <span>Automated Dataset & Model Health Recommendations ({recommendations.length})</span>
                 </h3>
               </div>
 
               {recommendations.length === 0 ? (
-                <div className="p-12 text-center bg-slate-900/40 border border-slate-800 rounded-2xl text-slate-400 space-y-2">
+                <div className="p-12 text-center bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl text-[var(--color-text-muted)] space-y-2 shadow-sm">
                   <CheckCircle2 className="w-8 h-8 text-emerald-400 mx-auto" />
-                  <p className="text-sm font-semibold text-slate-200">No active health warnings or recommendations</p>
-                  <p className="text-xs text-slate-500">Dataset and model metrics adhere to all quality heuristics.</p>
+                  <p className="text-sm font-bold text-[var(--color-text)]">No active health warnings or recommendations</p>
+                  <p className="text-xs text-[var(--color-text-muted)]">Dataset and model metrics adhere to all quality heuristics.</p>
                 </div>
               ) : (
-                <div className="space-y-3">
+                <div className="space-y-3.5">
                   {recommendations.map((rec, idx) => (
                     <div
                       key={rec.id || idx}
-                      className="p-5 rounded-2xl bg-slate-900/50 border border-slate-800 space-y-3 hover:border-slate-700 transition"
+                      className="p-5 rounded-2xl bg-[var(--color-surface)] border border-[var(--color-border)] space-y-3 hover:border-[var(--color-border-subtle)] transition shadow-sm"
                     >
                       {/* Header */}
                       <div className="flex items-start justify-between gap-2">
                         <div className="space-y-1">
-                          <h4 className="text-sm font-bold text-white flex items-center space-x-2">
+                          <h4 className="text-sm font-bold text-[var(--color-text)] flex items-center space-x-2">
                             <span>{rec.finding}</span>
                           </h4>
                           {rec.evidence && (
-                            <div className="text-xs font-mono text-cyan-300 bg-cyan-950/40 px-2.5 py-1 rounded border border-cyan-500/20 inline-block">
+                            <div className="text-xs font-mono text-[var(--color-accent)] bg-[var(--color-accent-soft)] px-3 py-1 rounded-full border border-[var(--color-accent-border)] inline-block">
                               Evidence: {rec.evidence}
                             </div>
                           )}
@@ -703,12 +713,12 @@ export const DiagnosticsStage = () => {
 
                         <div className="flex items-center space-x-2">
                           <span
-                            className={`px-2 py-0.5 rounded font-mono text-[10px] font-bold ${
+                            className={`px-2.5 py-0.5 rounded-full font-mono text-[10px] font-bold ${
                               rec.confidence_level === 'HIGH'
                                 ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
                                 : rec.confidence_level === 'MEDIUM'
                                 ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
-                                : 'bg-slate-800 text-slate-300'
+                                : 'bg-[var(--color-surface-hover)] text-[var(--color-text-muted)]'
                             }`}
                           >
                             {rec.confidence_level || 'HIGH'} Confidence
@@ -717,17 +727,17 @@ export const DiagnosticsStage = () => {
                       </div>
 
                       {/* Prescriptive Action */}
-                      <div className="p-3 bg-slate-950 rounded-xl border border-slate-800 text-xs text-slate-300 flex items-start space-x-2">
-                        <ArrowRight className="w-4 h-4 text-cyan-400 shrink-0 mt-0.5" />
+                      <div className="p-3 bg-[var(--color-surface-card)] rounded-xl border border-[var(--color-border)] text-xs text-[var(--color-text)] flex items-start space-x-2.5">
+                        <ArrowRight className="w-4 h-4 text-[var(--color-accent)] shrink-0 mt-0.5" />
                         <div>
-                          <span className="font-bold text-cyan-300">Recommended Action: </span>
-                          <span>{rec.recommended_action}</span>
+                          <span className="font-bold text-[var(--color-accent)]">Recommended Action: </span>
+                          <span className="text-[var(--color-text-muted)]">{rec.recommended_action}</span>
                         </div>
                       </div>
 
                       {/* Risk Note */}
                       {rec.risk_note && (
-                        <div className="text-[11px] text-slate-400 flex items-center space-x-2 font-mono">
+                        <div className="text-[11px] text-[var(--color-text-muted)] flex items-center space-x-2 font-mono">
                           <AlertTriangle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
                           <span>Risk if ignored: {rec.risk_note}</span>
                         </div>

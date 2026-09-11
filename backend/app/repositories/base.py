@@ -14,7 +14,7 @@ class BaseRepository(Generic[ModelType]):
             try:
                 id = PyUUID(id)
             except Exception:
-                pass
+                return None
         return self.db.query(self.model).filter(self.model.id == id).first()
 
     def get_all(self, skip: int = 0, limit: int = 100) -> list[ModelType]:

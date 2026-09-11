@@ -1,0 +1,34 @@
+============================= test session starts =============================
+platform win32 -- Python 3.13.14, pytest-9.1.1, pluggy-1.6.0 -- C:\Users\HP\AppData\Local\Programs\Python\Python313\python.exe
+cachedir: .pytest_cache
+rootdir: D:\Python\Data sets by campusx\Mangesh
+configfile: pytest.ini
+plugins: anyio-4.14.2, Faker-40.38.0, asyncio-1.4.0, cov-7.1.0, flask-1.3.0
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 23 items
+
+backend/tests/test_transformations.py::test_acceptance_check_a_unfit_attributes PASSED [  4%]
+backend/tests/test_transformations.py::test_acceptance_check_b_repeated_calls_isolation PASSED [  8%]
+backend/tests/test_transformations.py::test_acceptance_check_c_median_imputation_removes_nulls PASSED [ 13%]
+backend/tests/test_transformations.py::test_acceptance_check_d_locked_test_isolation_row_index_diff PASSED [ 17%]
+backend/tests/test_transformations.py::test_acceptance_check_e_structural_mismatch_returns_422 PASSED [ 21%]
+backend/tests/test_transformations.py::test_acceptance_check_f_preview_never_persists_learned_state PASSED [ 26%]
+backend/tests/test_transformations.py::test_get_transformations_endpoint_defaults PASSED [ 30%]
+backend/tests/test_transformations.py::test_pipeline_stage_updated_to_transformed PASSED [ 34%]
+backend/tests/test_transformations.py::test_outlier_capper_transformer PASSED [ 39%]
+backend/tests/test_transformations.py::test_day2_preview_contract_deterministic_and_isolated PASSED [ 43%]
+backend/tests/test_transformations.py::test_transformer_fit_scope PASSED [ 47%]
+backend/tests/test_size_guardrails.py::test_upload_guardrail_rejects_exceeded_columns PASSED [ 52%]
+backend/tests/test_size_guardrails.py::test_transformation_guardrail_rejects_exceeded_cardinality PASSED [ 56%]
+backend/tests/test_size_guardrails.py::test_permutation_importance_guardrail_blocks_large_cells PASSED [ 60%]
+backend/tests/test_size_guardrails.py::test_shap_guardrail_blocks_over_250_features PASSED [ 65%]
+backend/tests/test_resource_benchmark.py::test_profile_dataset_and_algorithm PASSED [ 69%]
+backend/tests/test_resource_benchmark.py::test_run_full_resource_benchmark_report_content PASSED [ 73%]
+backend/tests/test_checkpoint1_evidence.py::test_checkpoint1_zero_test_leakage_and_isolation PASSED [ 78%]
+backend/tests/test_pipeline_construction.py::test_build_fold_pipeline_structure PASSED [ 82%]
+backend/tests/test_pipeline_construction.py::test_transformer_refit_independently_per_fold PASSED [ 86%]
+backend/tests/test_pipeline_construction.py::test_selector_refit_independently_per_fold PASSED [ 91%]
+backend/tests/test_pipeline_construction.py::test_run_experiment_fold_pipelines_classification PASSED [ 95%]
+backend/tests/test_pipeline_construction.py::test_custom_placeholder_estimator_in_fold_pipeline PASSED [100%]
+
+======================== 23 passed in 73.15s (0:01:13) ========================

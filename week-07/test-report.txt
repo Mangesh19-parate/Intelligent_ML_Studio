@@ -1,0 +1,35 @@
+============================= test session starts =============================
+platform win32 -- Python 3.13.14, pytest-9.1.1, pluggy-1.6.0 -- C:\Users\HP\AppData\Local\Programs\Python\Python313\python.exe
+cachedir: .pytest_cache
+rootdir: D:\Python\Data sets by campusx\Mangesh
+configfile: pytest.ini
+plugins: anyio-4.14.2, Faker-40.38.0, asyncio-1.4.0, cov-7.1.0, flask-1.3.0
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 24 items
+
+backend/tests/test_evaluation_and_locked_test.py::test_acceptance_check_h_adjusted_r2_formula PASSED [  4%]
+backend/tests/test_evaluation_and_locked_test.py::test_acceptance_check_a_d_e_single_locked_test_and_full_dev_refit PASSED [  8%]
+backend/tests/test_evaluation_and_locked_test.py::test_acceptance_check_b_finalize_twice_rejected PASSED [ 12%]
+backend/tests/test_evaluation_and_locked_test.py::test_acceptance_check_c_diagnostic_rerun_and_leaderboard_isolation PASSED [ 16%]
+backend/tests/test_evaluation_and_locked_test.py::test_acceptance_check_f_overfit_and_underfit_diagnostics PASSED [ 20%]
+backend/tests/test_evaluation_and_locked_test.py::test_acceptance_check_g_model_selection_score_never_changes_sort_order PASSED [ 25%]
+backend/tests/test_day1_metrics.py::test_contract_metric_naming_strings PASSED [ 29%]
+backend/tests/test_day1_metrics.py::test_evaluation_service_regression_suite PASSED [ 33%]
+backend/tests/test_day1_metrics.py::test_evaluation_service_classification_suite PASSED [ 37%]
+backend/tests/test_day1_metrics.py::test_run_experiment_stores_regression_metrics PASSED [ 41%]
+backend/tests/test_day1_metrics.py::test_run_experiment_stores_classification_metrics PASSED [ 45%]
+backend/tests/test_day3_threshold_selection.py::test_select_optimal_binary_threshold_macro_f1 PASSED [ 50%]
+backend/tests/test_day3_threshold_selection.py::test_select_optimal_binary_threshold_deterministic_tie_breaker PASSED [ 54%]
+backend/tests/test_day3_threshold_selection.py::test_select_optimal_binary_threshold_precision_vs_recall PASSED [ 58%]
+backend/tests/test_day3_threshold_selection.py::test_select_optimal_binary_threshold_unsupported_or_empty PASSED [ 62%]
+backend/tests/test_day3_threshold_selection.py::test_strict_out_of_fold_leakage_assertion PASSED [ 66%]
+backend/tests/test_day3_threshold_selection.py::test_trained_model_decision_threshold_persistence PASSED [ 70%]
+backend/tests/test_day3_threshold_selection.py::test_api_leaderboard_includes_decision_threshold PASSED [ 75%]
+backend/tests/test_day3_threshold_selection.py::test_frozen_decision_threshold_used_in_locked_test PASSED [ 79%]
+backend/tests/test_day4_locked_test_consumption.py::test_locked_test_state_lifecycle PASSED [ 83%]
+backend/tests/test_day4_locked_test_consumption.py::test_second_finalize_attempt_strictly_rejected PASSED [ 87%]
+backend/tests/test_day4_locked_test_consumption.py::test_diagnostic_rerun_stores_test_reused_diagnostic_split PASSED [ 91%]
+backend/tests/test_day4_locked_test_consumption.py::test_query_level_exclusion_from_leaderboard_and_repository PASSED [ 95%]
+backend/tests/test_day4_locked_test_consumption.py::test_query_level_exclusion_from_deployment_gate PASSED [100%]
+
+============================= 24 passed in 32.64s =============================

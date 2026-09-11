@@ -1,0 +1,41 @@
+============================= test session starts =============================
+platform win32 -- Python 3.13.14, pytest-9.1.1, pluggy-1.6.0 -- C:\Users\HP\AppData\Local\Programs\Python\Python313\python.exe
+cachedir: .pytest_cache
+rootdir: D:\Python\Data sets by campusx\Mangesh
+configfile: pytest.ini
+plugins: anyio-4.14.2, Faker-40.38.0, asyncio-1.4.0, cov-7.1.0, flask-1.3.0
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 30 items
+
+backend/tests/test_explainability.py::test_acceptance_check_a_global_shap_summary_and_caching PASSED [  3%]
+backend/tests/test_explainability.py::test_acceptance_check_b_non_winning_model_returns_422 PASSED [  6%]
+backend/tests/test_explainability.py::test_acceptance_check_c_select_explainer_classes PASSED [ 10%]
+backend/tests/test_explainability.py::test_acceptance_check_d_additivity_sanity_check PASSED [ 13%]
+backend/tests/test_explainability.py::test_acceptance_check_e_leakage_check_zero_locked_test_overlap PASSED [ 16%]
+backend/tests/test_explainability.py::test_acceptance_check_f_tampered_artifact_rejection PASSED [ 20%]
+backend/tests/test_explainability.py::test_global_shap_caching_and_budget_prechecks PASSED [ 23%]
+backend/tests/test_explainability.py::test_global_shap_feature_dimension_and_cell_budget_rejections PASSED [ 26%]
+backend/tests/test_lineage_and_reproducibility.py::test_acceptance_check_a_live_capture_and_real_versions PASSED [ 30%]
+backend/tests/test_lineage_and_reproducibility.py::test_acceptance_check_b_artifact_checksum_and_tamper_detection PASSED [ 33%]
+backend/tests/test_lineage_and_reproducibility.py::test_acceptance_check_c_transformation_snapshot_immutability PASSED [ 36%]
+backend/tests/test_lineage_and_reproducibility.py::test_acceptance_check_d_feature_selection_snapshot_matches_full_dev_refit PASSED [ 40%]
+backend/tests/test_lineage_and_reproducibility.py::test_acceptance_check_e_experiment_config_immutability PASSED [ 43%]
+backend/tests/test_lineage_and_reproducibility.py::test_acceptance_check_f_backfill_script_marks_approximate PASSED [ 46%]
+backend/tests/test_lineage_and_reproducibility.py::test_acceptance_check_g_no_new_locked_test_calls PASSED [ 50%]
+backend/tests/test_lineage_and_reproducibility.py::test_lineage_api_endpoint PASSED [ 53%]
+backend/tests/test_lineage_and_reproducibility.py::test_lineage_api_endpoint_backfilled_experiment PASSED [ 56%]
+backend/tests/test_lineage_and_reproducibility.py::test_artifact_write_then_commit_lifecycle PASSED [ 60%]
+backend/tests/test_lineage_and_reproducibility.py::test_artifact_write_failure_leaves_no_dangling_db_row PASSED [ 63%]
+backend/tests/test_lineage_and_reproducibility.py::test_db_commit_failure_orphaned_file_cleaned_up PASSED [ 66%]
+backend/tests/test_lineage_and_reproducibility.py::test_db_commit_failure_cleanup_fails_marked_orphaned_recoverable PASSED [ 70%]
+backend/tests/test_lineage_and_reproducibility.py::test_reproduce_experiment_frozen_tolerances_success PASSED [ 73%]
+backend/tests/test_lineage_and_reproducibility.py::test_reproduce_experiment_discrepancy_exceeding_tolerance PASSED [ 76%]
+backend/tests/test_lineage_and_reproducibility.py::test_reproduce_experiment_endpoint_api PASSED [ 80%]
+backend/tests/test_checkpoint2_model_passport_and_e2e.py::test_checkpoint2_full_pipeline_live_and_invariants PASSED [ 83%]
+backend/tests/test_checkpoint2_model_passport_and_e2e.py::test_model_passport_strict_select_and_zero_recomputation PASSED [ 86%]
+backend/tests/test_checkpoint2_model_passport_and_e2e.py::test_model_passport_404_for_unknown_model PASSED [ 90%]
+backend/tests/test_day7_experiment_health_report.py::test_experiment_health_report_healthy PASSED [ 93%]
+backend/tests/test_day7_experiment_health_report.py::test_experiment_health_report_flagged_risks PASSED [ 96%]
+backend/tests/test_day7_experiment_health_report.py::test_experiment_health_report_artifact_tamper_critical PASSED [100%]
+
+======================== 30 passed in 68.83s (0:01:08) ========================

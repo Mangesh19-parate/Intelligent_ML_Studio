@@ -1,0 +1,37 @@
+============================= test session starts =============================
+platform win32 -- Python 3.13.14, pytest-9.1.1, pluggy-1.6.0 -- C:\Users\HP\AppData\Local\Programs\Python\Python313\python.exe
+cachedir: .pytest_cache
+rootdir: D:\Python\Data sets by campusx\Mangesh
+configfile: pytest.ini
+plugins: anyio-4.14.2, Faker-40.38.0, asyncio-1.4.0, cov-7.1.0, flask-1.3.0
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 26 items
+
+backend/tests/test_deployment_gate_service.py::test_condition_1_locked_test_evaluated_strictness PASSED [  3%]
+backend/tests/test_deployment_gate_service.py::test_condition_2_schema_locked PASSED [  7%]
+backend/tests/test_deployment_gate_service.py::test_condition_3_artifact_verified_disk_checksum PASSED [ 11%]
+backend/tests/test_deployment_gate_service.py::test_condition_4_lineage_complete PASSED [ 15%]
+backend/tests/test_deployment_gate_service.py::test_condition_5_performance_threshold_tri_state PASSED [ 19%]
+backend/tests/test_deployment_gate_service.py::test_condition_6_self_approval_rejection_service_level PASSED [ 23%]
+backend/tests/test_deployment_gate_service.py::test_self_approval_rejection_via_api_endpoints PASSED [ 26%]
+backend/tests/test_deployments_and_gates.py::test_check_a_pre_fix_experiment_unverifiable PASSED [ 30%]
+backend/tests/test_deployments_and_gates.py::test_check_b_new_experiment_with_threshold_passes_gate PASSED [ 34%]
+backend/tests/test_deployments_and_gates.py::test_check_c_d_e_f_g_h_full_roundtrip_and_edge_cases PASSED [ 38%]
+backend/tests/test_deployments_and_gates.py::test_model_download_joblib_and_pkl PASSED [ 42%]
+backend/tests/test_day2_predict_endpoint_and_deployment_lifecycle.py::test_artifact_verification_on_deploy_success_and_tamper PASSED [ 46%]
+backend/tests/test_day2_predict_endpoint_and_deployment_lifecycle.py::test_predict_endpoint_in_memory_caching PASSED [ 50%]
+backend/tests/test_day2_predict_endpoint_and_deployment_lifecycle.py::test_predict_schema_validation_and_audit_logging PASSED [ 53%]
+backend/tests/test_day2_predict_endpoint_and_deployment_lifecycle.py::test_deployment_state_lifecycle_transitions PASSED [ 57%]
+backend/tests/test_day4_explain_and_prediction_logs.py::test_decoupled_fast_predict_vs_explain PASSED [ 61%]
+backend/tests/test_day4_explain_and_prediction_logs.py::test_payload_privacy_modes_hashed_and_full PASSED [ 65%]
+backend/tests/test_day4_explain_and_prediction_logs.py::test_validation_error_audit_logging PASSED [ 69%]
+backend/tests/test_day5_monitoring_volume_and_latency_split.py::test_volume_over_time_bucketing PASSED [ 73%]
+backend/tests/test_day5_monitoring_volume_and_latency_split.py::test_latency_summary_segregated_metrics PASSED [ 76%]
+backend/tests/test_day5_monitoring_volume_and_latency_split.py::test_error_rate_breakdown PASSED [ 80%]
+backend/tests/test_day5_monitoring_volume_and_latency_split.py::test_monitoring_dashboard_endpoint PASSED [ 84%]
+backend/tests/test_day6_admin_pages.py::test_admin_list_and_create_users PASSED [ 88%]
+backend/tests/test_day6_admin_pages.py::test_per_user_deploy_override_flow PASSED [ 92%]
+backend/tests/test_day6_admin_pages.py::test_algorithm_and_metric_catalogs PASSED [ 96%]
+backend/tests/test_day6_admin_pages.py::test_governance_audit_logs PASSED [100%]
+
+======================== 26 passed in 64.19s (0:01:04) ========================

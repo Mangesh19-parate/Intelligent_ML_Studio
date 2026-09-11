@@ -15,12 +15,14 @@ Implements the 8-method feature selection comparison matrix:
 from dataclasses import dataclass
 from typing import Any
 import sys
+import warnings
 from pathlib import Path
 import numpy as np
 import pandas as pd
 from sklearn.feature_selection import RFE
 from sklearn.linear_model import LinearRegression, LogisticRegression
 from sklearn.preprocessing import StandardScaler
+
 
 # Ensure backend package can be imported without DB dependency
 BACKEND_PATH = Path(__file__).resolve().parent.parent / "backend"
@@ -147,21 +149,24 @@ def rfe_importance(
         return np.array([]), np.array([]), np.array([])
 
     norm_task = task_type.upper().strip()
-    if norm_task == "REGRESSION":
-        estimator = LinearRegression()
-        X_scaled = X_arr
-    else:
-        scaler = StandardScaler()
-        X_scaled = scaler.fit_transform(X_arr)
-        estimator = LogisticRegression(max_iter=1000, random_state=seed, tol=1e-3)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        if norm_task == "REGRESSION":
+            estimator = LinearRegression()
+            X_scaled = X_arr
+        else:
+            scaler = StandardScaler()
+            X_scaled = scaler.fit_transform(X_arr)
+            estimator = LogisticRegression(max_iter=2000, random_state=seed, tol=1e-3)
 
-    rfe = RFE(estimator=estimator, n_features_to_select=1, step=1)
-    rfe.fit(X_scaled, y_arr)
+        rfe = RFE(estimator=estimator, n_features_to_select=1, step=1)
+        rfe.fit(X_scaled, y_arr)
 
     # Convert ranking_ (1=best, p=worst) to raw importance score where higher is better
     raw = (p + 1 - rfe.ranking_).astype(np.float64)
     ranks, rank_scores = FeatureSelectionService.calculate_technique_rank_scores(raw)
     return raw, ranks, rank_scores
+
 
 
 # -----------------------------------------------------------------------------

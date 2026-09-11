@@ -1,0 +1,25 @@
+============================= test session starts =============================
+platform win32 -- Python 3.13.14, pytest-9.1.1, pluggy-1.6.0 -- C:\Users\HP\AppData\Local\Programs\Python\Python313\python.exe
+cachedir: .pytest_cache
+rootdir: D:\Python\Data sets by campusx\Mangesh
+configfile: pytest.ini
+plugins: anyio-4.14.2, Faker-40.38.0, asyncio-1.4.0, cov-7.1.0, flask-1.3.0
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 14 items
+
+backend/tests/test_consolidated_invariants.py::test_domain1_locked_test_indices_leakage_barrier PASSED [  7%]
+backend/tests/test_consolidated_invariants.py::test_domain1_row_uid_reordering_invariance PASSED [ 14%]
+backend/tests/test_consolidated_invariants.py::test_domain2_transformer_and_selector_fit_scope PASSED [ 21%]
+backend/tests/test_consolidated_invariants.py::test_domain3_feature_selection_tie_break_determinism PASSED [ 28%]
+backend/tests/test_consolidated_invariants.py::test_domain3_threshold_tie_break_distance_to_half PASSED [ 35%]
+backend/tests/test_consolidated_invariants.py::test_domain4_stability_rejection_api_and_service PASSED [ 42%]
+backend/tests/test_consolidated_invariants.py::test_domain5_out_of_fold_threshold_invariance PASSED [ 50%]
+backend/tests/test_consolidated_invariants.py::test_domain6_locked_test_one_time_consumption PASSED [ 57%]
+backend/tests/test_consolidated_invariants.py::test_domain7_training_concurrency_protection PASSED [ 64%]
+backend/tests/test_consolidated_invariants.py::test_domain8_state_legality_vs_gate_eligibility_separation PASSED [ 71%]
+backend/tests/test_attack_lab.py::test_attack_lab_execution_and_manifest_fidelity PASSED [ 78%]
+backend/tests/test_day12_audits.py::test_project_wide_leakage_audit PASSED [ 85%]
+backend/tests/test_day12_audits.py::test_project_wide_reproducibility_audit PASSED [ 92%]
+backend/tests/test_day12_audits.py::test_api_contract_audit_matrix PASSED [100%]
+
+============================= 14 passed in 30.63s =============================

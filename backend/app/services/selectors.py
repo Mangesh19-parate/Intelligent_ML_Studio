@@ -18,8 +18,10 @@ import pandas as pd
 from scipy.stats import rankdata
 from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
 from sklearn.linear_model import Lasso, LogisticRegression, Ridge
+from sklearn.preprocessing import StandardScaler
 from sklearn.inspection import permutation_importance
 from app.config.contract import FeatureSelectionMethod, TechniqueStatus, EvidenceStrength
+
 
 
 def compute_evidence_strength(
@@ -455,9 +457,13 @@ class LassoSelector(BaseSelector):
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
+            # Standardize X for robust numerical convergence across datasets
+            scaler = StandardScaler()
+            X_scaled = scaler.fit_transform(X)
+
             if task_type == "REGRESSION":
                 model = Lasso(alpha=0.01, max_iter=2000, random_state=seed)
-                model.fit(X, y)
+                model.fit(X_scaled, y)
                 coefs = np.abs(model.coef_)
                 if coefs.ndim == 0:
                     coefs = np.array([float(coefs)])
@@ -468,15 +474,16 @@ class LassoSelector(BaseSelector):
                 model = LogisticRegression(
                     penalty="l1",
                     solver=solver,
-                    max_iter=1000,
+                    max_iter=2000,
                     random_state=seed,
                     tol=1e-3,
                 )
-                model.fit(X, y)
+                model.fit(X_scaled, y)
                 coefs = np.abs(model.coef_)
                 if coefs.ndim == 2:
                     return np.mean(coefs, axis=0).astype(np.float64)
                 return coefs.flatten().astype(np.float64)
+
 
     def select(
         self,

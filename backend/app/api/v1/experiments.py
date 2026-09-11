@@ -492,6 +492,25 @@ def get_experiment_health_endpoint(
     return service.generate_health_report(id)
 
 
+from app.services.experiment_diff_service import ExperimentDiffService
+
+
+@router.get(
+    "/experiments/{id}/diff/{other_id}",
+    status_code=status.HTTP_200_OK,
+    summary="Get counterfactual diff between two experiments (READ permission required)",
+)
+def get_experiment_diff_endpoint(
+    id: UUID,
+    other_id: UUID,
+    current_user: User = Depends(require_permission("READ")),
+    db: Session = Depends(get_db),
+):
+    service = ExperimentDiffService(db)
+    return service.compute_diff(id, other_id)
+
+
+
 
 
 

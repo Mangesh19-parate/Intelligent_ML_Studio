@@ -1,0 +1,76 @@
+{
+  "protocol": "LOCKED_TEST_ONE_TIME_EVALUATION",
+  "evaluated_timestamp": "2026-09-05T10:48:43Z",
+  "status": "CONSUMED_AND_LOCKED",
+  "quota_policy": "Single-consumption per proposed method (RANK_AGGREGATION, RANK_AGGREGATION_STABILITY). Baseline methods strictly denied access.",
+  "results": [
+    {
+      "dataset": "california_housing",
+      "task_type": "REGRESSION",
+      "metric": "RMSE",
+      "higher_is_better": false,
+      "dev_samples": 16512,
+      "test_samples": 4128,
+      "experiment_a_rank_aggregation": {
+        "test_metric": 0.513042,
+        "selected_features": ["MedInc", "Latitude", "Longitude", "AveRooms"]
+      },
+      "experiment_b_rank_aggregation_stability": {
+        "test_metric": 0.513042,
+        "selected_features": ["MedInc", "Latitude", "Longitude", "AveRooms"]
+      },
+      "metric_difference": 0.0
+    },
+    {
+      "dataset": "bike_sharing",
+      "task_type": "REGRESSION",
+      "metric": "RMSE",
+      "higher_is_better": false,
+      "dev_samples": 13903,
+      "test_samples": 3476,
+      "experiment_a_rank_aggregation": {
+        "test_metric": 89.123946,
+        "selected_features": ["atemp", "hr", "yr", "temp", "hum", "season"]
+      },
+      "experiment_b_rank_aggregation_stability": {
+        "test_metric": 89.125214,
+        "selected_features": ["hr", "atemp", "yr", "temp", "hum", "season"]
+      },
+      "metric_difference": 0.001268
+    },
+    {
+      "dataset": "breast_cancer",
+      "task_type": "CLASSIFICATION",
+      "metric": "F1_MACRO",
+      "higher_is_better": true,
+      "dev_samples": 455,
+      "test_samples": 114,
+      "experiment_a_rank_aggregation": {
+        "test_metric": 0.952129,
+        "selected_features_count": 15
+      },
+      "experiment_b_rank_aggregation_stability": {
+        "test_metric": 0.942230,
+        "selected_features_count": 15
+      },
+      "metric_difference": -0.009899
+    },
+    {
+      "dataset": "adult_income",
+      "task_type": "CLASSIFICATION",
+      "metric": "F1_MACRO",
+      "higher_is_better": true,
+      "dev_samples": 26048,
+      "test_samples": 6513,
+      "experiment_a_rank_aggregation": {
+        "test_metric": 0.781991,
+        "selected_features_count": 50
+      },
+      "experiment_b_rank_aggregation_stability": {
+        "test_metric": 0.781252,
+        "selected_features_count": 50
+      },
+      "metric_difference": -0.000739
+    }
+  ]
+}

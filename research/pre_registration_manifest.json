@@ -1,0 +1,121 @@
+{
+  "protocol_version": "1.0-FROZEN",
+  "registration_timestamp": "2026-09-11T00:00:00Z",
+  "status": "PRE_REGISTERED",
+  "hypotheses": {
+    "H1": "Rank aggregation combined with selection stability produces more stable feature subsets than individual feature-selection methods, while maintaining comparable downstream predictive performance under a fixed-model comparison.",
+    "H0": "The proposed approach does not produce a meaningful improvement in feature-selection stability without unacceptable predictive-performance degradation."
+  },
+  "datasets": [
+    {
+      "name": "california_housing",
+      "task_type": "REGRESSION",
+      "target": "target",
+      "features_count": 8,
+      "k_selected": 4,
+      "primary_metric": "RMSE"
+    },
+    {
+      "name": "bike_sharing",
+      "task_type": "REGRESSION",
+      "target": "cnt",
+      "features_count": 12,
+      "k_selected": 6,
+      "primary_metric": "RMSE"
+    },
+    {
+      "name": "breast_cancer",
+      "task_type": "CLASSIFICATION",
+      "target": "target",
+      "features_count": 30,
+      "k_selected": 15,
+      "primary_metric": "F1_MACRO"
+    },
+    {
+      "name": "adult_income",
+      "task_type": "CLASSIFICATION",
+      "target": "income",
+      "features_count": 100,
+      "k_selected": 50,
+      "primary_metric": "F1_MACRO"
+    }
+  ],
+  "methods": {
+    "baselines": [
+      {
+        "id": "NO_SELECTION",
+        "type": "Full Feature Set Reference",
+        "description": "Uses 100% of available features without filtering."
+      },
+      {
+        "id": "CORRELATION",
+        "type": "Univariate Filter",
+        "description": "Pearson correlation (regression) / ANOVA F-score (classification)."
+      },
+      {
+        "id": "LASSO",
+        "type": "Embedded Regularization",
+        "description": "L1 regularized regression / logistic regression."
+      },
+      {
+        "id": "RANDOM_FOREST",
+        "type": "Embedded Impurity",
+        "description": "Mean Decrease in Impurity (MDI) feature importances."
+      },
+      {
+        "id": "PERMUTATION",
+        "type": "Model-Agnostic Validation",
+        "description": "Permutation feature importance evaluated on validation folds."
+      },
+      {
+        "id": "RFE",
+        "type": "Wrapper Elimination",
+        "description": "Recursive feature elimination with reference estimator."
+      }
+    ],
+    "proposed": [
+      {
+        "id": "RANK_AGGREGATION",
+        "experiment": "Experiment A",
+        "description": "Ensemble rank aggregation combining 4 normalized base selectors."
+      },
+      {
+        "id": "RANK_AGGREGATION_STABILITY",
+        "experiment": "Experiment B",
+        "description": "Ensemble rank aggregation weighted with cross-fold selection stability (alpha=0.7 / alpha=0.5)."
+      }
+    ]
+  },
+  "cv_protocol": {
+    "outer_split": {
+      "development_pct": 80,
+      "locked_test_pct": 20,
+      "disjoint_row_uid": true
+    },
+    "folds": 5,
+    "repeats": 8,
+    "total_folds_per_method": 40,
+    "total_evaluations": 1280,
+    "base_seed": 1000,
+    "reference_model": "RandomForest",
+    "alpha": 0.5,
+    "alpha_default": 0.7
+  },
+  "anti_leakage_invariants": [
+    "Development vs Locked Test outer split occurs strictly before any modeling or selection.",
+    "Feature selectors and transformers are fit strictly inside individual training fold slices.",
+    "Selection stability S(j) is computed strictly across repeated CV runs on the Development partition.",
+    "Locked Test partition is evaluated at most once per proposed method and never by baselines.",
+    "Downstream reference estimator is fixed across all compared methods (ADR-014)."
+  ],
+  "statistical_evaluation_criteria": {
+    "primary_comparison": "Fixed-model controlled comparison between Experiment B (RANK_AGGREGATION_STABILITY), Experiment A (RANK_AGGREGATION), and individual baselines.",
+    "paired_tests": [
+      "Wilcoxon signed-rank test across paired fold metrics",
+      "Paired two-tailed Student t-test",
+      "95% Confidence Interval of metric differences"
+    ],
+    "stability_metric": "Selection frequency S(j) = (count of selections) / (total runs)",
+    "reporting_scope": "Framed as 'across the evaluated benchmark datasets and protocol', without post-hoc generalization claims."
+  }
+}

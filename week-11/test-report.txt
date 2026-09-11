@@ -1,0 +1,49 @@
+============================= test session starts =============================
+platform win32 -- Python 3.13.14, pytest-9.1.1, pluggy-1.6.0 -- C:\Users\HP\AppData\Local\Programs\Python\Python313\python.exe
+cachedir: .pytest_cache
+rootdir: D:\Python\Data sets by campusx\Mangesh
+plugins: anyio-4.14.2, Faker-40.38.0, asyncio-1.4.0, cov-7.1.0, flask-1.3.0
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 19 items
+
+backend/tests/test_phase11_research.py::test_pre_registration_manifest_integrity PASSED [  5%]
+backend/tests/test_phase11_research.py::test_frozen_protocol_constants PASSED [ 10%]
+backend/tests/test_phase11_research.py::test_four_phase_stability_execution_runner PASSED [ 15%]
+backend/tests/test_phase11_research.py::test_mathematical_score_combination PASSED [ 21%]
+backend/tests/test_phase11_research.py::test_zero_leakage_locked_test_isolation PASSED [ 26%]
+backend/tests/test_phase11_research.py::test_paired_statistics_engine PASSED [ 31%]
+backend/tests/test_phase11_research.py::test_research_analysis_report_generation PASSED [ 36%]
+backend/tests/test_phase11_research.py::test_platform_api_blocks_rank_aggregation_stability PASSED [ 42%]
+backend/tests/test_consolidated_invariants.py::test_domain1_locked_test_indices_leakage_barrier PASSED [ 47%]
+backend/tests/test_consolidated_invariants.py::test_domain1_row_uid_reordering_invariance PASSED [ 52%]
+backend/tests/test_consolidated_invariants.py::test_domain2_transformer_and_selector_fit_scope PASSED [ 57%]
+backend/tests/test_consolidated_invariants.py::test_domain3_feature_selection_tie_break_determinism PASSED [ 63%]
+backend/tests/test_consolidated_invariants.py::test_domain3_threshold_tie_break_distance_to_half PASSED [ 68%]
+backend/tests/test_consolidated_invariants.py::test_domain4_stability_rejection_api_and_service PASSED [ 73%]
+backend/tests/test_consolidated_invariants.py::test_domain5_out_of_fold_threshold_invariance PASSED [ 78%]
+backend/tests/test_consolidated_invariants.py::test_domain6_locked_test_one_time_consumption PASSED [ 84%]
+backend/tests/test_consolidated_invariants.py::test_domain7_training_concurrency_protection PASSED [ 89%]
+backend/tests/test_consolidated_invariants.py::test_domain8_state_legality_vs_gate_eligibility_separation PASSED [ 94%]
+backend/tests/test_attack_lab.py::test_attack_lab_execution_and_manifest_fidelity PASSED [100%]
+
+============================== warnings summary ===============================
+backend/tests/test_phase11_research.py::test_four_phase_stability_execution_runner
+backend/tests/test_phase11_research.py::test_four_phase_stability_execution_runner
+backend/tests/test_phase11_research.py::test_four_phase_stability_execution_runner
+backend/tests/test_phase11_research.py::test_four_phase_stability_execution_runner
+backend/tests/test_phase11_research.py::test_four_phase_stability_execution_runner
+backend/tests/test_phase11_research.py::test_four_phase_stability_execution_runner
+backend/tests/test_phase11_research.py::test_four_phase_stability_execution_runner
+backend/tests/test_phase11_research.py::test_four_phase_stability_execution_runner
+  C:\Users\HP\AppData\Local\Programs\Python\Python313\Lib\site-packages\sklearn\linear_model\_logistic.py:599: ConvergenceWarning: lbfgs failed to converge after 500 iteration(s) (status=1):
+  STOP: TOTAL NO. OF ITERATIONS REACHED LIMIT
+  
+  Increase the number of iterations to improve the convergence (max_iter=500).
+  You might also want to scale the data as shown in:
+      https://scikit-learn.org/stable/modules/preprocessing.html
+  Please also refer to the documentation for alternative solver options:
+      https://scikit-learn.org/stable/modules/linear_model.html#logistic-regression
+    n_iter_i = _check_optimize_result(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+======================= 19 passed, 8 warnings in 35.75s =======================

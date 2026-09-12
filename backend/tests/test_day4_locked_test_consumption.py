@@ -196,7 +196,7 @@ def test_locked_test_state_lifecycle(db_session, day4_experiment_env):
     # Verify winning model state and LOCKED_TEST metrics
     winning_model = db_session.query(TrainedModel).filter_by(id=exp.selected_model_id).first()
     assert winning_model is not None
-    assert winning_model.status == ModelState.DEPLOYABLE.value
+    assert winning_model.status == ModelState.ARTIFACT_VERIFIED.value
 
     locked_metrics = db_session.query(ModelMetric).filter_by(
         model_id=winning_model.id,

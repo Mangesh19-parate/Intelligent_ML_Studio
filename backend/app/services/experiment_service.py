@@ -1794,7 +1794,7 @@ class ExperimentService:
         now = datetime.now(timezone.utc)
         self.exp_repo.update_status(experiment.id, ExperimentState.TEST_CONSUMED.value)
         self.exp_repo.mark_locked_test_consumed(experiment.id, consumed_at=now)
-        winning_model.status = ModelState.DEPLOYABLE.value
+        winning_model.status = ModelState.ARTIFACT_VERIFIED.value
         self.db.add(winning_model)
         self.db.commit()
         self.exp_repo.update_status(experiment.id, ExperimentState.REGISTERED.value, completed_at=now)

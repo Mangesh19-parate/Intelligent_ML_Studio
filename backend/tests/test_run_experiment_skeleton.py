@@ -229,7 +229,7 @@ def test_prepare_cv_context_loads_frozen_config(db_session, regression_cv_setup)
     service.freeze_experiment_config(
         exp.id,
         config_override={
-            "algorithms": ["LinearRegression", "Ridge"],
+            "algorithms": ["LinearRegression", "GradientBoostingRegressor"],
             "folds": 4,
             "seed": 777,
             "selection_metric": "rmse",

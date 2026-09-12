@@ -227,7 +227,7 @@ def test_end_to_end_regression_cv_run(db_session, day6_regression_setup):
     frozen_exp = service.freeze_experiment_config(
         exp.id,
         config_override={
-            "algorithms": ["LinearRegression", "Ridge"],
+            "algorithms": ["LinearRegression", "RandomForestRegressor"],
             "folds": 3,
             "seed": 42,
             "selection_metric": "rmse",

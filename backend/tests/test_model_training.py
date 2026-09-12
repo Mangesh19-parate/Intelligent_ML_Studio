@@ -94,7 +94,7 @@ def test_trainer_pipeline_unfit_freshness():
     Verifies that get_pipeline() on RegressionTrainer and ClassificationTrainer returns
     a fresh, UNFIT scikit-learn Pipeline combining transformer, selector, and estimator.
     """
-    reg_trainer = RegressionTrainer("Ridge", hyperparameters={"alpha": 2.0}, random_state=42)
+    reg_trainer = RegressionTrainer("GradientBoostingRegressor", hyperparameters={"n_estimators": 50}, random_state=42)
     pipe1 = reg_trainer.get_pipeline()
     pipe2 = reg_trainer.get_pipeline()
 
@@ -102,7 +102,7 @@ def test_trainer_pipeline_unfit_freshness():
     assert "transformer" in pipe1.named_steps
     assert "selector" in pipe1.named_steps
     assert "estimator" in pipe1.named_steps
-    assert pipe1.named_steps["estimator"].alpha == 2.0
+    assert pipe1.named_steps["estimator"].n_estimators == 50
 
     clf_trainer = ClassificationTrainer("LogisticRegression", random_state=42)
     clf_pipe = clf_trainer.get_pipeline()
@@ -168,7 +168,7 @@ def test_acceptance_check_a_and_b_regression_training_and_shared_selection(db_se
     exp_service = ExperimentService(db_session)
     result = exp_service.run_experiment(
         project_id=project.id,
-        algorithms=["LinearRegression", "Ridge", "RandomForestRegressor"],
+        algorithms=["LinearRegression", "GradientBoostingRegressor", "RandomForestRegressor"],
         folds=5,
         seed=42,
     )
@@ -186,11 +186,11 @@ def test_acceptance_check_a_and_b_regression_training_and_shared_selection(db_se
 
     model_map = {m.algorithm_name: m for m in models}
     assert "LinearRegression" in model_map
-    assert "Ridge" in model_map
+    assert "GradientBoostingRegressor" in model_map
     assert "RandomForestRegressor" in model_map
 
     for alg_name, m in model_map.items():
-        assert m.status in ["COMPLETED", "TRAINED", "DEPLOYABLE"]
+        assert m.status in ["COMPLETED", "TRAINED", "DEPLOYABLE", "ARTIFACT_VERIFIED"]
         assert m.quick_cv_score is not None
         score = float(m.quick_cv_score)
         # On synthetic linear regression data, R2 should be strongly positive (> 0.5)
@@ -327,19 +327,19 @@ def test_acceptance_check_d_single_algorithm_failure_isolation(db_session):
     split_service = DatasetSplitService(db_session)
     split_service.create_outer_split(dataset.id, locked_test_pct=20, seed=42)
 
-    # Force Ridge to raise an exception during fit by patching Ridge.fit
-    original_ridge_fit = RegressionTrainer.fit
+    # Force GradientBoostingRegressor to raise an exception during fit
+    original_gbr_fit = RegressionTrainer.fit
 
     def faulty_fit(self, X, y):
-        if self.algorithm_name == "Ridge":
-            raise ValueError("Intentional simulated solver crash for Ridge regression")
-        return original_ridge_fit(self, X, y)
+        if self.algorithm_name == "GradientBoostingRegressor":
+            raise ValueError("Intentional simulated solver crash for GradientBoostingRegressor")
+        return original_gbr_fit(self, X, y)
 
     with patch.object(RegressionTrainer, "fit", faulty_fit):
         exp_service = ExperimentService(db_session)
         result = exp_service.run_experiment(
             project_id=project.id,
-            algorithms=["LinearRegression", "Ridge", "RandomForestRegressor"],
+            algorithms=["LinearRegression", "GradientBoostingRegressor", "RandomForestRegressor"],
             folds=3,
             seed=42,
         )
@@ -355,15 +355,15 @@ def test_acceptance_check_d_single_algorithm_failure_isolation(db_session):
     model_map = {m.algorithm_name: m for m in models}
     
     # LinearRegression and RandomForestRegressor succeeded
-    assert model_map["LinearRegression"].status in ["COMPLETED", "TRAINED", "DEPLOYABLE"]
+    assert model_map["LinearRegression"].status in ["COMPLETED", "TRAINED", "DEPLOYABLE", "ARTIFACT_VERIFIED"]
     assert model_map["LinearRegression"].quick_cv_score is not None
-    assert model_map["RandomForestRegressor"].status in ["COMPLETED", "TRAINED", "DEPLOYABLE"]
+    assert model_map["RandomForestRegressor"].status in ["COMPLETED", "TRAINED", "DEPLOYABLE", "ARTIFACT_VERIFIED"]
     assert model_map["RandomForestRegressor"].quick_cv_score is not None
 
-    # Ridge failed gracefully without corrupting others
-    assert model_map["Ridge"].status in ["FAILED", "ARTIFACT_INVALID"]
-    assert model_map["Ridge"].quick_cv_score is None
-    assert "Intentional simulated solver crash" in model_map["Ridge"].error_message
+    # GradientBoostingRegressor failed gracefully without corrupting others
+    assert model_map["GradientBoostingRegressor"].status in ["FAILED", "ARTIFACT_INVALID"]
+    assert model_map["GradientBoostingRegressor"].quick_cv_score is None
+    assert "Intentional simulated solver crash" in model_map["GradientBoostingRegressor"].error_message
 
 
 # =============================================================================

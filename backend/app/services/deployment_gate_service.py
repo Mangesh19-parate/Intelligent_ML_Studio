@@ -9,6 +9,13 @@ from app.models.trained_model import TrainedModel
 from app.models.experiment import Experiment
 from app.models.model_metric import ModelMetric
 from app.models.deployment_gate import DeploymentGate
+from app.config.state_machines import (
+    ModelState,
+    DeploymentState,
+    ExperimentState,
+    validate_deployment_approval_state_legality,
+    InvalidStateTransitionError,
+)
 from app.services.model_registry_service import ModelRegistryService
 
 
@@ -139,6 +146,23 @@ class DeploymentGateService:
                     else:
                         performance_threshold_passed = "PASS" if val >= float(min_val) else "FAIL"
 
+        # 5-Condition Model Eligibility Check & Idempotent ModelState Management
+        model_eligible = bool(
+            locked_test_evaluated
+            and schema_locked
+            and artifact_verified
+            and lineage_complete
+            and (performance_threshold_passed == "PASS")
+        )
+        if model_eligible:
+            model.status = ModelState.DEPLOYABLE.value
+        else:
+            if not artifact_verified and model.artifact_path:
+                model.status = ModelState.ARTIFACT_INVALID.value
+            elif model.status == ModelState.DEPLOYABLE.value:
+                model.status = ModelState.ARTIFACT_VERIFIED.value
+        self.db.add(model)
+
         # 6. Condition: user_approved & Separation of Duties (Four-Eyes Principle per SRS v9 §2)
         # approved_by != trained_models.created_by enforced server-side
         approver_uuid = None
@@ -161,11 +185,7 @@ class DeploymentGateService:
 
         # Overall Gate status: AND of all six substantive conditions
         gate_passed = bool(
-            locked_test_evaluated
-            and schema_locked
-            and artifact_verified
-            and lineage_complete
-            and (performance_threshold_passed == "PASS")
+            model_eligible
             and user_approved
         )
 
@@ -203,9 +223,11 @@ class DeploymentGateService:
 
     def approve(self, model_id: UUID | str, approved_by_user_id: UUID | str) -> DeploymentGate:
         """
-        Re-computes gate checks fresh against the current system state,
-        enforces separation of duties (approved_by != created_by), sets user_approved = true,
-        persists a new DeploymentGate audit row, and returns the record.
+        Re-computes gate checks fresh against current state,
+        enforces separation of duties (approved_by != created_by),
+        validates cross-entity state legality (DeploymentState.GATE_PASSED,
+        ModelState.DEPLOYABLE, ExperimentState.REGISTERED),
+        and records the final approved gate check.
         """
         model = self.db.query(TrainedModel).filter(TrainedModel.id == model_id).first()
         if not model:
@@ -215,6 +237,13 @@ class DeploymentGateService:
             )
 
         experiment = self.db.query(Experiment).filter(Experiment.id == model.experiment_id).first()
+        if not experiment:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Parent experiment not found",
+            )
+
+        # 1. Four-Eyes Principle: Separation of Duties
         creator_id = model.created_by
         if creator_id is None and experiment and experiment.project:
             creator_id = experiment.project.owner_id
@@ -225,6 +254,25 @@ class DeploymentGateService:
                 detail="Self-approval is forbidden: model creator cannot approve their own model for deployment (SRS v9 §2 four-eyes principle).",
             )
 
+        # 2. Re-compute fresh 5-condition model eligibility (updates model.status)
+        self.check_gate(model_id=model.id, user_approved=False)
+        self.db.refresh(model)
+        self.db.refresh(experiment)
+
+        # 3. Cross-entity state legality validation
+        try:
+            validate_deployment_approval_state_legality(
+                deployment_current_state=DeploymentState.GATE_PASSED,
+                model_state=model.status,
+                experiment_state=experiment.status,
+            )
+        except InvalidStateTransitionError as e:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"Deployment approval state legality check failed: {str(e)}",
+            )
+
+        # 4. Final approval gate check persistence
         return self.check_gate(
             model_id=model_id,
             user_approved=True,

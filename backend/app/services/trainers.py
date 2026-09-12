@@ -5,7 +5,7 @@ import pandas as pd
 from sklearn.base import BaseEstimator, TransformerMixin, clone
 from sklearn.pipeline import Pipeline
 from sklearn.compose import ColumnTransformer
-from sklearn.linear_model import LinearRegression, Ridge, LogisticRegression
+from sklearn.linear_model import LinearRegression, LogisticRegression
 from sklearn.ensemble import (
     RandomForestRegressor,
     RandomForestClassifier,
@@ -157,13 +157,6 @@ class RegressionTrainer(BaseModelTrainer):
         "linear_regression": "LinearRegression",
         "LinearRegression": "LinearRegression",
         "Linear Regression": "LinearRegression",
-        "ridge": "Ridge",
-        "ridgeregression": "Ridge",
-        "ridge regression": "Ridge",
-        "ridge_regression": "Ridge",
-        "Ridge": "Ridge",
-        "RidgeRegression": "Ridge",
-        "Ridge Regression": "Ridge",
         "randomforestregressor": "RandomForestRegressor",
         "random forest regressor": "RandomForestRegressor",
         "random_forest_regressor": "RandomForestRegressor",
@@ -182,7 +175,6 @@ class RegressionTrainer(BaseModelTrainer):
 
     SUPPORTED_ALGORITHMS = {
         "LinearRegression": LinearRegression,
-        "Ridge": Ridge,
         "RandomForestRegressor": RandomForestRegressor,
         "GradientBoostingRegressor": GradientBoostingRegressor,
     }
@@ -231,10 +223,7 @@ class RegressionTrainer(BaseModelTrainer):
         cls = self.SUPPORTED_ALGORITHMS[canon_name]
         params = dict(self.hyperparameters)
 
-        if canon_name == "Ridge":
-            if "random_state" not in params and self.random_state is not None:
-                params["random_state"] = self.random_state
-        elif canon_name == "RandomForestRegressor":
+        if canon_name == "RandomForestRegressor":
             if "random_state" not in params and self.random_state is not None:
                 params["random_state"] = self.random_state
             if "n_estimators" not in params:

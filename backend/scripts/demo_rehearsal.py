@@ -172,7 +172,7 @@ def run_demo_rehearsal():
     exp_service = ExperimentService(db)
     exp_res = exp_service.run_experiment(
         project_id=project.id,
-        algorithms=["LinearRegression", "Ridge", "RandomForestRegressor"],
+        algorithms=["LinearRegression", "GradientBoostingRegressor", "RandomForestRegressor"],
         folds=5,
         seed=42,
         selection_metric="rmse",

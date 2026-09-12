@@ -195,7 +195,7 @@ def test_acceptance_check_a_walkthrough_all_derived_stages(db_session: Session):
     trained_model = TrainedModel(
         id=uuid.uuid4(),
         experiment_id=exp.id,
-        algorithm_name="Ridge",
+        algorithm_name="LinearRegression",
         quick_cv_score=0.85,
         status="COMPLETED",
         fit_diagnosis="GOOD_FIT",

@@ -144,7 +144,7 @@ def test_acceptance_check_a_live_capture_and_real_versions(db_session, regressio
 
     res = service.run_experiment(
         project_id=project.id,
-        algorithms=["LinearRegression", "Ridge"],
+        algorithms=["LinearRegression", "RandomForestRegressor"],
         folds=3,
         seed=101,
         selection_metric="rmse",
@@ -197,7 +197,7 @@ def test_acceptance_check_b_artifact_checksum_and_tamper_detection(db_session, r
 
     res = service.run_experiment(
         project_id=project.id,
-        algorithms=["LinearRegression", "Ridge"],
+        algorithms=["LinearRegression", "RandomForestRegressor"],
         folds=3,
         seed=101,
         auto_finalize=True,
@@ -294,7 +294,7 @@ def test_acceptance_check_d_feature_selection_snapshot_matches_full_dev_refit(db
 
     res = service.run_experiment(
         project_id=project.id,
-        algorithms=["LinearRegression", "Ridge"],
+        algorithms=["LinearRegression", "RandomForestRegressor"],
         folds=3,
         seed=101,
         auto_finalize=True,
@@ -430,7 +430,7 @@ def test_lineage_api_endpoint(client, create_test_user, db_session, regression_s
     service = ExperimentService(db_session)
     exp_res = service.run_experiment(
         project_id=project.id,
-        algorithms=["LinearRegression", "Ridge"],
+        algorithms=["LinearRegression", "RandomForestRegressor"],
         folds=3,
         seed=101,
         auto_finalize=True,
@@ -514,7 +514,7 @@ def test_artifact_write_then_commit_lifecycle(db_session, regression_setup):
     # 1. Run experiment without auto-finalize
     res = service.run_experiment(
         project_id=project.id,
-        algorithms=["LinearRegression", "Ridge"],
+        algorithms=["LinearRegression", "RandomForestRegressor"],
         folds=3,
         seed=101,
         auto_finalize=False,

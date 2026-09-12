@@ -3,7 +3,7 @@ Unit Tests for Day 5 Canonical Algorithm Names & BaseModelTrainer / RegressionTr
 
 Verifies:
 1. Canonical algorithm catalog:
-   - Regression: LinearRegression, Ridge, RandomForestRegressor, GradientBoostingRegressor
+   - Regression: LinearRegression, RandomForestRegressor, GradientBoostingRegressor
    - Classification: LogisticRegression, RandomForestClassifier, GradientBoostingClassifier
 2. Strict prohibition and rejection of bare 'RF' anywhere.
 3. Proper canonical resolution across casing and aliases (snake_case, Title Case, etc.).
@@ -15,7 +15,7 @@ Verifies:
 import numpy as np
 import pytest
 from sklearn.pipeline import Pipeline
-from sklearn.linear_model import LinearRegression, Ridge, LogisticRegression
+from sklearn.linear_model import LinearRegression, LogisticRegression
 from sklearn.ensemble import (
     RandomForestRegressor,
     RandomForestClassifier,
@@ -42,11 +42,6 @@ from app.services.trainers import (
         ("linear_regression", "LinearRegression", LinearRegression),
         ("Linear Regression", "LinearRegression", LinearRegression),
         ("linearregression", "LinearRegression", LinearRegression),
-        ("Ridge", "Ridge", Ridge),
-        ("ridge", "Ridge", Ridge),
-        ("ridge_regression", "Ridge", Ridge),
-        ("Ridge Regression", "Ridge", Ridge),
-        ("RidgeRegression", "Ridge", Ridge),
         ("RandomForestRegressor", "RandomForestRegressor", RandomForestRegressor),
         ("random_forest_regressor", "RandomForestRegressor", RandomForestRegressor),
         ("Random Forest Regressor", "RandomForestRegressor", RandomForestRegressor),
@@ -75,7 +70,6 @@ def test_regression_supported_algorithms_list():
         "GradientBoostingRegressor",
         "LinearRegression",
         "RandomForestRegressor",
-        "Ridge",
     ]
 
 
@@ -182,7 +176,7 @@ def test_cross_task_algorithm_rejection():
         ClassificationTrainer("LinearRegression")
 
     with pytest.raises(ValueError, match="Unsupported classification algorithm"):
-        ClassificationTrainer("Ridge")
+        ClassificationTrainer("GradientBoostingRegressor")
 
     with pytest.raises(ValueError, match="Unsupported classification algorithm"):
         ClassificationTrainer("RandomForestRegressor")
@@ -197,7 +191,7 @@ def test_pipeline_generation_freshness():
     Verifies that get_pipeline() returns fresh, unfit Pipeline instances
     combining transformer, selector, and estimator.
     """
-    trainer = RegressionTrainer("Ridge", hyperparameters={"alpha": 2.5}, random_state=123)
+    trainer = RegressionTrainer("LinearRegression", hyperparameters={"fit_intercept": True}, random_state=123)
     pipe1 = trainer.get_pipeline()
     pipe2 = trainer.get_pipeline()
 

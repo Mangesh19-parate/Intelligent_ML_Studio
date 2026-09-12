@@ -97,7 +97,7 @@ def run_demo():
     exp_service = ExperimentService(db)
     result = exp_service.run_experiment(
         project_id=project.id,
-        algorithms=["LinearRegression", "Ridge", "RandomForestRegressor"],
+        algorithms=["LinearRegression", "GradientBoostingRegressor", "RandomForestRegressor"],
         folds=5,
         seed=42,
     )
@@ -142,7 +142,7 @@ def run_demo():
     # Check (e): Determinism
     res_repeat = exp_service.run_experiment(
         project_id=project.id,
-        algorithms=["LinearRegression", "Ridge", "RandomForestRegressor"],
+        algorithms=["LinearRegression", "GradientBoostingRegressor", "RandomForestRegressor"],
         folds=5,
         seed=42,
     )

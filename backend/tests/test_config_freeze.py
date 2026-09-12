@@ -108,7 +108,7 @@ def test_freeze_experiment_config_transitions_created_to_configured(db_session, 
     frozen_exp = service.freeze_experiment_config(
         experiment_id=exp.id,
         config_override={
-            "algorithms": ["LinearRegression", "Ridge"],
+            "algorithms": ["LinearRegression", "RandomForestRegressor"],
             "folds": 5,
             "seed": 1234,
             "selection_metric": "rmse",
@@ -120,7 +120,7 @@ def test_freeze_experiment_config_transitions_created_to_configured(db_session, 
     assert frozen_exp.experiment_config is not None
     assert frozen_exp.experiment_config["task_type"] == "REGRESSION"
     assert frozen_exp.experiment_config["target"] == "target_val"
-    assert frozen_exp.experiment_config["algorithms"] == ["LinearRegression", "Ridge"]
+    assert frozen_exp.experiment_config["algorithms"] == ["LinearRegression", "RandomForestRegressor"]
     assert frozen_exp.experiment_config["cv"]["folds"] == 5
     assert frozen_exp.experiment_config["deployment_threshold"]["min_value"] == 0.5
     assert frozen_exp.deployment_threshold_frozen_at_creation is True
@@ -235,7 +235,7 @@ def test_configured_experiment_can_start_training(db_session, freeze_test_setup)
         status=ExperimentState.CREATED.value,
     )
 
-    service.freeze_experiment_config(exp.id, config_override={"algorithms": ["Ridge"]})
+    service.freeze_experiment_config(exp.id, config_override={"algorithms": ["RandomForestRegressor"]})
     db_session.refresh(exp)
     assert exp.status == ExperimentState.CONFIGURED.value
     original_config = dict(exp.experiment_config)

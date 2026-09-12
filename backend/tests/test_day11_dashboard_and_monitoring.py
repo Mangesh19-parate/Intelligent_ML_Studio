@@ -25,6 +25,7 @@ from app.models.model_metric import ModelMetric
 from app.models.deployment import Deployment
 from app.models.deployment_gate import DeploymentGate
 from app.models.prediction_log import PredictionLog
+from app.config.state_machines import DeploymentState
 from app.services.dataset_service import DatasetService
 from app.services.dataset_split_service import DatasetSplitService
 from app.services.data_profiling_service import DataProfilingService
@@ -251,7 +252,7 @@ def test_acceptance_check_a_walkthrough_all_derived_stages(db_session: Session):
         id=uuid.uuid4(),
         model_id=trained_model.id,
         endpoint_path=f"/models/{trained_model.id}/predict",
-        status="LIVE",
+        status=DeploymentState.DEPLOYED.value,
     )
     db_session.add(deployment)
     db_session.commit()
@@ -319,7 +320,7 @@ def test_acceptance_check_c_error_rate_separation(db_session: Session):
         id=dep_id,
         model_id=uuid.uuid4(),
         endpoint_path=f"/models/{dep_id}/predict",
-        status="LIVE",
+        status=DeploymentState.DEPLOYED.value,
     )
     db_session.add(deployment)
 
@@ -373,7 +374,7 @@ def test_acceptance_check_d_latency_summary_decoupled_profiles(db_session: Sessi
         id=dep_id,
         model_id=uuid.uuid4(),
         endpoint_path=f"/models/{dep_id}/predict",
-        status="LIVE",
+        status=DeploymentState.DEPLOYED.value,
     )
     db_session.add(deployment)
 

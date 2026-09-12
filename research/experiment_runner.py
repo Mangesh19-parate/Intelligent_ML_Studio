@@ -128,76 +128,82 @@ class ExperimentRunner:
                 cv = KFold(n_splits=self.n_splits, shuffle=True, random_state=run_seed)
                 splits = list(cv.split(X_dev))
 
-            if is_stability_method:
-                # -------------------------------------------------------------
-                # Method B (RANK_AGGREGATION_STABILITY): Two-Pass Procedure
-                # Pass 1: Run rank aggregation on each fold's training slice
-                # -------------------------------------------------------------
-                fold_ens_scores = []
-                fold_pass1_selected = []
+            for fold_idx, (train_idx, val_idx) in enumerate(splits):
+                start_time = time.perf_counter()
+                fold_seed = run_seed + fold_idx * 10
 
-                for fold_idx, (train_idx, _) in enumerate(splits):
-                    fold_seed = run_seed + fold_idx * 10
-                    X_tr = X_dev.iloc[train_idx]
-                    y_tr = y_dev.iloc[train_idx]
+                X_train_fold = X_dev.iloc[train_idx]
+                y_train_fold = y_dev.iloc[train_idx]
+                X_val_fold = X_dev.iloc[val_idx]
+                y_val_fold = y_dev.iloc[val_idx]
 
-                    _, _, rank_scores = rank_aggregation_ensemble(
-                        X_tr, y_tr, task_type, seed=fold_seed
+                if is_stability_method:
+                    # -------------------------------------------------------------
+                    # Method B (RANK_AGGREGATION_STABILITY): Strict Nested CV
+                    # Inner CV strictly executed on X_train_fold ONLY (zero val leakage)
+                    # -------------------------------------------------------------
+                    inner_splits_count = min(3, len(X_train_fold))
+                    if task_type == "CLASSIFICATION":
+                        inner_cv = StratifiedKFold(n_splits=inner_splits_count, shuffle=True, random_state=fold_seed + 1)
+                        inner_splits = list(inner_cv.split(X_train_fold, y_train_fold))
+                    else:
+                        inner_cv = KFold(n_splits=inner_splits_count, shuffle=True, random_state=fold_seed + 1)
+                        inner_splits = list(inner_cv.split(X_train_fold))
+
+                    inner_subsets = []
+                    for in_idx, (in_tr_idx, _) in enumerate(inner_splits):
+                        X_in_tr = X_train_fold.iloc[in_tr_idx]
+                        y_in_tr = y_train_fold.iloc[in_tr_idx]
+                        _, _, in_ranks = rank_aggregation_ensemble(
+                            X_in_tr, y_in_tr, task_type, seed=fold_seed + 100 + in_idx
+                        )
+                        in_sorted = np.argsort(-in_ranks, kind="stable")
+                        inner_subsets.append([feature_names[i] for i in in_sorted[:k]])
+
+                    inner_stab_dict = StabilityScorer.compute_stability_from_subsets(
+                        inner_subsets, feature_names
                     )
-                    sorted_idx = np.argsort(-rank_scores, kind="stable")
-                    top_k_feats = [feature_names[i] for i in sorted_idx[:k]]
+                    stab_vector = np.array([inner_stab_dict[f] for f in feature_names], dtype=np.float64)
 
-                    fold_ens_scores.append(rank_scores)
-                    fold_pass1_selected.append(top_k_feats)
-
-                # Compute feature stability across the SAME run's folds
-                stab_dict = StabilityScorer.compute_stability_from_subsets(
-                    fold_pass1_selected, feature_names
-                )
-                stab_vector = np.array([stab_dict[f] for f in feature_names], dtype=np.float64)
-
-                # -------------------------------------------------------------
-                # Pass 2: Reweight fold ensemble scores with stability
-                # -------------------------------------------------------------
-                for fold_idx, (train_idx, val_idx) in enumerate(splits):
-                    start_time = time.perf_counter()
-                    fold_seed = run_seed + fold_idx * 10
-
-                    X_train_fold = X_dev.iloc[train_idx]
-                    y_train_fold = y_dev.iloc[train_idx]
-                    X_val_fold = X_dev.iloc[val_idx]
-                    y_val_fold = y_dev.iloc[val_idx]
+                    # Compute base ensemble scores on X_train_fold
+                    _, _, ens_scores = rank_aggregation_ensemble(
+                        X_train_fold, y_train_fold, task_type, seed=fold_seed
+                    )
 
                     # FinalScore_j = alpha * EnsembleScore_j + (1 - alpha) * Stability_j
-                    ens_scores = fold_ens_scores[fold_idx]
                     final_scores = self.alpha * ens_scores + (1.0 - self.alpha) * stab_vector
                     _, final_rank_scores = FeatureSelectionService.calculate_technique_rank_scores(final_scores)
 
                     sorted_idx = np.argsort(-final_rank_scores, kind="stable")
                     selected_cols = [feature_names[i] for i in sorted_idx[:k]]
-
-                    # Filter and scale
-                    X_tr_sel = X_train_fold[selected_cols].to_numpy(dtype=np.float64)
-                    X_val_sel = X_val_fold[selected_cols].to_numpy(dtype=np.float64)
-
-                    scaler = StandardScaler()
-                    X_tr_scaled = scaler.fit_transform(X_tr_sel)
-                    X_val_scaled = scaler.transform(X_val_sel)
-
-                    # Downstream model fitting and evaluation
-                    model = self._get_downstream_model(task_type, fold_seed)
-                    model.fit(X_tr_scaled, y_train_fold)
-
-                    y_pred = model.predict(X_val_scaled)
-                    y_proba = model.predict_proba(X_val_scaled) if hasattr(model, "predict_proba") else None
-
-                    metric_name, metric_val = self._evaluate_predictions(
-                        y_val_fold, y_pred, y_proba, task_type
+                else:
+                    # Standard baseline / Experiment A selection on X_train_fold
+                    selected_cols, _ = select_features(
+                        X_train_fold, y_train_fold, self.method_name, task_type, k=k, seed=fold_seed
                     )
-                    elapsed_sec = time.perf_counter() - start_time
 
-                    rec = {
-                        "dataset": self.dataset_name,
+                # Filter and scale
+                X_tr_sel = X_train_fold[selected_cols].to_numpy(dtype=np.float64)
+                X_val_sel = X_val_fold[selected_cols].to_numpy(dtype=np.float64)
+
+                scaler = StandardScaler()
+                X_tr_scaled = scaler.fit_transform(X_tr_sel)
+                X_val_scaled = scaler.transform(X_val_sel)
+
+                # Downstream model fitting and evaluation
+                model = self._get_downstream_model(task_type, fold_seed)
+                model.fit(X_tr_scaled, y_train_fold)
+
+                y_pred = model.predict(X_val_scaled)
+                y_proba = model.predict_proba(X_val_scaled) if hasattr(model, "predict_proba") else None
+
+                metric_name, metric_val = self._evaluate_predictions(
+                    y_val_fold, y_pred, y_proba, task_type
+                )
+                elapsed_sec = time.perf_counter() - start_time
+
+                rec = {
+                    "dataset": self.dataset_name,
                         "method": self.method_name,
                         "run_index": run_idx,
                         "fold_index": fold_idx,

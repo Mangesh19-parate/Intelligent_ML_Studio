@@ -270,6 +270,10 @@ class ExperimentService:
             },
             "feature_selection": {
                 "method": "rank_aggregation_ensemble",
+                "selection_rule": "TOP_K_PERCENT",
+                "selection_percentage": 0.25,
+                "k_min": 5,
+                "k_max": 50,
             },
             "threshold_selection": {
                 "objective": "F1",
@@ -832,6 +836,10 @@ class ExperimentService:
                 },
                 "feature_selection": {
                     "method": "rank_aggregation_ensemble",
+                    "selection_rule": "TOP_K_PERCENT",
+                    "selection_percentage": 0.25,
+                    "k_min": 5,
+                    "k_max": 50,
                 },
                 "threshold_selection": {
                     "objective": "F1",
@@ -1042,15 +1050,17 @@ class ExperimentService:
                     fold_feature_names, technique_results
                 )
 
-                if threshold > 0.0:
-                    fold_selected = [
-                        feat for feat, sc in fold_ensemble.items() if sc >= threshold
-                    ]
-                    if not fold_selected:
-                        top_col = max(fold_ensemble.items(), key=lambda x: x[1])[0]
-                        fold_selected = [top_col]
-                else:
-                    fold_selected = self.fs_service.select_top_k_features(fold_ensemble)
+                fs_cfg = (
+                    experiment.experiment_config.get("feature_selection", {})
+                    if experiment and experiment.experiment_config
+                    else {}
+                )
+                fold_selected = self.fs_service.select_top_k_features(
+                    fold_ensemble,
+                    alpha=fs_cfg.get("selection_percentage", 0.25),
+                    k_min=fs_cfg.get("k_min", 5),
+                    k_max=fs_cfg.get("k_max", 50),
+                )
 
                 # Persist fold feature selection results (ONCE per fold)
                 self.exp_repo.add_fold_result(

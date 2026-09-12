@@ -42,7 +42,7 @@ class Deployment(Base):
 
     __table_args__ = (
         CheckConstraint(
-            "status IN ('CREATED', 'GATE_PENDING', 'GATE_PASSED', 'GATE_BLOCKED', 'APPROVED', 'DEPLOYED', 'PAUSED', 'RETIRED', 'LIVE')",
+            "status IN ('CREATED', 'GATE_PENDING', 'GATE_PASSED', 'GATE_BLOCKED', 'APPROVED', 'DEPLOYED', 'PAUSED', 'RETIRED')",
             name="chk_deployment_status"
         ),
     )

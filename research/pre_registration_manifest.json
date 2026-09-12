@@ -98,8 +98,7 @@
     "total_evaluations": 1280,
     "base_seed": 1000,
     "reference_model": "RandomForest",
-    "alpha": 0.5,
-    "alpha_default": 0.7
+    "alpha": 0.7
   },
   "anti_leakage_invariants": [
     "Development vs Locked Test outer split occurs strictly before any modeling or selection.",

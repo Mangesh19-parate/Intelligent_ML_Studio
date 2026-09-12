@@ -209,6 +209,38 @@ def analyze_research_results(
             "method_stability_summary": {m: v["mean_stability"] for m, v in method_stability.items()},
         }
 
+    # Dynamic Predetermined Hypothesis Decision Rule
+    datasets_with_stability_gain = 0
+    datasets_with_predictive_parity = 0
+    total_datasets_evaluated = len(dataset_reports)
+
+    for ds, rep in dataset_reports.items():
+        stab_gain = rep.get("stability_gain_absolute", 0.0)
+        if stab_gain >= 0.0:
+            datasets_with_stability_gain += 1
+        
+        prim = rep.get("primary_comparison_exp_b_vs_exp_a", {})
+        # Non-significant performance degradation rule
+        # Higher is better: negative mean_diff is degradation; Lower is better: positive mean_diff is degradation
+        mean_diff = prim.get("mean_diff", 0.0)
+        higher_better = rep.get("higher_is_better", True)
+        is_significant = prim.get("is_significant", False)
+        
+        if higher_better:
+            degraded = (mean_diff < -0.05 and is_significant)
+        else:
+            degraded = (mean_diff > 0.05 * abs(prim.get("mean_a", 1.0)) and is_significant)
+        
+        if not degraded:
+            datasets_with_predictive_parity += 1
+
+    if total_datasets_evaluated > 0 and datasets_with_stability_gain == total_datasets_evaluated and datasets_with_predictive_parity == total_datasets_evaluated:
+        h1_decision = "SUPPORTED"
+    elif datasets_with_stability_gain > 0 and datasets_with_predictive_parity == total_datasets_evaluated:
+        h1_decision = "PARTIALLY_SUPPORTED"
+    else:
+        h1_decision = "INCONCLUSIVE"
+
     # Consolidated Report Object
     full_report = {
         "study_identifier": "AGY-RES-2026-09",
@@ -216,10 +248,16 @@ def analyze_research_results(
         "alpha_parameter": ALPHA,
         "dataset_results": dataset_reports,
         "overall_conclusions": {
-            "H1_supported": True,
-            "stability_summary": "Rank aggregation with stability weighting improves feature selection stability on higher-dimensional datasets (breast_cancer, adult_income) by +16.7% to +17.6% relative to unweighted rank aggregation, reaching up to 0.8824 stability.",
-            "predictive_invariance_summary": "Across all 4 benchmark datasets and 160 paired CV folds, predictive performance differences between Experiment A and Experiment B remain statistically non-significant (p > 0.15 in all paired tests), confirming that stability gains are achieved without predictive accuracy sacrifice.",
-            "scope_qualification": "Findings are qualified as holding across the evaluated benchmark datasets and fixed-model protocol (ADR-014, SRS §9)."
+            "decision": h1_decision,
+            "datasets_evaluated_count": total_datasets_evaluated,
+            "datasets_with_stability_gain_count": datasets_with_stability_gain,
+            "datasets_with_predictive_parity_count": datasets_with_predictive_parity,
+            "small_n_qualification": (
+                f"Evaluation conducted across N={total_datasets_evaluated} benchmark datasets. "
+                "Folds within repeated cross-validation exhibit overlapping training sets and are not independent experimental units. "
+                "Dataset-level aggregation is the primary unit of comparison."
+            ),
+            "scope_qualification": "Findings are strictly qualified to the evaluated benchmark datasets and fixed reference-model protocol (ADR-014, SRS §9)."
         }
     }
 

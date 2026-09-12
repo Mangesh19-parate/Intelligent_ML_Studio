@@ -185,12 +185,36 @@ class PhasedStabilityRunner:
                 X_tr, X_val = X_dev.iloc[train_idx], X_dev.iloc[val_idx]
                 y_tr, y_val = y_dev.iloc[train_idx], y_dev.iloc[val_idx]
 
-                # Select features on this training fold slice using Phase 2 stability
+                # Nested Inner CV: Estimate stability strictly from X_tr (zero val leakage)
+                inner_splits_count = min(3, len(X_tr))
+                if norm_task == "CLASSIFICATION":
+                    inner_cv = StratifiedKFold(n_splits=inner_splits_count, shuffle=True, random_state=rep_seed + 1)
+                    inner_splits = list(inner_cv.split(X_tr, y_tr))
+                else:
+                    inner_cv = KFold(n_splits=inner_splits_count, shuffle=True, random_state=rep_seed + 1)
+                    inner_splits = list(inner_cv.split(X_tr))
+
+                inner_subsets = []
+                for in_idx, (in_tr_idx, _) in enumerate(inner_splits):
+                    X_in_tr = X_tr.iloc[in_tr_idx]
+                    y_in_tr = y_tr.iloc[in_tr_idx]
+                    _, _, in_ranks = rank_aggregation_ensemble(
+                        X_in_tr, y_in_tr, norm_task, seed=rep_seed + 100 + in_idx
+                    )
+                    in_sorted = np.argsort(-in_ranks, kind="stable")
+                    inner_subsets.append([feature_names[i] for i in in_sorted[:k]])
+
+                inner_stab_dict = StabilityScorer.compute_stability_from_subsets(
+                    inner_subsets, feature_names
+                )
+                inner_stab_vec = np.array([inner_stab_dict[f] for f in feature_names], dtype=np.float64)
+
+                # Select features on this training fold slice using inner stability
                 _, _, fold_base_scores = rank_aggregation_ensemble(
                     X_tr, y_tr, norm_task, seed=rep_seed
                 )
                 fold_final_scores = (
-                    self.alpha * fold_base_scores + (1.0 - self.alpha) * stability_vec
+                    self.alpha * fold_base_scores + (1.0 - self.alpha) * inner_stab_vec
                 )
                 fold_sorted_idx = np.argsort(-fold_final_scores, kind="stable")
                 fold_selected_feats = [feature_names[i] for i in fold_sorted_idx[:k]]

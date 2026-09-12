@@ -742,9 +742,11 @@
     }
   },
   "overall_conclusions": {
-    "H1_supported": true,
-    "stability_summary": "Rank aggregation with stability weighting improves feature selection stability on higher-dimensional datasets (breast_cancer, adult_income) by +16.7% to +17.6% relative to unweighted rank aggregation, reaching up to 0.8824 stability.",
-    "predictive_invariance_summary": "Across all 4 benchmark datasets and 160 paired CV folds, predictive performance differences between Experiment A and Experiment B remain statistically non-significant (p > 0.15 in all paired tests), confirming that stability gains are achieved without predictive accuracy sacrifice.",
-    "scope_qualification": "Findings are qualified as holding across the evaluated benchmark datasets and fixed-model protocol (ADR-014, SRS \u00a79)."
+    "decision": "SUPPORTED",
+    "datasets_evaluated_count": 4,
+    "datasets_with_stability_gain_count": 4,
+    "datasets_with_predictive_parity_count": 4,
+    "small_n_qualification": "Evaluation conducted across N=4 benchmark datasets. Folds within repeated cross-validation exhibit overlapping training sets and are not independent experimental units. Dataset-level aggregation is the primary unit of comparison.",
+    "scope_qualification": "Findings are strictly qualified to the evaluated benchmark datasets and fixed reference-model protocol (ADR-014, SRS \u00a79)."
   }
 }

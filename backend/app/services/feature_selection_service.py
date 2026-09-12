@@ -205,7 +205,24 @@ class FeatureSelectionService:
             return input_columns
 
     @staticmethod
+    def resolve_top_k(
+        p: int,
+        selection_percentage: float = 0.25,
+        k_min: int = 5,
+        k_max: int = 50,
+    ) -> int:
+        """
+        Calculates authoritative K from feature count P per ADR / SRS §2.7:
+        K = max(min(k_min, p), min(k_max, max(1, ceil(selection_percentage * p))))
+        """
+        if p <= 0:
+            return 0
+        target_k = int(np.ceil(selection_percentage * p))
+        return max(min(k_min, p), min(k_max, max(1, target_k)))
+
+    @classmethod
     def select_top_k_features(
+        cls,
         ensemble_scores: dict[str, float],
         alpha: float = 0.25,
         k_min: int = 5,
@@ -213,21 +230,19 @@ class FeatureSelectionService:
     ) -> list[str]:
         """
         Authoritative Top-K Percent Selection Rule (§2.7, §8).
-        Calculates k = max(min(k_min, N), min(k_max, max(1, ceil(alpha * N))))
-        and returns the top-k features ordered by ensemble score descending.
+        Calculates K = resolve_top_k(len(ensemble_scores), alpha, k_min, k_max)
+        and returns the top-K features ordered by ensemble score descending with deterministic tie-breaking (column name ascending).
         """
         if not ensemble_scores:
             return []
         
         n_features = len(ensemble_scores)
-        target_k = int(np.ceil(alpha * n_features))
-        k = max(min(k_min, n_features), min(k_max, max(1, target_k)))
+        k = cls.resolve_top_k(n_features, selection_percentage=alpha, k_min=k_min, k_max=k_max)
         
-        # Sort descending by score, deterministic tie-breaking by column name
+        # Sort descending by score, deterministic tie-breaking ascending by column name
         sorted_feats = sorted(
             ensemble_scores.items(),
-            key=lambda item: (item[1], item[0]),
-            reverse=True,
+            key=lambda item: (-float(item[1]), str(item[0])),
         )
         return [feat for feat, _ in sorted_feats[:k]]
 
@@ -480,15 +495,7 @@ class FeatureSelectionService:
                     # Insufficient evidence (< 2 applied methods): no feature subset returned
                     fold_selected = []
                 else:
-                    if threshold > 0.0:
-                        fold_selected = [
-                            feat for feat, sc in fold_ensemble.items() if sc >= threshold
-                        ]
-                        if not fold_selected:
-                            top_col = max(fold_ensemble.items(), key=lambda x: x[1])[0]
-                            fold_selected = [top_col]
-                    else:
-                        fold_selected = self.select_top_k_features(fold_ensemble)
+                    fold_selected = self.select_top_k_features(fold_ensemble)
 
                 # Persist fold record
                 self.exp_repo.add_fold_result(
@@ -510,14 +517,11 @@ class FeatureSelectionService:
             importance_items = self.importance_repo.upsert_scores(
                 project.id, overall_scores, default_selected=True
             )
-            # Apply initial threshold/top-k filtering
-            if threshold > 0.0:
-                self.importance_repo.update_selection(project.id, threshold=threshold)
-            else:
-                top_k_cols = set(self.select_top_k_features(overall_scores))
-                for item in self.importance_repo.get_by_project(project.id):
-                    item.is_selected = item.column_name in top_k_cols
-                self.db.commit()
+            # Apply authoritative top-k filtering
+            top_k_cols = set(self.select_top_k_features(overall_scores))
+            for item in self.importance_repo.get_by_project(project.id):
+                item.is_selected = item.column_name in top_k_cols
+            self.db.commit()
 
             # 7. Create FeatureSelectionSnapshot & Finalize Experiment
             final_selected = [

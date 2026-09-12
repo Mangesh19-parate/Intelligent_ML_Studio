@@ -14,6 +14,7 @@ import { DiagnosticsStage } from './pages/DiagnosticsStage';
 import { TransformationStage } from './pages/TransformationStage';
 import { ProductionStage } from './pages/ProductionStage';
 import { AdminConsole } from './pages/AdminConsole';
+import { NotFound } from './pages/NotFound';
 
 const ProtectedRoute = ({ children, requiredRole }) => {
   const { user, loading } = useAuth();
@@ -339,9 +340,11 @@ export default function App() {
             }
           />
 
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          {/* Catch-all Branded 404 Route */}
+          <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>
   );
 }
+

@@ -33,7 +33,21 @@ import {
   ChevronDown,
   Sparkle,
   Radio,
+  RotateCcw,
+  Download,
+  Target,
+  Split,
+  History,
+  Binary,
+  Clock,
+  Gauge,
+  GitBranch,
+  HelpCircle,
+  Sliders,
+  Flame,
+  Shuffle,
 } from 'lucide-react';
+
 
 export const AppLayout = ({ children }) => {
   const { user, logout, darkMode, toggleDarkMode } = useAuth();
@@ -41,6 +55,17 @@ export const AppLayout = ({ children }) => {
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsedSections, setCollapsedSections] = useState({});
+
+  // Close mobile drawer on Escape key
+  React.useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && mobileOpen) {
+        setMobileOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [mobileOpen]);
 
   const handleLogout = () => {
     logout();
@@ -58,66 +83,84 @@ export const AppLayout = ({ children }) => {
     user?.permissions ||
     (user?.role?.permissions ? user.role.permissions.map((p) => (typeof p === 'string' ? p : p.permission_key)) : [])
   );
-  const roleName = user?.role?.role_name || (typeof user?.role === 'string' ? user?.role : 'VIEWER');
-  const isAdmin = roleName === 'ADMIN';
+  // Identity Roles strictly: ADMIN or USER per Roles.md specification
+  const roleName = user?.role?.role_name === 'ADMIN' || user?.role === 'ADMIN' ? 'ADMIN' : 'USER';
+  const isAdmin = roleName === 'ADMIN' || userPerms.has('MANAGE_USERS');
 
-  // Navigation Structure matching the 8-stage enterprise ML workflow
+  // Navigation Structure matching the 8 requested modular ML studio sections
   const NAV_SECTIONS = [
     {
       title: 'Workspace',
       tag: '01',
       items: [
         { name: 'Project Overview', path: '/dashboard', icon: LayoutDashboard },
-        { name: 'My Projects', path: '/workspace', icon: FolderKanban },
+        { name: 'My projects', path: '/workspace', icon: FolderKanban },
       ],
     },
     {
-      title: 'Data Ingestion',
+      title: 'Data',
       tag: '02',
       items: [
-        { name: 'Upload Data', path: '/data/upload', icon: Upload },
-        { name: 'Dataset Catalog', path: '/data/datasets', icon: Database },
-        { name: 'Data Profiling', path: '/data/profiling', icon: BarChart3 },
-        { name: 'Cleaning & Prep', path: '/data/cleaning', icon: SlidersHorizontal },
+        { name: 'Upload', path: '/data/upload', icon: Upload },
+        { name: 'Data Manager', path: '/data/datasets', icon: Database },
+        { name: 'Profiling', path: '/data/profiling', icon: BarChart3 },
       ],
     },
     {
-      title: 'Analysis & Features',
+      title: 'Data Analysis',
       tag: '03',
       items: [
-        { name: 'Feature Engineering', path: '/analysis/feature-engineering', icon: Workflow },
-        { name: 'Exploratory EDA', path: '/analysis/eda', icon: Search },
-        { name: 'Outlier Detection', path: '/analysis/outliers', icon: AlertCircle },
-        { name: 'Missing Imputation', path: '/analysis/imputation', icon: Sparkles },
-        { name: 'Feature Selection', path: '/analysis/feature-selection', icon: SlidersHorizontal },
+        { name: 'Data Cleaning', path: '/data/cleaning', icon: SlidersHorizontal },
+        { name: 'EDA', path: '/analysis/eda', icon: Search },
       ],
     },
     {
-      title: 'Intelligence & Diagnostics',
+      title: 'Feature Transformation',
       tag: '04',
       items: [
-        { name: 'System Diagnostics', path: '/intelligence/diagnostics', icon: Stethoscope },
-        { name: 'Remediation Advice', path: '/intelligence/recommendations', icon: Lightbulb },
-        { name: 'Model Explainability', path: '/intelligence/explainability', icon: BrainCircuit },
+        { name: 'Missing Value', path: '/analysis/imputation', icon: Sparkles },
+        { name: 'Handling Categorical', path: '/transformations', icon: Binary },
+        { name: 'Handling Mixed Variable', path: '/transformations', icon: Shuffle },
+        { name: 'Handling Date & Time', path: '/transformations', icon: Clock },
+        { name: 'Outlier Detection', path: '/analysis/outliers', icon: AlertCircle },
+        { name: 'Feature Scaling', path: '/transformations', icon: Gauge },
+      ],
+    },
+    {
+      title: 'Feature Engineering',
+      tag: '05',
+      items: [
+        { name: 'Feature Construction', path: '/feature-engineering', icon: Boxes },
+        { name: 'Feature Selection', path: '/analysis/feature-selection', icon: Sliders },
+        { name: 'Feature Extraction', path: '/analysis/feature-engineering', icon: Layers },
+      ],
+    },
+    {
+      title: 'Intelligence',
+      tag: '06',
+      items: [
+        { name: 'Diagnostics', path: '/intelligence/diagnostics', icon: Stethoscope },
+        { name: 'Recommendation', path: '/intelligence/recommendations', icon: Lightbulb },
+        { name: 'Explainability', path: '/intelligence/explainability', icon: BrainCircuit },
       ],
     },
     {
       title: 'Machine Learning',
-      tag: '05',
+      tag: '07',
       items: [
-        { name: 'Model Training', path: '/ml/training', icon: Cpu },
-        { name: 'Experiment Runs', path: '/ml/experiments', icon: FlaskConical },
-        { name: 'Evaluation Matrix', path: '/ml/evaluation', icon: Trophy },
-        { name: 'Model Registry', path: '/ml/registry', icon: Boxes },
+        { name: 'Training', path: '/ml/training', icon: Cpu },
+        { name: 'Experiments', path: '/ml/experiments', icon: FlaskConical },
+        { name: 'Evaluation', path: '/ml/evaluation', icon: Trophy },
+        { name: 'Registry', path: '/ml/registry', icon: GitBranch },
       ],
     },
     {
-      title: 'Production & Serving',
-      tag: '06',
+      title: 'Production',
+      tag: '08',
       items: [
-        { name: 'Gate Validation', path: '/validation', icon: ShieldCheck },
-        { name: 'Prediction Engine', path: '/production/predictions', icon: Zap },
-        { name: 'Deployment Drift', path: '/production/monitoring', icon: Activity },
+        { name: 'Pipeline Validation', path: '/validation', icon: ShieldCheck },
+        { name: 'Prediction API', path: '/production/predictions', icon: Zap },
+        { name: 'Monitoring', path: '/production/monitoring', icon: Activity },
       ],
     },
   ];
@@ -126,31 +169,35 @@ export const AppLayout = ({ children }) => {
     return location.search ? `${basePath}${location.search}` : basePath;
   };
 
-  const isItemActive = (itemPath) => {
+  const isItemActive = (itemPath, itemName) => {
     const currentPath = location.pathname;
-    if (itemPath === '/dashboard' && (currentPath === '/' || currentPath === '/dashboard')) return true;
-    if (itemPath === '/workspace' && (currentPath === '/workspace' || currentPath === '/projects')) return true;
-    if (itemPath === '/data/upload' && currentPath === '/data/upload') return true;
-    if (itemPath === '/data/datasets' && (currentPath === '/data/datasets' || currentPath === '/data')) return true;
-    if (itemPath === '/data/profiling' && (currentPath === '/data/profiling' || currentPath === '/data-analysis')) return true;
-    if (itemPath === '/data/cleaning' && (currentPath === '/data/cleaning' || currentPath === '/transformations')) return true;
-    if (itemPath === '/analysis/feature-engineering' && (currentPath === '/analysis/feature-engineering' || currentPath === '/feature-engineering')) return true;
-    if (itemPath === '/analysis/eda' && currentPath === '/analysis/eda') return true;
-    if (itemPath === '/analysis/outliers' && currentPath === '/analysis/outliers') return true;
-    if (itemPath === '/analysis/imputation' && currentPath === '/analysis/imputation') return true;
-    if (itemPath === '/analysis/feature-selection' && currentPath === '/analysis/feature-selection') return true;
-    if (itemPath === '/intelligence/diagnostics' && (currentPath === '/intelligence/diagnostics' || currentPath === '/diagnostics')) return true;
-    if (itemPath === '/intelligence/recommendations' && currentPath === '/intelligence/recommendations') return true;
-    if (itemPath === '/intelligence/explainability' && currentPath === '/intelligence/explainability') return true;
-    if (itemPath === '/ml/training' && (currentPath === '/ml/training' || currentPath === '/machine-learning')) return true;
-    if (itemPath === '/ml/experiments' && currentPath === '/ml/experiments') return true;
-    if (itemPath === '/ml/evaluation' && (currentPath === '/ml/evaluation' || currentPath === '/leaderboard')) return true;
-    if (itemPath === '/ml/registry' && currentPath === '/ml/registry') return true;
-    if (itemPath === '/validation' && (currentPath === '/validation' || currentPath === '/production')) return true;
-    if (itemPath === '/production/predictions' && currentPath === '/production/predictions') return true;
-    if (itemPath === '/production/monitoring' && (currentPath === '/production/monitoring' || currentPath === '/monitoring')) return true;
+    if (itemName === 'Project Overview' && (currentPath === '/' || currentPath === '/dashboard')) return true;
+    if (itemName === 'My projects' && (currentPath === '/workspace' || currentPath === '/projects')) return true;
+    if (itemName === 'Upload' && currentPath === '/data/upload') return true;
+    if (itemName === 'Data Manager' && (currentPath === '/data/datasets' || currentPath === '/data')) return true;
+    if (itemName === 'Profiling' && currentPath === '/data/profiling') return true;
+    if (itemName === 'Data Cleaning' && currentPath === '/data/cleaning') return true;
+    if (itemName === 'EDA' && (currentPath === '/analysis/eda' || currentPath === '/data-analysis')) return true;
+    if (itemName === 'Missing Value' && currentPath === '/analysis/imputation') return true;
+    if (['Handling Categorical', 'Handling Mixed Variable', 'Handling Date & Time', 'Feature Scaling'].includes(itemName) && currentPath === '/transformations') return true;
+    if (itemName === 'Outlier Detection' && currentPath === '/analysis/outliers') return true;
+    if (itemName === 'Feature Construction' && currentPath === '/feature-engineering') return true;
+    if (itemName === 'Feature Selection' && currentPath === '/analysis/feature-selection') return true;
+    if (itemName === 'Feature Extraction' && currentPath === '/analysis/feature-engineering') return true;
+    if (itemName === 'Diagnostics' && (currentPath === '/intelligence/diagnostics' || currentPath === '/diagnostics')) return true;
+    if (itemName === 'Recommendation' && currentPath === '/intelligence/recommendations') return true;
+    if (itemName === 'Explainability' && currentPath === '/intelligence/explainability') return true;
+    if (itemName === 'Training' && (currentPath === '/ml/training' || currentPath === '/machine-learning')) return true;
+    if (itemName === 'Experiments' && currentPath === '/ml/experiments') return true;
+    if (itemName === 'Evaluation' && (currentPath === '/ml/evaluation' || currentPath === '/leaderboard')) return true;
+    if (itemName === 'Registry' && currentPath === '/ml/registry') return true;
+    if (itemName === 'Pipeline Validation' && (currentPath === '/validation' || currentPath === '/production')) return true;
+    if (itemName === 'Prediction API' && currentPath === '/production/predictions') return true;
+    if (itemName === 'Monitoring' && (currentPath === '/production/monitoring' || currentPath === '/monitoring')) return true;
     return currentPath === itemPath;
   };
+
+
 
   const sidebarContent = (
     <div className="flex flex-col h-full select-none bg-[var(--color-surface)]">
@@ -207,15 +254,16 @@ export const AppLayout = ({ children }) => {
                 type="button"
                 onClick={() => toggleSection(section.title)}
                 className="w-full flex items-center justify-between px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)]/80 hover:text-[var(--color-text)] transition-colors group cursor-pointer"
+                title={section.subtitle}
               >
-                <div className="flex items-center space-x-1.5">
+                <div className="flex items-center space-x-1.5 min-w-0">
                   <span className="text-[9px] font-mono text-[var(--color-text-muted)]/50 group-hover:text-[var(--color-accent)] transition-colors">
                     {section.tag}
                   </span>
-                  <span>{section.title}</span>
+                  <span className="truncate">{section.title}</span>
                 </div>
                 <ChevronDown
-                  className={`w-3 h-3 text-[var(--color-text-muted)]/50 group-hover:text-[var(--color-text)] transition-transform duration-200 ${
+                  className={`w-3 h-3 text-[var(--color-text-muted)]/50 group-hover:text-[var(--color-text)] transition-transform duration-200 shrink-0 ${
                     isCollapsed ? '-rotate-90' : 'rotate-0'
                   }`}
                 />
@@ -226,7 +274,7 @@ export const AppLayout = ({ children }) => {
                 <nav className="space-y-0.5">
                   {section.items.map((item) => {
                     const Icon = item.icon;
-                    const active = isItemActive(item.path);
+                    const active = isItemActive(item.path, item.name);
                     return (
                       <NavLink
                         key={item.name}
@@ -254,15 +302,23 @@ export const AppLayout = ({ children }) => {
                           <span className="truncate">{item.name}</span>
                         </div>
 
-                        {active && (
-                          <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-accent)] shadow-xs shrink-0" />
-                        )}
+                        <div className="flex items-center space-x-1.5 shrink-0">
+                          {item.badge && (
+                            <span className="text-[8px] font-mono font-black px-1.5 py-0.2 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                              {item.badge}
+                            </span>
+                          )}
+                          {active && (
+                            <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-accent)] shadow-xs shrink-0" />
+                          )}
+                        </div>
                       </NavLink>
                     );
                   })}
                 </nav>
               )}
             </div>
+
           );
         })}
 
@@ -340,7 +396,7 @@ export const AppLayout = ({ children }) => {
   );
 
   return (
-    <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text)] flex transition-colors">
+    <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text)] flex transition-colors overflow-x-hidden">
       {/* Desktop Left Sidebar */}
       <aside className="hidden md:flex flex-col w-64 shrink-0 h-screen sticky top-0 border-r border-[var(--color-border)]/80 bg-[var(--color-surface)] shadow-xs z-30 transition-colors">
         {sidebarContent}
@@ -352,6 +408,7 @@ export const AppLayout = ({ children }) => {
           <div
             className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity"
             onClick={() => setMobileOpen(false)}
+            aria-hidden="true"
           />
           <aside className="relative flex flex-col w-72 max-w-[85vw] h-full bg-[var(--color-surface)] border-r border-[var(--color-border)] z-10 shadow-2xl">
             {sidebarContent}
@@ -360,37 +417,46 @@ export const AppLayout = ({ children }) => {
       )}
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-w-0 min-h-screen">
+      <div className="flex-1 flex flex-col min-w-0 min-h-screen overflow-x-hidden">
         {/* Mobile Top Header */}
-        <header className="md:hidden sticky top-0 z-20 h-14 border-b border-[var(--color-border)] bg-[var(--color-surface)]/90 backdrop-blur-md px-4 flex items-center justify-between">
+        <header className="md:hidden sticky top-0 z-20 h-16 border-b border-[var(--color-border)] bg-[var(--color-surface)]/95 backdrop-blur-md px-4 flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <button
+              type="button"
               onClick={() => setMobileOpen(true)}
-              className="p-2 rounded-lg text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-hover)]"
+              className="p-2.5 rounded-xl text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-hover)] min-h-[44px] min-w-[44px] flex items-center justify-center transition-colors"
               aria-label="Open Navigation Menu"
+              aria-expanded={mobileOpen}
             >
               <Menu className="w-5 h-5" />
             </button>
-            <div className="flex items-center space-x-2">
+            <Link 
+              to={getNavPath('/dashboard')}
+              className="flex items-center space-x-2 min-h-[44px]"
+            >
               <span className="font-extrabold text-base tracking-tight text-[var(--color-text)]">
                 ML Studio
               </span>
               <span className="text-[9px] font-bold text-[var(--color-accent)] px-1.5 py-0.5 rounded-full bg-[var(--color-accent-soft)]">
                 PRO
               </span>
-            </div>
+            </Link>
           </div>
 
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-1.5">
             <button
+              type="button"
               onClick={toggleDarkMode}
-              className="p-2 rounded-full text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
+              className="p-2.5 rounded-xl text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-hover)] min-h-[44px] min-w-[44px] flex items-center justify-center transition-colors"
+              aria-label={darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
             >
               {darkMode ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4" />}
             </button>
             <button
+              type="button"
               onClick={handleLogout}
-              className="p-2 rounded-full text-rose-500 hover:bg-rose-500/10"
+              className="p-2.5 rounded-xl text-rose-500 hover:bg-rose-500/10 min-h-[44px] min-w-[44px] flex items-center justify-center transition-colors"
+              aria-label="Sign Out"
             >
               <LogOut className="w-4 h-4" />
             </button>
@@ -398,15 +464,47 @@ export const AppLayout = ({ children }) => {
         </header>
 
         {/* Main Viewport */}
-        <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-5 sm:py-6 overflow-x-hidden">
           {children}
         </main>
 
-        {/* Minimal Footer */}
-        <footer className="border-t border-[var(--color-border)]/60 bg-[var(--color-surface)]/30 py-3 text-center text-xs text-[var(--color-text-muted)]">
-          <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-1">
-            <span>ML Studio &bull; Intelligent Machine Learning Platform</span>
-            <span className="font-mono text-[11px]">Role: {roleName} {isAdmin && '&bull; Admin'}</span>
+        {/* Branded Launch-Ready Footer */}
+        <footer className="border-t border-[var(--color-border)]/60 bg-[var(--color-surface)]/40 py-4 text-xs text-[var(--color-text-muted)] mt-auto">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-3 text-center md:text-left">
+            <div className="flex flex-wrap items-center justify-center md:justify-start gap-x-3 gap-y-1">
+              <span className="font-medium text-[var(--color-text)]">
+                &copy; {new Date().getFullYear()} ML Studio Inc.
+              </span>
+              <span className="hidden sm:inline">&bull;</span>
+              <span className="text-[11px]">Intelligent Tabular ML Platform</span>
+              <span className="hidden sm:inline">&bull;</span>
+              <div className="inline-flex items-center space-x-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-mono">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                <span>Pipelines Operational</span>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-[11px]">
+              <a
+                href="mailto:support@mlstudio.io"
+                className="hover:text-[var(--color-accent)] transition-colors py-1 inline-flex items-center space-x-1"
+                title="Email ML Studio Support"
+              >
+                <span>Support: support@mlstudio.io</span>
+              </a>
+              <span className="hidden sm:inline text-[var(--color-border)]">|</span>
+              <a
+                href="tel:+18005550199"
+                className="hover:text-[var(--color-accent)] transition-colors py-1 inline-flex items-center space-x-1"
+                title="Call ML Studio Enterprise Support"
+              >
+                <span>+1 (800) 555-0199</span>
+              </a>
+              <span className="hidden sm:inline text-[var(--color-border)]">|</span>
+              <span className="font-mono text-[10px] text-[var(--color-accent)] bg-[var(--color-accent-soft)] px-2 py-0.5 rounded-full border border-[var(--color-accent)]/20">
+                Role: {roleName} {isAdmin && '&bull; ADMIN'}
+              </span>
+            </div>
           </div>
         </footer>
       </div>
@@ -415,3 +513,4 @@ export const AppLayout = ({ children }) => {
 };
 
 export default AppLayout;
+

@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <defs>
+    <linearGradient id="mlGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#F37338" />
+      <stop offset="100%" stop-color="#CF4500" />
+    </linearGradient>
+    <linearGradient id="accentGradient" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#141413" stop-opacity="0.3" />
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0.2" />
+    </linearGradient>
+  </defs>
+  <!-- Background rounded stadium container -->
+  <rect x="4" y="4" width="56" height="56" rx="16" fill="url(#mlGradient)" />
+  <rect x="4" y="4" width="56" height="56" rx="16" stroke="url(#accentGradient)" stroke-width="2" />
+  
+  <!-- Isometric Studio Stack / Layers -->
+  <path d="M32 14L48 23L32 32L16 23L32 14Z" fill="#FFFFFF" fill-opacity="0.95" />
+  <path d="M16 28L32 37L48 28L48 33L32 42L16 33L16 28Z" fill="#FFFFFF" fill-opacity="0.75" />
+  <path d="M16 37L32 46L48 37L48 42L32 51L16 42L16 37Z" fill="#FFFFFF" fill-opacity="0.55" />
+  
+  <!-- Active Signal Dot -->
+  <circle cx="48" cy="16" r="4" fill="#10B981" stroke="#FFFFFF" stroke-width="1.5" />
+</svg>

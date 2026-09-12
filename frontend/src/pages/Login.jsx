@@ -8,7 +8,7 @@ export const Login = () => {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('dev@mlstudio.io');
   const [password, setPassword] = useState('password123');
-  const [roleName, setRoleName] = useState('ML_ENGINEER');
+  const [roleName, setRoleName] = useState('USER');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -112,21 +112,19 @@ export const Login = () => {
           {isRegister && (
             <div>
               <label className="block text-xs font-semibold text-[var(--color-text-muted)] mb-1.5">
-                Initial Role (Permission Preset)
+                Assigned Identity Role
               </label>
               <select
                 value={roleName}
                 onChange={(e) => setRoleName(e.target.value)}
                 className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--color-bg)] border border-[var(--color-border)] text-text text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] transition-all"
               >
-                <option value="ML_ENGINEER">ML_ENGINEER (READ, EDIT_DATA, TRAIN, EXPORT)</option>
-                <option value="DATA_STEWARD">DATA_STEWARD (READ, EDIT_DATA)</option>
-                <option value="DEPLOYMENT_MANAGER">DEPLOYMENT_MANAGER (READ, DEPLOY, EXPORT)</option>
-                <option value="ADMIN">ADMIN (All 6 Permissions)</option>
-                <option value="VIEWER">VIEWER (READ Only)</option>
+                <option value="USER">USER (Standard • READ, EDIT_DATA, TRAIN, EXPORT)</option>
+                <option value="ADMIN">ADMIN (Full Governance • MANAGE_USERS & Overrides)</option>
               </select>
             </div>
           )}
+
 
           <button
             type="submit"
@@ -145,14 +143,26 @@ export const Login = () => {
               setIsRegister(!isRegister);
               setError('');
             }}
-            className="text-xs font-semibold text-[var(--color-accent)] hover:underline"
+            className="text-xs font-semibold text-[var(--color-accent)] hover:underline min-h-[44px] inline-flex items-center justify-center px-2"
           >
             {isRegister
               ? 'Already have an account? Sign In'
               : "Don't have an account? Create one"}
           </button>
         </div>
+
+        {/* Dynamic Launch Footer */}
+        <div className="mt-6 pt-4 border-t border-[var(--color-border)]/60 text-center text-[11px] text-[var(--color-text-muted)] space-y-1">
+          <div>&copy; {new Date().getFullYear()} ML Studio Inc. All rights reserved.</div>
+          <div>
+            Need access? Contact{' '}
+            <a href="mailto:support@mlstudio.io" className="text-[var(--color-accent)] hover:underline">
+              support@mlstudio.io
+            </a>
+          </div>
+        </div>
       </div>
     </div>
   );
 };
+

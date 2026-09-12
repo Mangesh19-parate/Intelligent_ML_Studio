@@ -42,6 +42,41 @@ app.add_middleware(
 app.include_router(api_v1_router)
 
 from datetime import datetime, timezone
+from fastapi import Request, HTTPException
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
+
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={
+            "detail": exc.detail,
+            "error": {
+                "status_code": exc.status_code,
+                "message": exc.detail if isinstance(exc.detail, str) else str(exc.detail),
+                "path": str(request.url.path),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+            },
+        },
+        headers=getattr(exc, "headers", None),
+    )
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    return JSONResponse(
+        status_code=422,
+        content={
+            "detail": exc.errors(),
+            "error": {
+                "status_code": 422,
+                "message": "Request validation failed",
+                "details": exc.errors(),
+                "path": str(request.url.path),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+            },
+        },
+    )
 
 @app.get("/health", tags=["Health"])
 @app.get("/api/v1/health", tags=["Health"])

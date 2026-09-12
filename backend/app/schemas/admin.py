@@ -26,7 +26,7 @@ class UserCreateRequest(BaseModel):
     full_name: str = Field(..., min_length=2, max_length=150)
     email: str
     password: str = Field(..., min_length=6)
-    role_name: str = Field(default="ML_ENGINEER")
+    role_name: str = Field(default="USER")
 
 
 class UserUpdateRequest(BaseModel):

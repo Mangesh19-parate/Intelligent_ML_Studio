@@ -27,7 +27,7 @@ def regression_setup(db_session, tmp_path, create_test_user):
     """
     Creates a realistic Regression project with uploaded dataset, splits, and transformation configs.
     """
-    user = create_test_user("engineer@test.com", "ML_ENGINEER")
+    user = create_test_user("engineer@test.com", "USER")
 
     project = Project(
         id=uuid4(),
@@ -421,7 +421,7 @@ def test_lineage_api_endpoint(client, create_test_user, db_session, regression_s
     """
     Tests GET /api/v1/experiments/{id}/lineage endpoint with JWT authentication.
     """
-    user = create_test_user("ml_engineer@test.com", "ML_ENGINEER")
+    user = create_test_user("ml_engineer@test.com", "USER")
     login_res = client.post("/api/v1/auth/login", json={"email": "ml_engineer@test.com", "password": "password123"})
     token = login_res.json()["access_token"]
     headers = {"Authorization": f"Bearer {token}"}

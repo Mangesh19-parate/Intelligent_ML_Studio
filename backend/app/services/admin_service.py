@@ -74,7 +74,7 @@ class AdminService:
             id=user.id,
             full_name=user.full_name,
             email=user.email,
-            role_name=user.role.role_name if user.role else "VIEWER",
+            role_name=user.role.role_name if user.role else "USER",
             role_id=user.role_id,
             is_active=user.is_active,
             created_at=user.created_at,

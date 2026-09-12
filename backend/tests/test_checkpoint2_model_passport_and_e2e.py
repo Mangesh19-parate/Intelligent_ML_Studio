@@ -42,7 +42,7 @@ def test_model_passport_strict_select_and_zero_recomputation(client, db_session,
     model_id = res["model_passport"]["model_id"]
 
     # 2. Authenticate user
-    user = create_test_user("viewer_passport@mlstudio.io", role_name="VIEWER")
+    user = create_test_user("viewer_passport@mlstudio.io", role_name="USER")
     headers = auth_headers(user)
 
     engine = db_session.get_bind()
@@ -69,7 +69,7 @@ def test_model_passport_strict_select_and_zero_recomputation(client, db_session,
 
 def test_model_passport_404_for_unknown_model(client, db_session, create_test_user, auth_headers):
     """Verifies that GET /api/v1/models/{nonexistent_id}/passport returns HTTP 404."""
-    user = create_test_user("viewer_passport2@mlstudio.io", role_name="VIEWER")
+    user = create_test_user("viewer_passport2@mlstudio.io", role_name="USER")
     headers = auth_headers(user)
 
     random_id = str(uuid.uuid4())

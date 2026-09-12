@@ -30,7 +30,7 @@ def regression_setup(db_session, tmp_path, create_test_user):
     Creates a realistic Regression project with uploaded dataset, splits, and transformation configs.
     Target: price = 300 * sqft + 5000 * bedrooms + noise
     """
-    user = create_test_user("ml_owner@test.com", "ML_ENGINEER")
+    user = create_test_user("ml_owner@test.com", "USER")
 
     project = Project(
         id=uuid4(),
@@ -153,7 +153,7 @@ def classification_setup(db_session, tmp_path, create_test_user):
     """
     Creates a realistic Classification project for checking LogisticRegression & tree explainers.
     """
-    user = create_test_user("clf_owner@test.com", "ML_ENGINEER")
+    user = create_test_user("clf_owner@test.com", "USER")
 
     project = Project(
         id=uuid4(),

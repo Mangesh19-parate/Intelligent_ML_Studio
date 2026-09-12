@@ -47,7 +47,7 @@ def test_storage_service_singleton():
     assert isinstance(storage, LocalStorageService)
 
 def test_dataset_upload_csv(client, create_test_user):
-    user = create_test_user("steward_d1@example.com", role_name="DATA_STEWARD")
+    user = create_test_user("steward_d1@example.com", role_name="USER")
     login_resp = client.post(
         "/api/v1/auth/login",
         json={"email": "steward_d1@example.com", "password": "password123"}
@@ -102,7 +102,7 @@ def test_dataset_upload_csv(client, create_test_user):
         assert f not in data
 
 def test_dataset_upload_version_increment(client, create_test_user):
-    user = create_test_user("mle_d1@example.com", role_name="ML_ENGINEER")
+    user = create_test_user("mle_d1@example.com", role_name="USER")
     login_resp = client.post(
         "/api/v1/auth/login",
         json={"email": "mle_d1@example.com", "password": "password123"}
@@ -199,8 +199,8 @@ def test_dataset_upload_excel_and_json(client, create_test_user):
     assert e_data["version_number"] == 2
 
 def test_dataset_upload_errors_and_rbac(client, create_test_user):
-    steward = create_test_user("steward_err@example.com", role_name="DATA_STEWARD")
-    viewer = create_test_user("viewer_err@example.com", role_name="VIEWER")
+    steward = create_test_user("steward_err@example.com", role_name="USER")
+    viewer = create_test_user("viewer_err@example.com", role_name="USER")
     
     steward_token = client.post("/api/v1/auth/login", json={"email": "steward_err@example.com", "password": "password123"}).json()["access_token"]
     viewer_token = client.post("/api/v1/auth/login", json={"email": "viewer_err@example.com", "password": "password123"}).json()["access_token"]

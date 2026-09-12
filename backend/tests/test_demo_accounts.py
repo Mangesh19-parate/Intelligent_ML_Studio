@@ -1,8 +1,8 @@
 """
 Unit & Integration tests for Day 6 Demo Accounts & Permission Overrides.
 Validates:
-- trainer@demo.com has role ML_ENGINEER (default bundle: READ, EDIT_DATA, TRAIN, EXPORT) without DEPLOY.
-- approver@demo.com has role ML_ENGINEER + explicit DEPLOY override.
+- trainer@demo.com has role USER (default bundle: READ, EDIT_DATA, TRAIN, EXPORT) without DEPLOY.
+- approver@demo.com has role USER + explicit DEPLOY override.
 - Neither user has the ADMIN role.
 - Only approver@demo.com can access routes requiring the DEPLOY permission.
 """

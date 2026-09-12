@@ -69,7 +69,7 @@ def test_permission_based_rbac_enforcement(client, create_test_user):
     assert res_admin_deploy.status_code == 200
 
 def test_project_crud_and_invariants(client, create_test_user):
-    ml_eng = create_test_user("eng@example.com", role_name="ML_ENGINEER")
+    ml_eng = create_test_user("eng@example.com", role_name="USER")
     eng_login = client.post(
         "/api/v1/auth/login",
         json={"email": "eng@example.com", "password": "password123"}
@@ -107,7 +107,7 @@ def test_project_crud_and_invariants(client, create_test_user):
     assert update_resp.json()["project_name"] == "Churn Model V2"
 
 def test_dataset_upload_and_structural_schema_inference(client, create_test_user):
-    user = create_test_user("steward@example.com", role_name="DATA_STEWARD")
+    user = create_test_user("steward@example.com", role_name="USER")
     login_data = client.post(
         "/api/v1/auth/login",
         json={"email": "steward@example.com", "password": "password123"}

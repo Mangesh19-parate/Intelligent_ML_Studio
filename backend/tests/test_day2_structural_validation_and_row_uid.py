@@ -9,7 +9,7 @@ from app.services.dataset_service import DatasetService
 from app.services.dataset_split_service import DatasetSplitService
 
 def test_structural_schema_detection_and_invariants(client, create_test_user, db_session):
-    user = create_test_user("steward_d2@example.com", role_name="DATA_STEWARD")
+    user = create_test_user("steward_d2@example.com", role_name="USER")
     login_data = client.post(
         "/api/v1/auth/login",
         json={"email": "steward_d2@example.com", "password": "password123"}
@@ -88,7 +88,7 @@ def test_structural_schema_detection_and_invariants(client, create_test_user, db
             assert f_key not in col, f"Leakage detected: {f_key} present in pre-split structural column metadata"
 
 def test_immutable_row_uid_assignment_and_persistence(client, create_test_user, db_session):
-    user = create_test_user("mle_d2@example.com", role_name="ML_ENGINEER")
+    user = create_test_user("mle_d2@example.com", role_name="USER")
     login_data = client.post(
         "/api/v1/auth/login",
         json={"email": "mle_d2@example.com", "password": "password123"}
@@ -138,7 +138,7 @@ def test_immutable_row_uid_assignment_and_persistence(client, create_test_user, 
     assert df_reloaded["row_uid"].tolist() == original_uids
 
 def test_split_references_row_uid(client, create_test_user, db_session):
-    user = create_test_user("steward_split_d2@example.com", role_name="DATA_STEWARD")
+    user = create_test_user("steward_split_d2@example.com", role_name="USER")
     login_data = client.post(
         "/api/v1/auth/login",
         json={"email": "steward_split_d2@example.com", "password": "password123"}

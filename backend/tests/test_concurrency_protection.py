@@ -113,6 +113,7 @@ def test_concurrent_training_starts_exactly_one_winner_others_409(db_session, se
     """
     from sqlalchemy.orm import sessionmaker
     _, _, exp = setup_experiment
+    db_session.commit()
     num_threads = 8
     session_factory = sessionmaker(autocommit=False, autoflush=False, bind=db_session.bind)
 

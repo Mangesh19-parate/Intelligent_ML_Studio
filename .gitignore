@@ -31,6 +31,7 @@ data/
 *.db
 *.sqlite
 *.sqlite3
+*.pkl
 
 # Node
 node_modules/

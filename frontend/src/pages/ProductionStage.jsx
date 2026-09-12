@@ -59,7 +59,14 @@ export const ProductionStage = () => {
   const [loadingLogs, setLoadingLogs] = useState(false);
 
   const { user } = useAuth();
-  const canDeploy = user?.role === 'ADMIN' || user?.role === 'DEPLOYMENT_MANAGER' || user?.permissions?.includes('DEPLOY');
+  const userPerms = new Set(
+    Array.isArray(user?.permissions)
+      ? user.permissions
+      : user?.role?.permissions
+      ? user.role.permissions.map((p) => (typeof p === 'string' ? p : p.permission_key))
+      : []
+  );
+  const canDeploy = userPerms.has('DEPLOY') || userPerms.has('MANAGE_USERS');
 
   // Load Projects
   useEffect(() => {

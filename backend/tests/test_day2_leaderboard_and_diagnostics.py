@@ -29,13 +29,12 @@ from app.config.state_machines import ExperimentState, ModelState
 from app.services.evaluation_service import EvaluationService
 
 
-def get_auth_token(client, email="day2_mle@studio.com", role_name="ML_ENGINEER"):
-    """Helper to register/login and obtain JWT bearer token."""
-    reg_resp = client.post("/api/v1/auth/register", json={
+def get_auth_token(client, email="day2_mle@studio.com"):
+    """Helper to signup/login and obtain JWT bearer token."""
+    reg_resp = client.post("/api/v1/auth/signup", json={
         "email": email,
         "password": "Password123!",
         "full_name": "Day2 MLE",
-        "role_name": role_name,
     })
     assert reg_resp.status_code in [200, 201]
     resp = client.post("/api/v1/auth/login", json={
@@ -172,7 +171,7 @@ def test_leaderboard_disagreement_case_regression(client, db_session):
     Model B has inferior primary metric (higher RMSE=4.0) but higher composite score (85.0).
     The leaderboard MUST rank Model A #1 and Model B #2.
     """
-    token = get_auth_token(client, email="disagree_reg@studio.com", role_name="ML_ENGINEER")
+    token = get_auth_token(client, email="disagree_reg@studio.com")
     headers = {"Authorization": f"Bearer {token}"}
 
     proj_resp = client.post("/api/v1/projects", headers=headers, json={"project_name": "Disagree Reg Proj", "task_type": "REGRESSION"})
@@ -246,7 +245,7 @@ def test_leaderboard_disagreement_case_classification(client, db_session):
     Model B has lower Macro F1 (0.70) but higher composite score (90.0).
     The leaderboard MUST rank Model A #1 and Model B #2.
     """
-    token = get_auth_token(client, email="disagree_clf@studio.com", role_name="ML_ENGINEER")
+    token = get_auth_token(client, email="disagree_clf@studio.com")
     headers = {"Authorization": f"Bearer {token}"}
 
     proj_resp = client.post("/api/v1/projects", headers=headers, json={"project_name": "Disagree Clf Proj", "task_type": "CLASSIFICATION"})

@@ -48,14 +48,13 @@ from app.services.selectors import (
 )
 
 
-def get_auth_token(client, email="w5_suite@example.com", role_name="ML_ENGINEER"):
+def get_auth_token(client, email="w5_suite@example.com"):
     reg_resp = client.post(
-        "/api/v1/auth/register",
+        "/api/v1/auth/signup",
         json={
             "full_name": "W5 Suite Runner",
             "email": email,
             "password": "password123",
-            "role_name": role_name,
         },
     )
     assert reg_resp.status_code == 201

@@ -13,14 +13,13 @@ from app.services.feature_selection_service import FeatureSelectionService
 from app.services.explainability_service import ExplainabilityService
 
 
-def get_auth_token(client, email="guardrail_user@example.com", role_name="ML_ENGINEER"):
+def get_auth_token(client, email="guardrail_user@example.com"):
     reg_resp = client.post(
-        "/api/v1/auth/register",
+        "/api/v1/auth/signup",
         json={
             "full_name": "Guardrail Engineer",
             "email": email,
             "password": "password123",
-            "role_name": role_name,
         },
     )
     assert reg_resp.status_code == 201

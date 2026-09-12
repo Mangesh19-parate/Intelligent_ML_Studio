@@ -18,9 +18,9 @@ def test_experiment_diff_service_computation(db_session):
     from app.models.role import Role
 
     # Get or create test user
-    role = db_session.query(Role).filter(Role.role_name == "ML_ENGINEER").first()
+    role = db_session.query(Role).filter(Role.role_name == "USER").first()
     if not role:
-        role = Role(role_name="ML_ENGINEER", description="ML Engineer")
+        role = Role(role_name="USER", description="User")
         db_session.add(role)
         db_session.flush()
 

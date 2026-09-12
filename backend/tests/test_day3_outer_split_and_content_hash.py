@@ -22,14 +22,13 @@ def create_sample_csv(n_rows: int = 50, target_col: str = "label") -> bytes:
     df.to_csv(buf, index=False)
     return buf.getvalue().encode("utf-8")
 
-def get_auth_token(client, email="day3_engineer@example.com", role_name="ML_ENGINEER"):
+def get_auth_token(client, email="day3_engineer@example.com"):
     client.post(
-        "/api/v1/auth/register",
+        "/api/v1/auth/signup",
         json={
             "full_name": "Day 3 Test Engineer",
             "email": email,
             "password": "password123",
-            "role_name": role_name,
         },
     )
     login_resp = client.post(

@@ -21,14 +21,13 @@ from app.services.transformation_service import TransformationService
 from app.services.experiment_service import ExperimentService
 from app.services.trainers import RegressionTrainer, ClassificationTrainer, FeatureSelector
 
-def get_auth_token(client, email="engineer_d6@example.com", role_name="ML_ENGINEER"):
+def get_auth_token(client, email="engineer_d6@example.com"):
     reg_resp = client.post(
-        "/api/v1/auth/register",
+        "/api/v1/auth/signup",
         json={
             "full_name": "Test User D6",
             "email": email,
             "password": "password123",
-            "role_name": role_name,
         },
     )
     assert reg_resp.status_code in [201, 200]
@@ -124,7 +123,7 @@ def test_acceptance_check_a_and_b_regression_training_and_shared_selection(db_se
     Check (b): Confirm feature selection ran exactly ONCE per fold
                (feature_selection_fold_results row count = fold_count = 5, not 5 * 3 = 15).
     """
-    role = db_session.query(Role).filter(Role.role_name == "ML_ENGINEER").first()
+    role = db_session.query(Role).filter(Role.role_name == "USER").first()
     user = User(
         id=uuid.uuid4(),
         full_name="ML Trainer",
@@ -226,7 +225,7 @@ def test_acceptance_check_c_zero_leakage(db_session):
     Check (c): Zero leakage check - verify zero overlap between fold train indices and
                fold validation indices, and zero overlap with Locked Test indices.
     """
-    role = db_session.query(Role).filter(Role.role_name == "ML_ENGINEER").first()
+    role = db_session.query(Role).filter(Role.role_name == "USER").first()
     user = User(
         id=uuid.uuid4(),
         full_name="ML Leakage Auditor",
@@ -299,7 +298,7 @@ def test_acceptance_check_d_single_algorithm_failure_isolation(db_session):
                and confirm the experiment still completes for the other two algorithms,
                with the failed one's trained_models row clearly reflecting the failure (status='FAILED').
     """
-    role = db_session.query(Role).filter(Role.role_name == "ML_ENGINEER").first()
+    role = db_session.query(Role).filter(Role.role_name == "USER").first()
     user = User(
         id=uuid.uuid4(),
         full_name="Fault Dev",
@@ -376,7 +375,7 @@ def test_acceptance_check_e_determinism_across_runs(db_session):
     Check (e): Determinism check: rerun the same experiment config (same seed, same algorithms)
                and confirm quick_cv_scores are identical across the two runs.
     """
-    role = db_session.query(Role).filter(Role.role_name == "ML_ENGINEER").first()
+    role = db_session.query(Role).filter(Role.role_name == "USER").first()
     user = User(
         id=uuid.uuid4(),
         full_name="Det Dev",
@@ -410,14 +409,14 @@ def test_acceptance_check_e_determinism_across_runs(db_session):
     # Run 1
     res1 = exp_service.run_experiment(
         project_id=project.id,
-        algorithms=["LinearRegression", "Ridge", "RandomForestRegressor"],
+        algorithms=["LinearRegression", "GradientBoostingRegressor", "RandomForestRegressor"],
         folds=3,
         seed=999,
     )
     # Run 2
     res2 = exp_service.run_experiment(
         project_id=project.id,
-        algorithms=["LinearRegression", "Ridge", "RandomForestRegressor"],
+        algorithms=["LinearRegression", "GradientBoostingRegressor", "RandomForestRegressor"],
         folds=3,
         seed=999,
     )
@@ -425,7 +424,7 @@ def test_acceptance_check_e_determinism_across_runs(db_session):
     models1 = {m["algorithm_name"]: m["quick_cv_score"] for m in res1["trained_models"]}
     models2 = {m["algorithm_name"]: m["quick_cv_score"] for m in res2["trained_models"]}
 
-    for alg in ["LinearRegression", "Ridge", "RandomForestRegressor"]:
+    for alg in ["LinearRegression", "GradientBoostingRegressor", "RandomForestRegressor"]:
         assert pytest.approx(models1[alg], abs=1e-5) == models2[alg]
 
 
@@ -438,7 +437,7 @@ def test_acceptance_check_f_task_type_mismatch_422(db_session):
     Check (f): Requesting a classification algorithm on a REGRESSION-typed project
                (or vice versa) is rejected with a clear HTTP 422 before any training work starts.
     """
-    role = db_session.query(Role).filter(Role.role_name == "ML_ENGINEER").first()
+    role = db_session.query(Role).filter(Role.role_name == "USER").first()
     user = User(
         id=uuid.uuid4(),
         full_name="Val Dev",
@@ -493,11 +492,8 @@ def test_api_experiments_endpoints_and_rbac(client):
     Tests POST /api/v1/projects/{id}/experiments, GET /api/v1/experiments/{id},
     GET /api/v1/projects/{id}/experiments, and RBAC enforcement.
     """
-    mle_token = get_auth_token(client, email="mle_trainer@studio.com", role_name="ML_ENGINEER")
+    mle_token = get_auth_token(client, email="mle_trainer@studio.com")
     mle_headers = {"Authorization": f"Bearer {mle_token}"}
-
-    viewer_token = get_auth_token(client, email="viewer_trainer@studio.com", role_name="VIEWER")
-    viewer_headers = {"Authorization": f"Bearer {viewer_token}"}
 
     # 1. Create project
     proj_resp = client.post(
@@ -530,13 +526,12 @@ def test_api_experiments_endpoints_and_rbac(client):
     )
     assert patch_resp.status_code == 200
 
-    # 4. VIEWER lacks TRAIN permission -> should receive 403 Forbidden
-    forbidden_resp = client.post(
+    # 4. Unauthenticated request -> should receive 401 Unauthorized
+    unauth_resp = client.post(
         f"/api/v1/projects/{project_id}/experiments",
-        headers=viewer_headers,
         json={"algorithms": ["LogisticRegression"], "folds": 3},
     )
-    assert forbidden_resp.status_code == status.HTTP_403_FORBIDDEN
+    assert unauth_resp.status_code == status.HTTP_401_UNAUTHORIZED
 
     # 5. Invalid algorithm rejection via API (422)
     mismatch_resp = client.post(

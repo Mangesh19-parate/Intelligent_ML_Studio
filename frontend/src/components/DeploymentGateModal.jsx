@@ -48,8 +48,15 @@ export default function DeploymentGateModal({ model, isOpen, onClose, onDeployme
   const [logs, setLogs] = useState([]);
   const [loadingLogs, setLoadingLogs] = useState(false);
 
-  const canDeploy = user?.role === 'ADMIN' || user?.role === 'DEPLOYMENT_MANAGER' || user?.permissions?.includes('DEPLOY');
-  const canExport = user?.role === 'ADMIN' || user?.role === 'DEPLOYMENT_MANAGER' || user?.permissions?.includes('EXPORT');
+  const userPerms = new Set(
+    Array.isArray(user?.permissions)
+      ? user.permissions
+      : user?.role?.permissions
+      ? user.role.permissions.map((p) => (typeof p === 'string' ? p : p.permission_key))
+      : []
+  );
+  const canDeploy = userPerms.has('DEPLOY') || userPerms.has('MANAGE_USERS');
+  const canExport = userPerms.has('EXPORT') || userPerms.has('MANAGE_USERS');
 
   useEffect(() => {
     if (isOpen && model?.id) {

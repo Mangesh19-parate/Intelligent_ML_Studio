@@ -204,6 +204,33 @@ class FeatureSelectionService:
         except Exception:
             return input_columns
 
+    @staticmethod
+    def select_top_k_features(
+        ensemble_scores: dict[str, float],
+        alpha: float = 0.25,
+        k_min: int = 5,
+        k_max: int = 50,
+    ) -> list[str]:
+        """
+        Authoritative Top-K Percent Selection Rule (§2.7, §8).
+        Calculates k = max(min(k_min, N), min(k_max, max(1, ceil(alpha * N))))
+        and returns the top-k features ordered by ensemble score descending.
+        """
+        if not ensemble_scores:
+            return []
+        
+        n_features = len(ensemble_scores)
+        target_k = int(np.ceil(alpha * n_features))
+        k = max(min(k_min, n_features), min(k_max, max(1, target_k)))
+        
+        # Sort descending by score, deterministic tie-breaking by column name
+        sorted_feats = sorted(
+            ensemble_scores.items(),
+            key=lambda item: (item[1], item[0]),
+            reverse=True,
+        )
+        return [feat for feat, _ in sorted_feats[:k]]
+
     # -------------------------------------------------------------------------
     # 4. Cross-Validation Feature Selection Ensemble Harness
     # -------------------------------------------------------------------------
@@ -453,13 +480,15 @@ class FeatureSelectionService:
                     # Insufficient evidence (< 2 applied methods): no feature subset returned
                     fold_selected = []
                 else:
-                    fold_selected = [
-                        feat for feat, sc in fold_ensemble.items() if sc >= threshold
-                    ]
-                    if not fold_selected and threshold <= 0.0:
-                        # If threshold <= 0 selects none, default to top feature
-                        top_col = max(fold_ensemble.items(), key=lambda x: x[1])[0]
-                        fold_selected = [top_col]
+                    if threshold > 0.0:
+                        fold_selected = [
+                            feat for feat, sc in fold_ensemble.items() if sc >= threshold
+                        ]
+                        if not fold_selected:
+                            top_col = max(fold_ensemble.items(), key=lambda x: x[1])[0]
+                            fold_selected = [top_col]
+                    else:
+                        fold_selected = self.select_top_k_features(fold_ensemble)
 
                 # Persist fold record
                 self.exp_repo.add_fold_result(
@@ -481,8 +510,14 @@ class FeatureSelectionService:
             importance_items = self.importance_repo.upsert_scores(
                 project.id, overall_scores, default_selected=True
             )
-            # Apply initial threshold filtering
-            self.importance_repo.update_selection(project.id, threshold=threshold)
+            # Apply initial threshold/top-k filtering
+            if threshold > 0.0:
+                self.importance_repo.update_selection(project.id, threshold=threshold)
+            else:
+                top_k_cols = set(self.select_top_k_features(overall_scores))
+                for item in self.importance_repo.get_by_project(project.id):
+                    item.is_selected = item.column_name in top_k_cols
+                self.db.commit()
 
             # 7. Create FeatureSelectionSnapshot & Finalize Experiment
             final_selected = [
@@ -499,10 +534,7 @@ class FeatureSelectionService:
             self.db.add(experiment)
 
             self.exp_repo.update_status(experiment.id, "COMPLETED")
-            if project.pipeline_stage in ["DATA", "DATA_UPLOADED", "SPLIT", "SPLIT_LOCKED", "PROFILED", "TRANSFORMED"]:
-                project.pipeline_stage = "FEATURE_SELECTED"
-                self.db.add(project)
-                self.db.commit()
+            self.db.commit()
 
             return {
                 "project_id": project.id,

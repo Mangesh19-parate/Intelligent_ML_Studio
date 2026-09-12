@@ -167,13 +167,14 @@ class ToleranceConfigResponse(BaseModel):
 
 class ExperimentReproduceResponse(BaseModel):
     status: str
+    passed: bool = True
     expected: float
     observed: float
     difference: float
     relative_difference: float
     metric_name: str
     original_experiment_id: UUID
-    reproduced_experiment_id: UUID
+    reproduced_experiment_id: UUID | None = None
     tolerance: ToleranceConfigResponse
 
 

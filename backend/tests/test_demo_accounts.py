@@ -31,8 +31,8 @@ def test_demo_accounts_non_admin_roles(db_session: Session):
     assert trainer.role.role_name != "ADMIN", "trainer@demo.com must not be ADMIN"
     assert approver.role.role_name != "ADMIN", "approver@demo.com must not be ADMIN"
 
-    assert trainer.role.role_name == "ML_ENGINEER"
-    assert approver.role.role_name == "ML_ENGINEER"
+    assert trainer.role.role_name == "USER"
+    assert approver.role.role_name == "USER"
 
 
 def test_demo_accounts_permission_differences(db_session: Session):

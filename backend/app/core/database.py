@@ -24,10 +24,11 @@ Base = declarative_base()
 
 def sync_database_schema(engine_instance=engine) -> None:
     """
-    Inspects existing database schema and executes ALTER TABLE ADD COLUMN
-    for any missing columns defined in Base.metadata.
-    Ensures backward compatibility with existing SQLite/Postgres databases without requiring full rebuilds.
+    Optional development-only helper for SQLite local iterations.
+    In production/PostgreSQL, all schema modifications are strictly managed via Alembic migrations.
     """
+    if not str(engine_instance.url).startswith("sqlite"):
+        return
     try:
         from sqlalchemy import inspect, text
         inspector = inspect(engine_instance)
@@ -48,7 +49,7 @@ def sync_database_schema(engine_instance=engine) -> None:
             conn.commit()
     except Exception as e:
         import logging
-        logging.getLogger(__name__).warning(f"Schema synchronization notice: {e}")
+        logging.getLogger(__name__).warning(f"Development schema synchronization notice: {e}")
 
 def get_db() -> Generator[Session, None, None]:
     db = SessionLocal()

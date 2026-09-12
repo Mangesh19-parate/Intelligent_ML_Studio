@@ -31,7 +31,7 @@ const ProtectedRoute = ({ children, requiredRole }) => {
     return <Navigate to="/login" replace />;
   }
 
-  const roleName = user.role?.role_name || (typeof user.role === 'string' ? user.role : 'VIEWER');
+  const roleName = user.role?.role_name || (typeof user.role === 'string' ? user.role : 'USER');
   if (requiredRole && roleName !== requiredRole) {
     return <Navigate to="/dashboard" replace />;
   }

@@ -12,11 +12,16 @@ Performs rigorous statistical analysis on experimental runs:
 
 import json
 import math
+import sys
 from pathlib import Path
 from typing import Any, Sequence
 import numpy as np
 import pandas as pd
 from scipy import stats
+
+WORKSPACE_ROOT = Path(__file__).resolve().parent.parent
+if str(WORKSPACE_ROOT) not in sys.path:
+    sys.path.insert(0, str(WORKSPACE_ROOT))
 
 from research.config import (
     DATASETS,
@@ -89,8 +94,11 @@ def compute_paired_statistics(
         except Exception:
             w_stat, p_val_w = 0.0, 1.0
 
-    # Determine if difference is statistically significant (alpha = 0.05)
-    is_significant = bool(p_val_t < 0.05 or p_val_w < 0.05)
+    # Cohen's d effect size for paired samples
+    cohens_d = (mean_diff / std_diff) if std_diff > 0 else 0.0
+
+    # Conservative significance: require p < 0.05 without OR-inflation
+    is_significant = bool((p_val_w < 0.05 if len(non_zero_diffs) >= 5 else p_val_t < 0.05) and p_val_t < 0.05)
 
     return {
         "n_folds": n,
@@ -103,12 +111,14 @@ def compute_paired_statistics(
         "mean_diff": round(mean_diff, 6),
         "median_diff": round(median_diff, 6),
         "std_diff": round(std_diff, 6),
+        "cohens_d": round(cohens_d, 4),
         "ci_95": [round(ci_95[0], 6), round(ci_95[1], 6)],
         "t_stat": round(t_stat, 4),
         "p_val_t": round(p_val_t, 6),
         "w_stat": round(w_stat, 4),
         "p_val_w": round(p_val_w, 6),
         "is_significant": is_significant,
+        "correlation_limitation_noted": True,
     }
 
 

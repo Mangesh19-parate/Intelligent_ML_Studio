@@ -28,7 +28,7 @@ from app.config.state_machines import (
 def test_project_state_members():
     """Verify all canonical ProjectState enum values."""
     expected = {
-        "DATA", "SPLIT", "PROFILED", "TRANSFORMED", "FEATURE_SELECTED",
+        "DATA", "SPLIT", "PROFILED", "TRANSFORMED",
         "TRAINING", "TRAINED", "EVALUATED", "GATE_PASSED", "DEPLOYED", "ARCHIVED"
     }
     actual = {s.value for s in ProjectState}

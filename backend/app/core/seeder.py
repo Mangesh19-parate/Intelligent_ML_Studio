@@ -8,11 +8,7 @@ logger = logging.getLogger(__name__)
 
 CANONICAL_ROLES = [
     ("ADMIN", "System administrator with full permissions"),
-    ("ML_ENGINEER", "Machine learning engineer with training and data edit permissions"),
-    ("DATA_STEWARD", "Data steward with dataset management and editing permissions"),
-    ("DEPLOYMENT_MANAGER", "Deployment manager with model deployment and export permissions"),
-    ("VIEWER", "Read-only viewer with inspection permissions"),
-    ("USER", "Standard registered user with basic access"),
+    ("USER", "Standard workbench user with training and data edit permissions"),
 ]
 
 CANONICAL_PERMISSIONS = [
@@ -26,11 +22,7 @@ CANONICAL_PERMISSIONS = [
 
 DEFAULT_ROLE_PERMISSIONS: dict[str, list[str]] = {
     "ADMIN": ["READ", "EDIT_DATA", "TRAIN", "DEPLOY", "MANAGE_USERS", "EXPORT"],
-    "ML_ENGINEER": ["READ", "EDIT_DATA", "TRAIN", "EXPORT"],
-    "DATA_STEWARD": ["READ", "EDIT_DATA"],
-    "DEPLOYMENT_MANAGER": ["READ", "DEPLOY", "EXPORT"],
-    "VIEWER": ["READ"],
-    "USER": ["READ"],
+    "USER": ["READ", "EDIT_DATA", "TRAIN", "EXPORT"],
 }
 
 from app.models.user import User
@@ -40,12 +32,12 @@ from app.core.security import get_password_hash
 def seed_demo_accounts(db: Session) -> None:
     """
     Seeds the two non-admin demonstration accounts:
-    1. trainer@demo.com: role ML_ENGINEER (READ, EDIT_DATA, TRAIN, EXPORT) without DEPLOY
-    2. approver@demo.com: role ML_ENGINEER (same default bundle) + explicit DEPLOY permission override
+    1. trainer@demo.com: role USER (READ, EDIT_DATA, TRAIN, EXPORT) without DEPLOY
+    2. approver@demo.com: role USER (same default bundle) + explicit DEPLOY permission override
     Demonstrates the per-user permission override mechanism without ADMIN escalation.
     """
-    engineer_role = db.query(Role).filter(Role.role_name == "ML_ENGINEER").first()
-    if not engineer_role:
+    user_role = db.query(Role).filter(Role.role_name == "USER").first()
+    if not user_role:
         return
 
     # 1. trainer@demo.com
@@ -55,11 +47,13 @@ def seed_demo_accounts(db: Session) -> None:
             full_name="Demo Trainer",
             email="trainer@demo.com",
             password_hash=get_password_hash("DemoPassword123!"),
-            role_id=engineer_role.id,
+            role_id=user_role.id,
             is_active=True,
         )
         db.add(trainer)
         db.flush()
+    else:
+        trainer.role_id = user_role.id
 
     # 2. approver@demo.com
     approver = db.query(User).filter(User.email == "approver@demo.com").first()
@@ -68,11 +62,13 @@ def seed_demo_accounts(db: Session) -> None:
             full_name="Demo Approver",
             email="approver@demo.com",
             password_hash=get_password_hash("DemoPassword123!"),
-            role_id=engineer_role.id,
+            role_id=user_role.id,
             is_active=True,
         )
         db.add(approver)
         db.flush()
+    else:
+        approver.role_id = user_role.id
 
     # Explicit DEPLOY override for approver
     deploy_override = db.query(UserPermissionOverride).filter(
@@ -86,6 +82,8 @@ def seed_demo_accounts(db: Session) -> None:
             is_granted=True,
         )
         db.add(deploy_override)
+    else:
+        deploy_override.is_granted = True
 
     db.commit()
     logger.info("Demo accounts (trainer@demo.com and approver@demo.com) successfully seeded.")

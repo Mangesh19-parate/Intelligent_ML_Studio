@@ -64,50 +64,50 @@ def test_admin_list_and_create_users(client: TestClient, db_session: Session, ad
         "full_name": "Data Analyst Test",
         "email": new_email,
         "password": "Password123!",
-        "role_name": "VIEWER",
+        "role_name": "USER",
     }
     create_resp = client.post("/api/v1/admin/users", json=create_payload, headers=admin_headers)
     assert create_resp.status_code == status.HTTP_201_CREATED
     created_user = create_resp.json()
     assert created_user["email"] == new_email
-    assert created_user["role_name"] == "VIEWER"
+    assert created_user["role_name"] == "USER"
     assert "READ" in created_user["effective_permissions"]
     assert "DEPLOY" not in created_user["effective_permissions"]
 
-    # 3. Update user role to ML_ENGINEER
+    # 3. Update user role to ADMIN
     user_id = created_user["id"]
     patch_resp = client.patch(
         f"/api/v1/admin/users/{user_id}",
-        json={"role_name": "ML_ENGINEER"},
+        json={"role_name": "ADMIN"},
         headers=admin_headers,
     )
     assert patch_resp.status_code == status.HTTP_200_OK
     updated_user = patch_resp.json()
-    assert updated_user["role_name"] == "ML_ENGINEER"
-    assert "TRAIN" in updated_user["effective_permissions"]
+    assert updated_user["role_name"] == "ADMIN"
+    assert "MANAGE_USERS" in updated_user["effective_permissions"]
 
 
 def test_per_user_deploy_override_flow(client: TestClient, db_session: Session, admin_headers: dict):
     """
     Verifies granular per-user DEPLOY permission override:
-    1. A VIEWER user has no DEPLOY permission.
-    2. Admin grants DEPLOY override -> VIEWER gains DEPLOY permission.
-    3. Admin revokes DEPLOY override -> VIEWER loses DEPLOY permission.
+    1. A USER has no DEPLOY permission.
+    2. Admin grants DEPLOY override -> USER gains DEPLOY permission.
+    3. Admin revokes DEPLOY override -> USER loses DEPLOY permission.
     4. Admin resets override -> User returns to role default.
     """
-    viewer_role = db_session.query(Role).filter(Role.role_name == "VIEWER").first()
-    viewer_user = User(
+    user_role = db_session.query(Role).filter(Role.role_name == "USER").first()
+    normal_user = User(
         id=uuid4(),
-        full_name="Restricted Viewer",
-        email=f"viewer_{uuid4().hex[:6]}@demo.com",
+        full_name="Restricted User",
+        email=f"user_{uuid4().hex[:6]}@demo.com",
         password_hash=get_password_hash("Secret123"),
-        role_id=viewer_role.id,
+        role_id=user_role.id,
         is_active=True,
     )
-    db_session.add(viewer_user)
+    db_session.add(normal_user)
     db_session.commit()
 
-    user_id = str(viewer_user.id)
+    user_id = str(normal_user.id)
 
     # 1. Initial State: Viewer has NO deploy permission
     users_resp = client.get("/api/v1/admin/users", headers=admin_headers)

@@ -96,7 +96,7 @@ def test_fold_results_and_snapshot_persistence_end_to_end(db_session):
     1. Persists records to feature_selection_fold_results with all technique scores and fold indices.
     2. Persists record to feature_selection_snapshots on experiment completion and links it to Experiment.
     """
-    role = db_session.query(Role).filter(Role.role_name == "ML_ENGINEER").first()
+    role = db_session.query(Role).filter(Role.role_name == "USER").first()
     user = User(
         id=uuid.uuid4(),
         full_name="Fold Tester",
@@ -187,7 +187,7 @@ def test_cv_feature_selection_forced_one_applied_fold_aborts_selection(db_sessio
     Simulates a CV run where 3 selectors fail in a fold, leaving only 1 applied selector.
     Verifies that the fold record has selected_features == [].
     """
-    role = db_session.query(Role).filter(Role.role_name == "ML_ENGINEER").first()
+    role = db_session.query(Role).filter(Role.role_name == "USER").first()
     user = User(
         id=uuid.uuid4(),
         full_name="Aborted Fold Dev",

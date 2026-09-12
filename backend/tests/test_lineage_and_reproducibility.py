@@ -728,10 +728,10 @@ def test_db_commit_failure_cleanup_fails_marked_orphaned_recoverable(db_session,
 def test_reproduce_experiment_frozen_tolerances_success(db_session, regression_setup):
     """
     Day 4 (P0) Verification:
-    Re-runs run_experiment with identical frozen configuration.
+    Re-runs CV on Development partition with identical frozen configuration.
     Compares newly observed primary metric against original using frozen contract tolerance
     (metric_absolute_tolerance=1e-3, metric_relative_tolerance=0.01 per SRS v9 §3).
-    Confirms status == 'REPRODUCED' and return payload format {status, expected, observed, difference}.
+    Confirms non-mutating behavior (no new Experiment entity, no new TrainedModel rows).
     """
     project, _, _ = regression_setup
     service = ExperimentService(db_session)
@@ -739,7 +739,7 @@ def test_reproduce_experiment_frozen_tolerances_success(db_session, regression_s
     # 1. Run original experiment
     orig_res = service.run_experiment(
         project_id=project.id,
-        algorithms=["LinearRegression", "Ridge"],
+        algorithms=["LinearRegression", "RandomForestRegressor"],
         folds=3,
         seed=42,
         selection_metric="rmse",
@@ -748,18 +748,22 @@ def test_reproduce_experiment_frozen_tolerances_success(db_session, regression_s
     )
     orig_exp_id = orig_res["experiment_id"]
 
+    exp_count_before = db_session.query(Experiment).count()
+
     # 2. Call service.reproduce_experiment
     reproduce_res = service.reproduce_experiment(orig_exp_id)
 
-    # 3. Assert return contract
+    # 3. Assert return contract & non-mutating invariant
     assert reproduce_res["status"] == "REPRODUCED"
+    assert reproduce_res["passed"] is True
     assert "expected" in reproduce_res
     assert "observed" in reproduce_res
     assert "difference" in reproduce_res
     assert "relative_difference" in reproduce_res
     assert reproduce_res["metric_name"] == "rmse"
     assert reproduce_res["original_experiment_id"] == orig_exp_id
-    assert reproduce_res["reproduced_experiment_id"] != orig_exp_id
+    # Non-mutating invariant: no new Experiment entity created
+    assert db_session.query(Experiment).count() == exp_count_before
 
     # 4. Assert frozen tolerance values from Week 1 contract (not ad hoc)
     tol = reproduce_res["tolerance"]
@@ -791,27 +795,19 @@ def test_reproduce_experiment_discrepancy_exceeding_tolerance(db_session, regres
     )
     orig_exp_id = orig_res["experiment_id"]
 
-    # Intercept run_experiment inside reproduce_experiment to simulate non-reproducible run
-    real_run_experiment = service.run_experiment
+    # Alter the expected metric on the model to simulate a discrepancy
+    exp = service.exp_repo.get_with_models(orig_exp_id)
+    winning_model = exp.trained_models[0]
+    for metric in winning_model.metrics:
+        if metric.split == "CV_MEAN":
+            metric.metric_value = float(metric.metric_value) * 5.0 + 50.0
+            service.db.add(metric)
+    service.db.commit()
 
-    def simulated_divergent_run(*args, **kwargs):
-        res = real_run_experiment(*args, **kwargs)
-        # Artificially alter the reproduced metric in DB
-        reproduced_exp = service.exp_repo.get_with_models(res["experiment_id"])
-        for m in reproduced_exp.trained_models:
-            for metric in m.metrics:
-                if metric.split == "CV_MEAN":
-                    metric.metric_value = float(metric.metric_value) * 2.0 + 10.0  # Cleanly exceeds 1.0% relative tolerance
-                    service.db.add(metric)
-            m.quick_cv_score = float(m.quick_cv_score or 0.0) * 2.0 + 10.0
-            service.db.add(m)
-        service.db.commit()
-        return res
-
-    with patch.object(service, "run_experiment", side_effect=simulated_divergent_run):
-        reproduce_res = service.reproduce_experiment(orig_exp_id)
+    reproduce_res = service.reproduce_experiment(orig_exp_id)
 
     assert reproduce_res["status"] == "REPRODUCIBILITY_FAILED"
+    assert reproduce_res["passed"] is False
     assert reproduce_res["difference"] > 1e-3
     assert reproduce_res["relative_difference"] > 0.01
 
@@ -821,7 +817,7 @@ def test_reproduce_experiment_endpoint_api(client, db_session, regression_setup,
     Day 4 (P0) Verification:
     Tests POST /api/v1/experiments/{id}/reproduce HTTP endpoint with auth permissions.
     """
-    user = create_test_user("reproduce_engineer@test.com", "ML_ENGINEER")
+    user = create_test_user("reproduce_engineer@test.com", "USER")
     headers = auth_headers(user)
 
     project, _, _ = regression_setup

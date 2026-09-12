@@ -86,7 +86,7 @@ export const Dashboard = () => {
     user?.permissions ||
     (user?.role?.permissions ? user.role.permissions.map((p) => (typeof p === 'string' ? p : p.permission_key)) : [])
   );
-  const isAdmin = user?.role === 'ADMIN' || userPerms.has('MANAGE_USERS');
+  const isAdmin = userPerms.has('MANAGE_USERS');
   const canEditData = isAdmin || userPerms.has('EDIT_DATA');
 
   const loadDashboardData = async () => {

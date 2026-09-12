@@ -4,7 +4,6 @@ from app.core.database import get_db
 from app.core.dependencies import get_current_user, require_permission
 from app.models.user import User
 from app.schemas.auth import (
-    RegisterRequest,
     SignupRequest,
     LoginRequest,
     TokenResponse,
@@ -32,19 +31,6 @@ async def signup(
         raw_body = {}
     service = AuthService(db)
     return service.signup_user(payload, raw_body=raw_body)
-
-@router.post(
-    "/register",
-    response_model=UserResponse,
-    status_code=status.HTTP_201_CREATED,
-    summary="Register a new user"
-)
-def register(
-    payload: RegisterRequest,
-    db: Session = Depends(get_db)
-):
-    service = AuthService(db)
-    return service.register_user(payload)
 
 @router.post(
     "/login",

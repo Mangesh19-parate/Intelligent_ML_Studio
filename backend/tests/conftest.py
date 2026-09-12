@@ -64,8 +64,10 @@ def client(db_session):
 
 @pytest.fixture
 def create_test_user(db_session):
-    def _create(email: str, role_name: str = "ML_ENGINEER", full_name: str = "Test User"):
+    def _create(email: str, role_name: str = "USER", full_name: str = "Test User"):
         role = db_session.query(Role).filter(Role.role_name == role_name).first()
+        if not role:
+            role = db_session.query(Role).filter(Role.role_name == "USER").first()
         user = User(
             id=uuid.uuid4(),
             full_name=full_name,

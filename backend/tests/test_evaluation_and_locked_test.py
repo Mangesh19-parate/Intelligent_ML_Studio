@@ -21,14 +21,13 @@ from app.services.experiment_service import ExperimentService
 from app.services.evaluation_service import EvaluationService
 from app.services.trainers import RegressionTrainer, ClassificationTrainer
 
-def get_auth_token(client, email="engineer_d7@example.com", role_name="ML_ENGINEER"):
+def get_auth_token(client, email="engineer_d7@example.com"):
     reg_resp = client.post(
-        "/api/v1/auth/register",
+        "/api/v1/auth/signup",
         json={
             "full_name": "Test User D7",
             "email": email,
             "password": "password123",
-            "role_name": role_name,
         },
     )
     assert reg_resp.status_code in [201, 200]
@@ -127,7 +126,7 @@ def test_acceptance_check_a_d_e_single_locked_test_and_full_dev_refit(db_session
     Check (d): Confirm the final refit uses ALL Development rows (not a fold subset).
     Check (e): Confirm Locked Test rows are never used in a .fit() call anywhere in this day's code.
     """
-    role = db_session.query(Role).filter(Role.role_name == "ML_ENGINEER").first()
+    role = db_session.query(Role).filter(Role.role_name == "USER").first()
     user = User(
         id=uuid.uuid4(),
         full_name="Locked Test Auditor",
@@ -239,7 +238,7 @@ def test_acceptance_check_b_finalize_twice_rejected(db_session):
                is rejected outright (locked_test_consumed guard fires) rather than silently
                re-evaluating and overwriting the first LOCKED_TEST metrics.
     """
-    role = db_session.query(Role).filter(Role.role_name == "ML_ENGINEER").first()
+    role = db_session.query(Role).filter(Role.role_name == "USER").first()
     user = User(
         id=uuid.uuid4(),
         full_name="Guard Dev",
@@ -301,7 +300,7 @@ def test_acceptance_check_c_diagnostic_rerun_and_leaderboard_isolation(client, d
                resulting rows are stored as TEST_REUSED_DIAGNOSTIC and do NOT appear in the
                GET /leaderboard response or affect selected_model_id.
     """
-    mle_token = get_auth_token(client, email="diagnostic_user@studio.com", role_name="ML_ENGINEER")
+    mle_token = get_auth_token(client, email="diagnostic_user@studio.com")
     headers = {"Authorization": f"Bearer {mle_token}"}
 
     # 1. Create project & dataset
@@ -441,7 +440,7 @@ def test_acceptance_check_g_model_selection_score_never_changes_sort_order(clien
     Check (g): Confirm changing model_selection_score (or a bug that miscalculates it)
                never changes leaderboard sort order — sort strictly by selection_metric.
     """
-    mle_token = get_auth_token(client, email="sort_order_test@studio.com", role_name="ML_ENGINEER")
+    mle_token = get_auth_token(client, email="sort_order_test@studio.com")
     headers = {"Authorization": f"Bearer {mle_token}"}
 
     proj_resp = client.post("/api/v1/projects", headers=headers, json={"project_name": "Sort Invariance Project"})
@@ -458,7 +457,7 @@ def test_acceptance_check_g_model_selection_score_never_changes_sort_order(clien
     exp_service = ExperimentService(db_session)
     exp_res = exp_service.run_experiment(
         project_id=proj_id,
-        algorithms=["LinearRegression", "Ridge", "RandomForestRegressor"],
+        algorithms=["LinearRegression", "GradientBoostingRegressor", "RandomForestRegressor"],
         folds=3,
         seed=42,
         selection_metric="rmse",

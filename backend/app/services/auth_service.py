@@ -11,7 +11,6 @@ from app.core.security import (
 from app.models.user import User
 from app.repositories.user_repository import UserRepository
 from app.schemas.auth import (
-    RegisterRequest,
     SignupRequest,
     LoginRequest,
     TokenResponse,
@@ -73,41 +72,10 @@ class AuthService:
 
         role = self.user_repo.get_role_by_name("USER")
         if not role:
-            role = self.user_repo.get_role_by_name("VIEWER")
-            if not role:
-                raise HTTPException(
-                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    detail="Default role configuration is missing. Please initialize RBAC seed."
-                )
-
-        new_user = User(
-            full_name=payload.full_name.strip(),
-            email=payload.email.lower().strip(),
-            password_hash=get_password_hash(payload.password),
-            role_id=role.id,
-            is_active=True,
-        )
-        created_user = self.user_repo.create(new_user)
-        return self._build_user_response(created_user)
-
-    def register_user(self, payload: RegisterRequest) -> UserResponse:
-        existing = self.user_repo.get_by_email(payload.email)
-        if existing:
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="A user with this email address already exists."
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Default USER role configuration is missing. Please initialize RBAC seed."
             )
-
-        role_name = payload.role_name or "ML_ENGINEER"
-        role = self.user_repo.get_role_by_name(role_name)
-        if not role:
-            # Fallback to VIEWER if requested role not found
-            role = self.user_repo.get_role_by_name("VIEWER")
-            if not role:
-                raise HTTPException(
-                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    detail="Default role configuration is missing. Please initialize RBAC seed."
-                )
 
         new_user = User(
             full_name=payload.full_name.strip(),

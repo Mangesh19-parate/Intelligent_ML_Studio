@@ -51,88 +51,88 @@ def test_bootstrap_admin_creation_and_refusal(db_session: Session):
 
 
 def test_require_permission_role_default_denial(client: TestClient, db_session: Session):
-    """A user with VIEWER role lacks TRAIN permission by default -> 403 Forbidden."""
-    viewer_role = db_session.query(Role).filter(Role.role_name == "VIEWER").first()
-    viewer_user = User(
-        full_name="Default Viewer",
-        email="viewer_default@example.com",
+    """A user with USER role lacks DEPLOY permission by default -> 403 Forbidden."""
+    user_role = db_session.query(Role).filter(Role.role_name == "USER").first()
+    test_user = User(
+        full_name="Default User",
+        email="user_default@example.com",
         password_hash="hash",
-        role_id=viewer_role.id,
+        role_id=user_role.id,
         is_active=True,
     )
-    db_session.add(viewer_user)
+    db_session.add(test_user)
     db_session.commit()
-    db_session.refresh(viewer_user)
+    db_session.refresh(test_user)
 
-    token = create_access_token(subject=str(viewer_user.id))
+    token = create_access_token(subject=str(test_user.id))
     headers = {"Authorization": f"Bearer {token}"}
 
-    response = client.get("/api/v1/auth/protected-demo", headers=headers)
+    response = client.get("/api/v1/auth/deploy-demo", headers=headers)
     assert response.status_code == 403
-    assert "Missing required permission 'TRAIN'" in response.json()["detail"]
+    assert "Missing required permission 'DEPLOY'" in response.json()["detail"]
 
 
 def test_require_permission_override_grant(client: TestClient, db_session: Session):
     """
-    A VIEWER user who is granted an explicit user_permission_overrides row (is_granted=True, TRAIN)
-    successfully accesses the route requiring TRAIN -> 200 OK.
+    A USER user who is granted an explicit user_permission_overrides row (is_granted=True, DEPLOY)
+    successfully accesses the route requiring DEPLOY -> 200 OK.
     """
-    viewer_role = db_session.query(Role).filter(Role.role_name == "VIEWER").first()
-    viewer_user = User(
-        full_name="Elevated Viewer",
-        email="viewer_elevated@example.com",
+    user_role = db_session.query(Role).filter(Role.role_name == "USER").first()
+    test_user = User(
+        full_name="Elevated User",
+        email="user_elevated@example.com",
         password_hash="hash",
-        role_id=viewer_role.id,
+        role_id=user_role.id,
         is_active=True,
     )
-    db_session.add(viewer_user)
+    db_session.add(test_user)
     db_session.commit()
-    db_session.refresh(viewer_user)
+    db_session.refresh(test_user)
 
-    # Add override GRANT for TRAIN
+    # Add override GRANT for DEPLOY
     override = UserPermissionOverride(
-        user_id=viewer_user.id,
-        permission_key="TRAIN",
+        user_id=test_user.id,
+        permission_key="DEPLOY",
         is_granted=True,
     )
     db_session.add(override)
     db_session.commit()
 
-    token = create_access_token(subject=str(viewer_user.id))
+    token = create_access_token(subject=str(test_user.id))
     headers = {"Authorization": f"Bearer {token}"}
 
-    response = client.get("/api/v1/auth/protected-demo", headers=headers)
+    response = client.get("/api/v1/auth/deploy-demo", headers=headers)
     assert response.status_code == 200
-    assert response.json()["message"] == "Permission TRAIN verified."
+    assert response.json()["message"] == "Permission DEPLOY verified."
 
 
 def test_require_permission_override_revoke(client: TestClient, db_session: Session):
     """
-    An ML_ENGINEER user who has TRAIN by default, but has an explicit user_permission_overrides row
+    A USER user who has TRAIN by default, but has an explicit user_permission_overrides row
     (is_granted=False, TRAIN), is denied access -> 403 Forbidden.
     """
-    engineer_role = db_session.query(Role).filter(Role.role_name == "ML_ENGINEER").first()
-    engineer_user = User(
-        full_name="Revoked Engineer",
-        email="engineer_revoked@example.com",
+    user_role = db_session.query(Role).filter(Role.role_name == "USER").first()
+    test_user = User(
+        full_name="Revoked User",
+        email="user_revoked@example.com",
         password_hash="hash",
-        role_id=engineer_role.id,
+        role_id=user_role.id,
         is_active=True,
     )
-    db_session.add(engineer_user)
+    db_session.add(test_user)
     db_session.commit()
-    db_session.refresh(engineer_user)
+    db_session.refresh(test_user)
 
     # Add override REVOKE for TRAIN
     override = UserPermissionOverride(
-        user_id=engineer_user.id,
+        user_id=test_user.id,
         permission_key="TRAIN",
         is_granted=False,
     )
     db_session.add(override)
     db_session.commit()
 
-    token = create_access_token(subject=str(engineer_user.id))
+    token = create_access_token(subject=str(test_user.id))
     headers = {"Authorization": f"Bearer {token}"}
 
     response = client.get("/api/v1/auth/protected-demo", headers=headers)

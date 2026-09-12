@@ -180,7 +180,7 @@ def test_project_wide_leakage_audit(db_session: Session, client, create_test_use
     exp_service = ExperimentService(db_session)
     exp_res = exp_service.run_experiment(
         project_id=uuid.UUID(project_id),
-        algorithms=["LinearRegression", "Ridge", "RandomForestRegressor"],
+        algorithms=["LinearRegression", "GradientBoostingRegressor", "RandomForestRegressor"],
         folds=5,
         seed=42,
         selection_metric="rmse",
@@ -230,7 +230,10 @@ def test_project_wide_leakage_audit(db_session: Session, client, create_test_use
         mock_no_locked.assert_not_called()
 
     # Stage 10: Deployment Gate & Live Deployment (Four-Eyes Principle: Approver != Creator)
-    approver_user = create_test_user("deployment_approver@studio.com", "DEPLOYMENT_MANAGER")
+    approver_user = create_test_user("deployment_approver@studio.com", "USER")
+    from app.models.user_permission_override import UserPermissionOverride
+    db_session.add(UserPermissionOverride(user_id=approver_user.id, permission_key="DEPLOY", is_granted=True))
+    db_session.commit()
     app_login_res = client.post("/api/v1/auth/login", json={"email": "deployment_approver@studio.com", "password": "password123"})
     approver_token = app_login_res.json()["access_token"]
     approver_headers = {"Authorization": f"Bearer {approver_token}"}
@@ -324,7 +327,7 @@ def test_project_wide_reproducibility_audit(db_session: Session, tmp_path, creat
         exp_service = ExperimentService(db_session)
         exp_res = exp_service.run_experiment(
             project_id=project.id,
-            algorithms=["LinearRegression", "Ridge", "RandomForestRegressor"],
+            algorithms=["LinearRegression", "GradientBoostingRegressor", "RandomForestRegressor"],
             folds=4,
             seed=777,
             selection_metric="rmse",
@@ -400,7 +403,7 @@ def test_project_wide_reproducibility_audit(db_session: Session, tmp_path, creat
 # 3. API CONTRACT AUDIT MATRIX
 # =============================================================================
 
-def test_api_contract_audit_matrix(client, create_test_user):
+def test_api_contract_audit_matrix(client, db_session, create_test_user):
     """
     API Contract Audit:
     Systematic test verifying permission enforcement (403 for lacking permission),
@@ -408,7 +411,12 @@ def test_api_contract_audit_matrix(client, create_test_user):
     nonexistent resource handling (404, not 500) across all endpoints.
     """
     # 1. Users setup
-    viewer_user = create_test_user("matrix_viewer@studio.com", "VIEWER")
+    viewer_user = create_test_user("matrix_viewer@studio.com", "USER")
+    from app.models.user_permission_override import UserPermissionOverride
+    for perm in ["EDIT_DATA", "TRAIN"]:
+        db_session.add(UserPermissionOverride(user_id=viewer_user.id, permission_key=perm, is_granted=False))
+    db_session.commit()
+
     viewer_token = client.post("/api/v1/auth/login", json={"email": "matrix_viewer@studio.com", "password": "password123"}).json()["access_token"]
     viewer_headers = {"Authorization": f"Bearer {viewer_token}"}
 
@@ -434,9 +442,8 @@ def test_api_contract_audit_matrix(client, create_test_user):
     # VIEWER cannot deploy model
     assert client.post(f"/api/v1/models/{fake_uuid}/deploy", headers=viewer_headers).status_code == 403
 
-    # --- 2. Validation Error Schema (422) ---
-    # Register with missing required field
-    reg_err = client.post("/api/v1/auth/register", json={"email": "invalid"})
+    # Signup with missing required field
+    reg_err = client.post("/api/v1/auth/signup", json={"email": "invalid"})
     assert reg_err.status_code == 422
     assert "detail" in reg_err.json()
 

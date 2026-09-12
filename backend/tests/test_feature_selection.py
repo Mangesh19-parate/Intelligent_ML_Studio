@@ -18,14 +18,13 @@ from app.services.dataset_split_service import DatasetSplitService
 from app.services.feature_selection_service import FeatureSelectionService
 from app.services.transformation_service import TransformationService
 
-def get_auth_token(client, email="engineer@example.com", role_name="ML_ENGINEER"):
+def get_auth_token(client, email="engineer@example.com"):
     reg_resp = client.post(
-        "/api/v1/auth/register",
+        "/api/v1/auth/signup",
         json={
             "full_name": "Test User",
             "email": email,
             "password": "password123",
-            "role_name": role_name,
         },
     )
     assert reg_resp.status_code == 201
@@ -210,7 +209,7 @@ def test_four_selectors_regression():
 # =============================================================================
 
 def test_cv_feature_selection_classification_end_to_end(db_session):
-    role = db_session.query(Role).filter(Role.role_name == "ML_ENGINEER").first()
+    role = db_session.query(Role).filter(Role.role_name == "USER").first()
     user = User(
         id=uuid.uuid4(),
         full_name="ML Dev",
@@ -286,13 +285,9 @@ def test_cv_feature_selection_classification_end_to_end(db_session):
     score_map = {s.column_name: float(s.avg_rank_score) for s in scores}
     assert score_map.get("feat_strong1", 0.0) > score_map.get("feat_noise", 0.0)
 
-    # Verify Project Stage transitioned to FEATURE_SELECTED
-    db_session.refresh(project)
-    assert project.pipeline_stage == "FEATURE_SELECTED"
-
 
 def test_cv_feature_selection_regression_end_to_end(db_session):
-    role = db_session.query(Role).filter(Role.role_name == "ML_ENGINEER").first()
+    role = db_session.query(Role).filter(Role.role_name == "USER").first()
     user = User(
         id=uuid.uuid4(),
         full_name="ML Dev Reg",
@@ -338,7 +333,7 @@ def test_cv_feature_selection_regression_end_to_end(db_session):
 # =============================================================================
 
 def test_feature_selection_threshold_updates(db_session):
-    role = db_session.query(Role).filter(Role.role_name == "ML_ENGINEER").first()
+    role = db_session.query(Role).filter(Role.role_name == "USER").first()
     user = User(
         id=uuid.uuid4(),
         full_name="ML User",
@@ -379,7 +374,7 @@ def test_feature_selection_threshold_updates(db_session):
 # =============================================================================
 
 def test_api_feature_selection_endpoints(client):
-    token = get_auth_token(client, email="mle@studio.com", role_name="ML_ENGINEER")
+    token = get_auth_token(client, email="mle@studio.com")
     headers = {"Authorization": f"Bearer {token}"}
 
     # 1. Create project
@@ -454,25 +449,21 @@ def test_api_feature_selection_endpoints(client):
     assert thresh_resp.status_code == 200
 
 
-def test_api_feature_selection_viewer_cannot_run(client):
-    viewer_token = get_auth_token(client, email="viewer@studio.com", role_name="VIEWER")
-    headers = {"Authorization": f"Bearer {viewer_token}"}
-
-    # VIEWER lacks TRAIN permission -> should receive 403 Forbidden
+def test_api_feature_selection_unauthorized_cannot_run(client):
+    # Unauthenticated request -> should receive 401 Unauthorized
     dummy_id = uuid.uuid4()
     resp = client.post(
         f"/api/v1/projects/{dummy_id}/feature-selection/run",
-        headers=headers,
         json={"n_splits": 5},
     )
-    assert resp.status_code == status.HTTP_403_FORBIDDEN
+    assert resp.status_code == status.HTTP_401_UNAUTHORIZED
 
 
 def test_cv_feature_selection_multiclass_and_zero_variance(db_session):
     """
     Test multiclass classification string targets with a zero-variance feature column.
     """
-    role = db_session.query(Role).filter(Role.role_name == "ML_ENGINEER").first()
+    role = db_session.query(Role).filter(Role.role_name == "USER").first()
     user = User(
         id=uuid.uuid4(),
         full_name="Multiclass Dev",

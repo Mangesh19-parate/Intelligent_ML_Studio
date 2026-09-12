@@ -38,13 +38,13 @@ from app.config.contract import (
 
 
 def test_algorithm_set_composition():
-    """Verify algorithm catalog contains expected models and canonical metadata."""
-    assert len(ALGORITHM_SET) >= 6
+    """Verify algorithm catalog contains 6 canonical models and metadata."""
+    assert len(ALGORITHM_SET) == 6
     
-    # Check Regression Suite
+    # Check Regression Suite (Canonical 3)
     regression_algos = [k for k, v in ALGORITHM_SET.items() if v.task_type == TaskType.REGRESSION]
+    assert len(regression_algos) == 3
     assert "linear_regression" in regression_algos
-    assert "ridge_regression" in regression_algos
     assert "random_forest_regressor" in regression_algos
     assert "gradient_boosting_regressor" in regression_algos
     

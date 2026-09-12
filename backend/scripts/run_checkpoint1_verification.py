@@ -58,7 +58,7 @@ def run_live_checkpoint_1():
     storage = LocalStorageService(str(storage_dir))
 
     # Create Test User & Project
-    role = db.query(Role).filter(Role.role_name == "ML_ENGINEER").first()
+    role = db.query(Role).filter(Role.role_name == "USER").first()
     user = User(
         id=uuid.uuid4(),
         full_name="ML Specialist",

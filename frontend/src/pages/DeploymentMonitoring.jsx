@@ -47,7 +47,7 @@ export const DeploymentMonitoring = () => {
     user?.permissions ||
     (user?.role?.permissions ? user.role.permissions.map((p) => (typeof p === 'string' ? p : p.permission_key)) : [])
   );
-  const canDeploy = user?.role === 'ADMIN' || userPerms.has('DEPLOY') || userPerms.has('MANAGE_USERS');
+  const canDeploy = userPerms.has('DEPLOY') || userPerms.has('MANAGE_USERS');
 
   const fetchMonitoring = async (depId) => {
     if (!depId) return;

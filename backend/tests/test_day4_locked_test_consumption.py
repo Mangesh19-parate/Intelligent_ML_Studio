@@ -35,13 +35,12 @@ from app.services.deployment_gate_service import DeploymentGateService
 from app.repositories.experiment_repository import ExperimentRepository
 
 
-def get_auth_token(client, email="day4_mle@studio.com", role_name="ML_ENGINEER"):
-    """Helper to register/login and obtain JWT bearer token."""
-    reg_resp = client.post("/api/v1/auth/register", json={
+def get_auth_token(client, email="day4_mle@studio.com"):
+    """Helper to signup/login and obtain JWT bearer token."""
+    reg_resp = client.post("/api/v1/auth/signup", json={
         "email": email,
         "password": "Password123!",
         "full_name": "Day4 MLE",
-        "role_name": role_name,
     })
     assert reg_resp.status_code in [200, 201]
     resp = client.post("/api/v1/auth/login", json={

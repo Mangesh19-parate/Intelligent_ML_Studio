@@ -79,15 +79,15 @@ class ExperimentService:
     """
 
     VALID_REGRESSION_ALGORITHMS = {
-        "LinearRegression", "Linear Regression",
-        "Ridge", "Ridge Regression",
-        "RandomForestRegressor", "Random Forest", "Random Forest Regressor"
+        "LinearRegression", "Linear Regression", "linear_regression",
+        "RandomForestRegressor", "Random Forest", "Random Forest Regressor", "random_forest_regressor",
+        "GradientBoostingRegressor", "Gradient Boosting", "Gradient Boosting Regressor", "gradient_boosting_regressor",
     }
 
     VALID_CLASSIFICATION_ALGORITHMS = {
-        "LogisticRegression", "Logistic Regression",
-        "RandomForestClassifier", "Random Forest", "Random Forest Classifier",
-        "GradientBoostingClassifier", "Gradient Boosting", "Gradient Boosting Classifier"
+        "LogisticRegression", "Logistic Regression", "logistic_regression",
+        "RandomForestClassifier", "Random Forest", "Random Forest Classifier", "random_forest_classifier",
+        "GradientBoostingClassifier", "Gradient Boosting", "Gradient Boosting Classifier", "gradient_boosting_classifier",
     }
 
     def __init__(self, db: Session, storage: StorageService | None = None):
@@ -699,7 +699,7 @@ class ExperimentService:
 
         if not algorithms:
             if task_type == "REGRESSION":
-                algorithms = ["LinearRegression", "Ridge", "RandomForestRegressor"]
+                algorithms = ["LinearRegression", "RandomForestRegressor", "GradientBoostingRegressor"]
             else:
                 algorithms = ["LogisticRegression", "RandomForestClassifier", "GradientBoostingClassifier"]
 
@@ -947,9 +947,8 @@ class ExperimentService:
                     else:
                         X_train_trans = np.asarray(X_arr, dtype=np.float64)
 
-                if np.isnan(X_train_trans).any():
-                    fallback_imputer = SimpleImputer(strategy="mean")
-                    X_train_trans = fallback_imputer.fit_transform(X_train_trans)
+                fallback_imputer = SimpleImputer(strategy="mean")
+                X_train_trans = fallback_imputer.fit_transform(X_train_trans)
 
                 fold_feature_names = self.fs_service.extract_clean_feature_names(transformer, candidate_cols)
 
@@ -1043,12 +1042,15 @@ class ExperimentService:
                     fold_feature_names, technique_results
                 )
 
-                fold_selected = [
-                    feat for feat, sc in fold_ensemble.items() if sc >= threshold
-                ]
-                if not fold_selected:
-                    top_col = max(fold_ensemble.items(), key=lambda x: x[1])[0]
-                    fold_selected = [top_col]
+                if threshold > 0.0:
+                    fold_selected = [
+                        feat for feat, sc in fold_ensemble.items() if sc >= threshold
+                    ]
+                    if not fold_selected:
+                        top_col = max(fold_ensemble.items(), key=lambda x: x[1])[0]
+                        fold_selected = [top_col]
+                else:
+                    fold_selected = self.fs_service.select_top_k_features(fold_ensemble)
 
                 # Persist fold feature selection results (ONCE per fold)
                 self.exp_repo.add_fold_result(
@@ -1094,9 +1096,11 @@ class ExperimentService:
                     else:
                         X_val_trans = np.asarray(X_v_arr, dtype=np.float64)
 
+                # Strictly transform-only on validation (NO fit_transform)
                 if np.isnan(X_val_trans).any():
-                    fallback_imp = SimpleImputer(strategy="mean")
-                    X_val_trans = fallback_imp.fit_transform(X_val_trans)
+                    X_val_trans = fallback_imputer.transform(X_val_trans)
+                    if np.isnan(X_val_trans).any():
+                        X_val_trans = np.nan_to_num(X_val_trans, nan=0.0)
 
                 X_val_selected = X_val_trans[:, selected_indices]
 
@@ -2091,18 +2095,17 @@ class ExperimentService:
             technique_results["Permutation"] = {"status": "FAILED", "raw_scores": None, "status_reason": str(e)}
 
         _, ensemble = self.fs_service.aggregate_technique_scores_for_fold(feature_names, technique_results)
-        selected = [feat for feat, sc in ensemble.items() if sc >= 0.0]
-        if not selected:
-            top_col = max(ensemble.items(), key=lambda x: x[1])[0]
-            selected = [top_col]
-        return selected
+        return self.fs_service.select_top_k_features(ensemble)
 
     def reproduce_experiment(self, experiment_id: UUID | str) -> dict[str, Any]:
         """
-        Re-runs run_experiment with the identical frozen configuration and compares
-        the newly observed primary metric against the original using the frozen contract
-        tolerance from Week 1 (metric_absolute_tolerance=1e-3, metric_relative_tolerance=0.01).
-        Returns {status, expected, observed, difference, relative_difference, metric_name, ...}.
+        Non-mutating diagnostic replay of cross-validation on Development data (§1, §3).
+        
+        INVARIANTS:
+        - Re-executes CV on Development data using the identical frozen parameters.
+        - Does NOT create a new Experiment entity or register new TrainedModel rows.
+        - NEVER accesses or consumes the Locked Test partition.
+        - Computes observed CV mean metrics in-memory and verifies against frozen tolerances.
         """
         exp_uuid = UUID(str(experiment_id)) if not isinstance(experiment_id, UUID) else experiment_id
         original_exp = self.exp_repo.get_with_models(exp_uuid)
@@ -2119,29 +2122,15 @@ class ExperimentService:
                 detail="Associated project not found."
             )
 
-        # 1. Determine primary selection metric and expected value from original experiment
         task_type = original_exp.task_type or project.task_type or "REGRESSION"
-        metric_name = original_exp.selection_metric or ("rmse" if task_type == "REGRESSION" else "f1_macro")
-        direction = original_exp.selection_direction or ("MINIMIZE" if metric_name in ["rmse", "mae", "mse"] else "MAXIMIZE")
-
-        # Find original winning model or best completed model
+        metric_name = original_exp.selection_metric or ("rmse" if task_type == "REGRESSION" else "macro_f1")
+        
+        # Identify original winning model
         winning_model = None
         if original_exp.selected_model_id:
             winning_model = next((m for m in original_exp.trained_models if m.id == original_exp.selected_model_id), None)
-
         if not winning_model and original_exp.trained_models:
-            completed = [
-                m for m in original_exp.trained_models
-                if m.status in [
-                    ModelState.TRAINED.value,
-                    ModelState.ARTIFACT_VERIFIED.value,
-                    ModelState.DEPLOYABLE.value,
-                    "COMPLETED",
-                    "TRAINED",
-                ]
-            ]
-            if completed:
-                winning_model = completed[0]
+            winning_model = original_exp.trained_models[0]
 
         if not winning_model:
             raise HTTPException(
@@ -2149,7 +2138,7 @@ class ExperimentService:
                 detail=f"Original experiment {exp_uuid} has no completed trained models to reproduce."
             )
 
-        # Extract expected metric value (CV_MEAN metric or quick_cv_score)
+        # Expected CV metric
         expected_metric = next(
             (
                 m for m in winning_model.metrics
@@ -2168,61 +2157,127 @@ class ExperimentService:
         else:
             expected_val = 0.0
 
-        # 2. Extract identical configuration
-        algorithms = [m.algorithm_name for m in original_exp.trained_models] if original_exp.trained_models else None
-        if original_exp.experiment_config and "algorithms" in original_exp.experiment_config:
-            algorithms = original_exp.experiment_config["algorithms"]
+        # Load Development partition strictly
+        datasets = self.dataset_repo.get_by_project(project.id)
+        if not datasets:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Dataset not found for project."
+            )
+        dev_df = self.split_service.get_development_data(datasets[0].id)
+        if dev_df is None or dev_df.empty:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Development partition data not found for replay."
+            )
+
+        target_col = project.target_column
+        candidate_cols = [c for c in dev_df.columns if c != target_col and c != "row_uid"]
+        X_dev_raw = dev_df[candidate_cols]
+        y_dev_raw = dev_df[target_col]
 
         folds = original_exp.fold_count or 5
-        cv_seed = original_exp.cv_seed
+        cv_seed = original_exp.cv_seed or 42
+        algorithm_name = winning_model.algorithm_name
 
-        dep_threshold = None
-        if original_exp.experiment_config and "deployment_threshold" in original_exp.experiment_config:
-            dep_threshold = original_exp.experiment_config["deployment_threshold"]
+        # Non-mutating CV Replay in memory
+        if task_type == "CLASSIFICATION":
+            splitter = StratifiedKFold(n_splits=folds, shuffle=True, random_state=cv_seed)
+            splits = list(splitter.split(X_dev_raw, y_dev_raw))
+        else:
+            splitter = KFold(n_splits=folds, shuffle=True, random_state=cv_seed)
+            splits = list(splitter.split(X_dev_raw, y_dev_raw))
 
-        # 3. Re-run experiment synchronously with identical configuration
-        reproduced_res = self.run_experiment(
-            project_id=original_exp.project_id,
-            algorithms=algorithms,
-            folds=folds,
-            seed=cv_seed,
-            selection_metric=metric_name,
-            selection_direction=direction,
-            auto_finalize=True,
-            deployment_threshold=dep_threshold,
-        )
+        fold_metrics_list = []
+        for fold_idx, (train_idx, val_idx) in enumerate(splits):
+            X_tr_f = X_dev_raw.iloc[train_idx]
+            y_tr_f = y_dev_raw.iloc[train_idx]
+            X_va_f = X_dev_raw.iloc[val_idx]
+            y_va_f = y_dev_raw.iloc[val_idx]
 
-        reproduced_exp_id = reproduced_res["experiment_id"]
-        self.db.expire_all()
-        reproduced_exp = self.exp_repo.get_with_models(reproduced_exp_id)
+            # Fit transformation on train fold only
+            tr_pipeline = self.trans_service.build_pipeline(project.id)
+            X_tr_trans = tr_pipeline.fit_transform(X_tr_f)
+            if hasattr(X_tr_trans, "toarray"):
+                X_tr_trans = X_tr_trans.toarray()
+            X_tr_arr = np.asarray(X_tr_trans, dtype=np.float64)
+            fallback_imp = SimpleImputer(strategy="mean")
+            X_tr_trans = fallback_imp.fit_transform(X_tr_arr)
 
-        # 4. Extract observed metric value from reproduced experiment
-        reproduced_winning_model = None
-        if reproduced_exp and reproduced_exp.selected_model_id:
-            reproduced_winning_model = next((m for m in reproduced_exp.trained_models if m.id == reproduced_exp.selected_model_id), None)
+            f_names = self.fs_service.extract_clean_feature_names(tr_pipeline, candidate_cols)
 
-        if not reproduced_winning_model and reproduced_exp and reproduced_exp.trained_models:
-            reproduced_winning_model = reproduced_exp.trained_models[0]
+            if task_type == "CLASSIFICATION":
+                y_tr_fit = y_tr_f.astype(int) if pd.api.types.is_numeric_dtype(y_tr_f) and not np.isnan(y_tr_f).any() else pd.Series(y_tr_f).astype(str).values
+                y_va_eval = y_va_f.astype(int) if pd.api.types.is_numeric_dtype(y_va_f) and not np.isnan(y_va_f).any() else pd.Series(y_va_f).astype(str).values
+            else:
+                y_tr_fit = y_tr_f.astype(float)
+                y_va_eval = y_va_f.astype(float)
 
-        observed_val = 0.0
-        if reproduced_winning_model:
-            obs_metric = next(
-                (
-                    m for m in reproduced_winning_model.metrics
-                    if m.split == "CV_MEAN" and (
-                        m.metric_name == metric_name
-                        or (metric_name in ["macro_f1", "f1_macro"] and m.metric_name in ["macro_f1", "f1_macro"])
-                        or (metric_name in ["weighted_f1", "f1_weighted"] and m.metric_name in ["weighted_f1", "f1_weighted"])
-                    )
-                ),
-                None
-            )
-            if obs_metric and obs_metric.metric_value is not None:
-                observed_val = float(obs_metric.metric_value)
-            elif reproduced_winning_model.quick_cv_score is not None:
-                observed_val = float(reproduced_winning_model.quick_cv_score)
+            # Feature Selection on train fold
+            t_res: dict[str, dict[str, Any]] = {}
+            try:
+                corr_sc = self.fs_service.compute_correlation_scores(X_tr_trans, y_tr_fit, task_type)
+                t_res["Correlation"] = {"status": "APPLIED", "raw_scores": corr_sc, "status_reason": None}
+            except Exception as e:
+                t_res["Correlation"] = {"status": "FAILED", "raw_scores": None, "status_reason": str(e)}
 
-        # 5. Compare using Week 1 FROZEN tolerance contract (SRS v9 §3 & Architecture Contract §11)
+            try:
+                lasso_sc = self.fs_service.compute_lasso_scores(X_tr_trans, y_tr_fit, task_type, seed=cv_seed + fold_idx)
+                t_res["Lasso"] = {"status": "APPLIED", "raw_scores": lasso_sc, "status_reason": None}
+            except Exception as e:
+                t_res["Lasso"] = {"status": "FAILED", "raw_scores": None, "status_reason": str(e)}
+
+            try:
+                rf_sc = self.fs_service.compute_random_forest_scores(X_tr_trans, y_tr_fit, task_type, seed=cv_seed + fold_idx)
+                t_res["Random Forest"] = {"status": "APPLIED", "raw_scores": rf_sc, "status_reason": None}
+            except Exception as e:
+                t_res["Random Forest"] = {"status": "FAILED", "raw_scores": None, "status_reason": str(e)}
+
+            try:
+                perm_sc = self.fs_service.compute_permutation_scores(X_tr_trans, y_tr_fit, task_type, seed=cv_seed + fold_idx)
+                t_res["Permutation"] = {"status": "APPLIED", "raw_scores": perm_sc, "status_reason": None}
+            except Exception as e:
+                t_res["Permutation"] = {"status": "FAILED", "raw_scores": None, "status_reason": str(e)}
+
+            _, f_ensemble = self.fs_service.aggregate_technique_scores_for_fold(f_names, t_res)
+            f_selected = self.fs_service.select_top_k_features(f_ensemble)
+            sel_idx = [i for i, c in enumerate(f_names) if c in f_selected] or list(range(len(f_names)))
+
+            X_tr_sel = X_tr_trans[:, sel_idx]
+
+            # Validation slice transform strictly
+            X_va_trans = tr_pipeline.transform(X_va_f)
+            if hasattr(X_va_trans, "toarray"):
+                X_va_trans = X_va_trans.toarray()
+            X_va_arr = np.asarray(X_va_trans, dtype=np.float64)
+            if np.isnan(X_va_arr).any():
+                X_va_arr = fallback_imp.transform(X_va_arr)
+                if np.isnan(X_va_arr).any():
+                    X_va_arr = np.nan_to_num(X_va_arr, nan=0.0)
+            X_va_sel = X_va_arr[:, sel_idx]
+
+            # Train and evaluate model
+            if task_type == "REGRESSION":
+                tr = RegressionTrainer(algorithm_name=algorithm_name, hyperparameters=winning_model.hyperparameters, random_state=cv_seed + fold_idx)
+                tr.fit(X_tr_sel, y_tr_fit)
+                y_pred = tr.predict(X_va_sel)
+                m_eval = EvaluationService.evaluate_regression(y_va_eval, y_pred, n=len(y_va_eval), p=len(f_selected))
+            else:
+                tr = ClassificationTrainer(algorithm_name=algorithm_name, hyperparameters=winning_model.hyperparameters, random_state=cv_seed + fold_idx)
+                tr.fit(X_tr_sel, y_tr_fit)
+                y_pred = tr.predict(X_va_sel)
+                try:
+                    y_prob = tr.predict_proba(X_va_sel)
+                except Exception:
+                    y_prob = None
+                m_eval = EvaluationService.evaluate_classification(y_va_eval, y_pred, y_prob)
+
+            norm_m_key = "macro_f1" if metric_name in ["macro_f1", "f1_macro"] else ("weighted_f1" if metric_name in ["weighted_f1", "f1_weighted"] else metric_name)
+            fold_metrics_list.append(m_eval.get(norm_m_key, m_eval.get(metric_name, 0.0)))
+
+        observed_val = float(np.mean(fold_metrics_list)) if fold_metrics_list else 0.0
+
+        # Tolerances
         abs_tol = REPRODUCIBILITY_TOLERANCE["metric_absolute_tolerance"]  # 1e-3
         rel_tol = REPRODUCIBILITY_TOLERANCE["metric_relative_tolerance"]  # 0.01
 
@@ -2230,22 +2285,35 @@ class ExperimentService:
         denom = abs(expected_val) + 1e-9
         rel_diff = diff / denom
 
-        # Tolerant if absolute difference <= abs_tol OR relative difference <= rel_tol
         is_reproduced = (diff <= abs_tol) or (rel_diff <= rel_tol)
         reproduce_status = "REPRODUCED" if is_reproduced else "REPRODUCIBILITY_FAILED"
 
         return {
             "status": reproduce_status,
+            "passed": is_reproduced,
+            "metric_name": metric_name,
             "expected": expected_val,
             "observed": observed_val,
+            "expected_value": expected_val,
+            "observed_value": observed_val,
             "difference": diff,
+            "absolute_difference": diff,
             "relative_difference": rel_diff,
-            "metric_name": metric_name,
             "original_experiment_id": original_exp.id,
-            "reproduced_experiment_id": reproduced_exp_id,
+            "source_experiment_id": original_exp.id,
+            "reproduced_experiment_id": None,
             "tolerance": {
                 "metric_absolute_tolerance": abs_tol,
                 "metric_relative_tolerance": rel_tol,
+            },
+            "tolerances": {
+                "metric_absolute_tolerance": abs_tol,
+                "metric_relative_tolerance": rel_tol,
+            },
+            "environment": {
+                "cv_seed": cv_seed,
+                "folds": folds,
+                "algorithm": algorithm_name,
             },
         }
 

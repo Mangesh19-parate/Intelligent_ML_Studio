@@ -18,14 +18,13 @@ from app.services.dataset_split_service import DatasetSplitService
 from app.services.transformation_service import TransformationService
 from app.services.transformers import OutlierCapper
 
-def get_auth_token(client, email="engineer@example.com", role_name="ML_ENGINEER"):
+def get_auth_token(client, email="engineer@example.com"):
     reg_resp = client.post(
-        "/api/v1/auth/register",
+        "/api/v1/auth/signup",
         json={
             "full_name": "Test Engineer",
             "email": email,
             "password": "password123",
-            "role_name": role_name,
         },
     )
     assert reg_resp.status_code == 201

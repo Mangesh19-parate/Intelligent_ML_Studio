@@ -8,19 +8,19 @@ def test_code_version_utility():
     assert len(ver) > 0
 
 def test_auth_register_and_login(client):
-    # 1. Register new user
+    # 1. Signup new user (hardcodes role to USER)
     reg_resp = client.post(
-        "/api/v1/auth/register",
+        "/api/v1/auth/signup",
         json={
             "full_name": "Alice Engineer",
             "email": "alice@example.com",
             "password": "securepassword123",
-            "role_name": "ML_ENGINEER"
         }
     )
     assert reg_resp.status_code == 201
     user_data = reg_resp.json()
     assert user_data["email"] == "alice@example.com"
+    assert user_data["role"]["role_name"] == "USER"
     assert "EDIT_DATA" in user_data["permissions"]
     assert "READ" in user_data["permissions"]
 
@@ -46,57 +46,27 @@ def test_auth_register_and_login(client):
     assert me_resp.json()["email"] == "alice@example.com"
 
 def test_permission_based_rbac_enforcement(client, create_test_user):
-    # 1. VIEWER (has 'READ' only)
-    viewer = create_test_user("viewer@example.com", role_name="VIEWER")
-    viewer_headers = {"Authorization": f"Bearer {client.post('/api/v1/auth/login', json={'email': 'viewer@example.com', 'password': 'password123'}).json()['access_token']}"}
+    # 1. USER without DEPLOY / MANAGE_USERS
+    user = create_test_user("user_rbac@example.com", role_name="USER")
+    user_headers = {"Authorization": f"Bearer {client.post('/api/v1/auth/login', json={'email': 'user_rbac@example.com', 'password': 'password123'}).json()['access_token']}"}
     
-    # VIEWER can READ projects
-    assert client.get("/api/v1/projects", headers=viewer_headers).status_code == 200
-    # VIEWER cannot CREATE projects (requires EDIT_DATA)
-    res_v_create = client.post("/api/v1/projects", json={"project_name": "Unauthorized Project"}, headers=viewer_headers)
-    assert res_v_create.status_code == 403
-    assert "EDIT_DATA" in res_v_create.json()["detail"]
+    # USER can create projects and READ
+    user_proj = client.post("/api/v1/projects", json={"project_name": "User Project", "target_column": "target"}, headers=user_headers)
+    assert user_proj.status_code == 201
+    proj_id = user_proj.json()["id"]
 
-    # 2. DATA_STEWARD (has 'READ', 'EDIT_DATA')
-    steward = create_test_user("steward_rbac@example.com", role_name="DATA_STEWARD")
-    steward_headers = {"Authorization": f"Bearer {client.post('/api/v1/auth/login', json={'email': 'steward_rbac@example.com', 'password': 'password123'}).json()['access_token']}"}
-    
-    # DATA_STEWARD can create projects
-    steward_proj = client.post("/api/v1/projects", json={"project_name": "Steward Project", "target_column": "target"}, headers=steward_headers)
-    assert steward_proj.status_code == 201
-    steward_proj_id = steward_proj.json()["id"]
+    # USER without DEPLOY cannot access deploy-demo
+    res_deploy = client.get("/api/v1/auth/deploy-demo", headers=user_headers)
+    assert res_deploy.status_code == 403
+    assert "DEPLOY" in res_deploy.json()["detail"]
 
-    # DATA_STEWARD cannot trigger model training (requires TRAIN)
-    res_s_train = client.post(f"/api/v1/projects/{steward_proj_id}/experiments", json={"algorithms": ["LogisticRegression"]}, headers=steward_headers)
-    assert res_s_train.status_code == 403
-    assert "TRAIN" in res_s_train.json()["detail"]
-
-    # 3. ML_ENGINEER (has 'READ', 'EDIT_DATA', 'TRAIN')
-    mle = create_test_user("mle_rbac@example.com", role_name="ML_ENGINEER")
-    mle_headers = {"Authorization": f"Bearer {client.post('/api/v1/auth/login', json={'email': 'mle_rbac@example.com', 'password': 'password123'}).json()['access_token']}"}
-    
-    # ML_ENGINEER can create projects and edit transformations
-    mle_proj = client.post("/api/v1/projects", json={"project_name": "MLE Project", "target_column": "target"}, headers=mle_headers)
-    assert mle_proj.status_code == 201
-
-    # 4. DEPLOYMENT_MANAGER (has 'READ', 'DEPLOY')
-    dep_mgr = create_test_user("dep_mgr_rbac@example.com", role_name="DEPLOYMENT_MANAGER")
-    dep_mgr_headers = {"Authorization": f"Bearer {client.post('/api/v1/auth/login', json={'email': 'dep_mgr_rbac@example.com', 'password': 'password123'}).json()['access_token']}"}
-    
-    # DEPLOYMENT_MANAGER can READ projects
-    assert client.get("/api/v1/projects", headers=dep_mgr_headers).status_code == 200
-    # DEPLOYMENT_MANAGER cannot trigger training (requires TRAIN)
-    res_dm_train = client.post(f"/api/v1/projects/{steward_proj_id}/experiments", json={"algorithms": ["LogisticRegression"]}, headers=dep_mgr_headers)
-    assert res_dm_train.status_code == 403
-    assert "TRAIN" in res_dm_train.json()["detail"]
-
-    # 5. ADMIN (has all permissions)
+    # 2. ADMIN (has all permissions including DEPLOY and MANAGE_USERS)
     admin = create_test_user("admin_rbac@example.com", role_name="ADMIN")
     admin_headers = {"Authorization": f"Bearer {client.post('/api/v1/auth/login', json={'email': 'admin_rbac@example.com', 'password': 'password123'}).json()['access_token']}"}
     
-    # ADMIN can create projects
-    admin_proj = client.post("/api/v1/projects", json={"project_name": "Admin Project", "target_column": "target"}, headers=admin_headers)
-    assert admin_proj.status_code == 201
+    # ADMIN can access deploy-demo
+    res_admin_deploy = client.get("/api/v1/auth/deploy-demo", headers=admin_headers)
+    assert res_admin_deploy.status_code == 200
 
 def test_project_crud_and_invariants(client, create_test_user):
     ml_eng = create_test_user("eng@example.com", role_name="ML_ENGINEER")

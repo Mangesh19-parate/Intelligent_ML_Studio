@@ -40,10 +40,7 @@ class TaskType(str, Enum):
 class RoleType(str, Enum):
     """Canonical user roles (§1.3). Never use role names for logic directly in code."""
     ADMIN = "ADMIN"
-    ML_ENGINEER = "ML_ENGINEER"
-    DATA_STEWARD = "DATA_STEWARD"
-    DEPLOYMENT_MANAGER = "DEPLOYMENT_MANAGER"
-    VIEWER = "VIEWER"
+    USER = "USER"
 
 
 class PermissionType(str, Enum):
@@ -69,9 +66,6 @@ class FeatureSelectionMethod(str, Enum):
     LASSO = "lasso"
     RANDOM_FOREST = "random_forest"
     PERMUTATION = "permutation"
-    # Deferred methods (§8)
-    RFE = "rfe"
-    SHAP = "shap"
 
 
 class TechniqueStatus(str, Enum):
@@ -142,7 +136,7 @@ class AlgorithmMetadata(BaseModel):
 
 
 ALGORITHM_SET: dict[str, AlgorithmMetadata] = {
-    # Regression Suite
+    # Regression Suite (Canonical 3)
     "linear_regression": AlgorithmMetadata(
         id="linear_regression",
         display_name="Linear Regression",
@@ -150,14 +144,6 @@ ALGORITHM_SET: dict[str, AlgorithmMetadata] = {
         is_baseline=True,
         sklearn_class="sklearn.linear_model.LinearRegression",
         description="Standard ordinary least squares regression baseline.",
-    ),
-    "ridge_regression": AlgorithmMetadata(
-        id="ridge_regression",
-        display_name="Ridge Regression",
-        task_type=TaskType.REGRESSION,
-        is_baseline=False,
-        sklearn_class="sklearn.linear_model.Ridge",
-        description="Linear least squares with L2 regularization.",
     ),
     "random_forest_regressor": AlgorithmMetadata(
         id="random_forest_regressor",
@@ -175,7 +161,7 @@ ALGORITHM_SET: dict[str, AlgorithmMetadata] = {
         sklearn_class="sklearn.ensemble.GradientBoostingRegressor",
         description="Additive stage-wise gradient boosting regression model.",
     ),
-    # Classification Suite
+    # Classification Suite (Canonical 3)
     "logistic_regression": AlgorithmMetadata(
         id="logistic_regression",
         display_name="Logistic Regression",
@@ -220,8 +206,8 @@ FEATURE_SELECTION_DEFAULTS = {
         FeatureSelectionMethod.PERMUTATION.value,
     ],
     "deferred_methods": [
-        FeatureSelectionMethod.RFE.value,
-        FeatureSelectionMethod.SHAP.value,
+        "rfe",
+        "shap",
     ],
 }
 
@@ -237,7 +223,8 @@ DATASET_SEMANTICS = {
     "dataset_id": "UUIDv4 representing a logical dataset resource (collection of versions)",
     "dataset_version_id": "UUIDv4 representing an immutable physical snapshot",
     "version_number": "Positive monotonically increasing integer starting at 1 per project/dataset",
-    "content_hash": "Hex-encoded SHA-256 digest computed over raw uploaded file bytes",
+    "raw_upload_sha256": "Hex-encoded SHA-256 digest computed over raw uploaded file bytes",
+    "dataset_content_hash": "Hex-encoded SHA-256 digest computed over canonical parsed representation before row_uid",
     "deduplication_policy": "Content hash match within project flags identical version or deduplicates",
 }
 

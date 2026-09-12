@@ -16,14 +16,13 @@ from app.services.data_profiling_service import DataProfilingService
 from app.services.task_type_service import TaskTypeDetectionService
 from app.services.diagnostics_service import DiagnosticsService
 
-def get_auth_token(client, email="profiler@example.com", role_name="ML_ENGINEER"):
+def get_auth_token(client, email="profiler@example.com"):
     reg_resp = client.post(
-        "/api/v1/auth/register",
+        "/api/v1/auth/signup",
         json={
             "full_name": "Test Profiler",
             "email": email,
             "password": "password123",
-            "role_name": role_name,
         },
     )
     assert reg_resp.status_code == 201

@@ -53,7 +53,6 @@ class ProjectState(str, Enum):
     SPLIT = "SPLIT"
     PROFILED = "PROFILED"
     TRANSFORMED = "TRANSFORMED"
-    FEATURE_SELECTED = "FEATURE_SELECTED"
     TRAINING = "TRAINING"
     TRAINED = "TRAINED"
     EVALUATED = "EVALUATED"
@@ -66,9 +65,8 @@ PROJECT_VALID_TRANSITIONS: Dict[ProjectState, List[ProjectState]] = {
     ProjectState.DATA: [ProjectState.SPLIT, ProjectState.ARCHIVED],
     ProjectState.SPLIT: [ProjectState.PROFILED, ProjectState.TRANSFORMED, ProjectState.DATA, ProjectState.ARCHIVED],
     ProjectState.PROFILED: [ProjectState.TRANSFORMED, ProjectState.SPLIT, ProjectState.ARCHIVED],
-    ProjectState.TRANSFORMED: [ProjectState.FEATURE_SELECTED, ProjectState.TRAINING, ProjectState.PROFILED, ProjectState.ARCHIVED],
-    ProjectState.FEATURE_SELECTED: [ProjectState.TRAINING, ProjectState.TRANSFORMED, ProjectState.ARCHIVED],
-    ProjectState.TRAINING: [ProjectState.TRAINED, ProjectState.FEATURE_SELECTED, ProjectState.TRANSFORMED, ProjectState.ARCHIVED],
+    ProjectState.TRANSFORMED: [ProjectState.TRAINING, ProjectState.PROFILED, ProjectState.ARCHIVED],
+    ProjectState.TRAINING: [ProjectState.TRAINED, ProjectState.TRANSFORMED, ProjectState.ARCHIVED],
     ProjectState.TRAINED: [ProjectState.EVALUATED, ProjectState.TRAINING, ProjectState.ARCHIVED],
     ProjectState.EVALUATED: [ProjectState.GATE_PASSED, ProjectState.TRAINING, ProjectState.ARCHIVED],
     ProjectState.GATE_PASSED: [ProjectState.DEPLOYED, ProjectState.TRAINING, ProjectState.ARCHIVED],

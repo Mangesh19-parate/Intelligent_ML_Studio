@@ -70,14 +70,13 @@ from app.services.selectors import (
 # Helper Utilities
 # =============================================================================
 
-def get_auth_token(client, email="consolidated_inv@studio.com", role_name="ML_ENGINEER"):
+def get_auth_token(client, email="consolidated_inv@studio.com"):
     client.post(
-        "/api/v1/auth/register",
+        "/api/v1/auth/signup",
         json={
             "full_name": "Invariant Runner",
             "email": email,
             "password": "Password123!",
-            "role_name": role_name,
         },
     )
     login_resp = client.post(

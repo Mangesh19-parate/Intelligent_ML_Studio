@@ -37,13 +37,12 @@ from app.services.experiment_service import ExperimentService
 from app.repositories.experiment_repository import ExperimentRepository
 
 
-def get_auth_token(client, email="day3_mle@studio.com", role_name="ML_ENGINEER"):
-    """Helper to register/login and obtain JWT bearer token."""
-    reg_resp = client.post("/api/v1/auth/register", json={
+def get_auth_token(client, email="day3_mle@studio.com"):
+    """Helper to signup/login and obtain JWT bearer token."""
+    reg_resp = client.post("/api/v1/auth/signup", json={
         "email": email,
         "password": "Password123!",
         "full_name": "Day3 MLE",
-        "role_name": role_name,
     })
     assert reg_resp.status_code in [200, 201]
     resp = client.post("/api/v1/auth/login", json={
@@ -223,7 +222,7 @@ def test_strict_out_of_fold_leakage_assertion():
 def test_trained_model_decision_threshold_persistence(db_session):
     """Verify decision_threshold column on TrainedModel model and repository."""
     repo = ExperimentRepository(db_session)
-    role = db_session.query(Role).filter(Role.role_name == "ML_ENGINEER").first()
+    role = db_session.query(Role).filter(Role.role_name == "USER").first()
     user = User(
         id=uuid4(),
         email=f"thresh_test_{uuid4().hex[:6]}@studio.com",

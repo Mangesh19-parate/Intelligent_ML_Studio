@@ -14,6 +14,7 @@ from app.main import app
 from app.models.project import Project
 from app.models.user import User
 from app.models.role import Role
+from app.models.user_permission_override import UserPermissionOverride
 from app.models.dataset import Dataset
 from app.models.dataset_split import DatasetSplit
 from app.models.profiling_report import ProfilingReport
@@ -55,8 +56,7 @@ def create_synthetic_csv(n_rows: int = 100) -> bytes:
 @pytest.fixture
 def client_and_users(db_session: Session):
     admin_role = db_session.query(Role).filter(Role.role_name == "ADMIN").first()
-    engineer_role = db_session.query(Role).filter(Role.role_name == "ML_ENGINEER").first()
-    viewer_role = db_session.query(Role).filter(Role.role_name == "VIEWER").first()
+    user_role = db_session.query(Role).filter(Role.role_name == "USER").first()
 
     admin_user = User(
         id=uuid.uuid4(),
@@ -65,26 +65,35 @@ def client_and_users(db_session: Session):
         password_hash="fake",
         role_id=admin_role.id,
     )
-    engineer_user = User(
+    user_user = User(
         id=uuid.uuid4(),
-        full_name="Engineer User",
-        email=f"eng_{uuid.uuid4().hex[:6]}@test.com",
+        full_name="Standard User",
+        email=f"user_{uuid.uuid4().hex[:6]}@test.com",
         password_hash="fake",
-        role_id=engineer_role.id,
+        role_id=user_role.id,
     )
-    viewer_user = User(
+    restricted_user = User(
         id=uuid.uuid4(),
-        full_name="Viewer User",
-        email=f"viewer_{uuid.uuid4().hex[:6]}@test.com",
+        full_name="Restricted User",
+        email=f"restricted_{uuid.uuid4().hex[:6]}@test.com",
         password_hash="fake",
-        role_id=viewer_role.id,
+        role_id=user_role.id,
     )
-    db_session.add_all([admin_user, engineer_user, viewer_user])
+    db_session.add_all([admin_user, user_user, restricted_user])
+    db_session.commit()
+
+    # Revoke EDIT_DATA from restricted_user
+    override = UserPermissionOverride(
+        user_id=restricted_user.id,
+        permission_key="EDIT_DATA",
+        is_granted=False,
+    )
+    db_session.add(override)
     db_session.commit()
 
     admin_token = create_access_token(str(admin_user.id))
-    eng_token = create_access_token(str(engineer_user.id))
-    viewer_token = create_access_token(str(viewer_user.id))
+    user_token = create_access_token(str(user_user.id))
+    restricted_token = create_access_token(str(restricted_user.id))
 
     def override_get_db():
         try:
@@ -98,11 +107,11 @@ def client_and_users(db_session: Session):
     yield {
         "client": client,
         "admin_user": admin_user,
-        "eng_user": engineer_user,
-        "viewer_user": viewer_user,
+        "eng_user": user_user,
+        "viewer_user": restricted_user,
         "admin_headers": {"Authorization": f"Bearer {admin_token}"},
-        "eng_headers": {"Authorization": f"Bearer {eng_token}"},
-        "viewer_headers": {"Authorization": f"Bearer {viewer_token}"},
+        "eng_headers": {"Authorization": f"Bearer {user_token}"},
+        "viewer_headers": {"Authorization": f"Bearer {restricted_token}"},
     }
 
     app.dependency_overrides.clear()
@@ -114,13 +123,13 @@ def test_acceptance_check_a_walkthrough_all_derived_stages(db_session: Session):
     checking derive_pipeline_stage()'s output after EACH step and confirming it advances
     correctly at every transition.
     """
-    eng_role = db_session.query(Role).filter(Role.role_name == "ML_ENGINEER").first()
+    user_role = db_session.query(Role).filter(Role.role_name == "USER").first()
     user = User(
         id=uuid.uuid4(),
         full_name="Stage Tester",
         email=f"stage_{uuid.uuid4().hex[:6]}@test.com",
         password_hash="fake",
-        role_id=eng_role.id,
+        role_id=user_role.id,
     )
     db_session.add(user)
     db_session.commit()

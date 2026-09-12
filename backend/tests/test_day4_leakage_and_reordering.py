@@ -27,14 +27,13 @@ def generate_leakage_test_csv(n_rows: int = 100) -> bytes:
     df.to_csv(buf, index=False)
     return buf.getvalue().encode("utf-8")
 
-def get_auth_token(client, email="day4_tester@example.com", role_name="ML_ENGINEER"):
+def get_auth_token(client, email="day4_tester@example.com"):
     client.post(
-        "/api/v1/auth/register",
+        "/api/v1/auth/signup",
         json={
             "full_name": "Day 4 Leakage Tester",
             "email": email,
             "password": "password123",
-            "role_name": role_name,
         },
     )
     login_resp = client.post(

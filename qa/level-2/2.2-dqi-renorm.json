@@ -1,0 +1,16 @@
+{
+  "dataset": "all_categorical_dqi.csv",
+  "numeric_columns_count": 0,
+  "categorical_columns_count": 4,
+  "excluded_subscores": [
+    "outliers"
+  ],
+  "effective_weights": {
+    "completeness": 0.3333,
+    "validity": 0.3333,
+    "uniqueness": 0.3334,
+    "outliers": 0.0
+  },
+  "effective_weight_sum": 1.0,
+  "status": "NORMALIZED_SUCCESSFULLY"
+}

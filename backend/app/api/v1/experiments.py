@@ -1,6 +1,6 @@
 import secrets
 from uuid import UUID
-from fastapi import APIRouter, Depends, BackgroundTasks, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -20,6 +20,7 @@ from app.schemas.experiment import (
 )
 from app.schemas.model_metric import SelectionRecordResponse, ModelMetricResponse
 from app.services.experiment_service import ExperimentService
+from app.tasks.experiment_tasks import submit_experiment_task
 
 router = APIRouter(tags=["Model Training Experiments"])
 
@@ -32,7 +33,6 @@ router = APIRouter(tags=["Model Training Experiments"])
 def create_experiment(
     id: UUID,
     payload: ExperimentCreateRequest,
-    background_tasks: BackgroundTasks,
     current_user: User = Depends(require_permission("TRAIN")),
     db: Session = Depends(get_db),
 ):
@@ -94,9 +94,8 @@ def create_experiment(
     # Atomically acquire training lock with DB concurrency protection
     service.start_training(experiment.id)
 
-    # Kick off background execution
-    background_tasks.add_task(
-        ExperimentService.run_experiment_background,
+    # Submit task to durable persistent execution layer
+    submit_experiment_task(
         project_id=project.id,
         experiment_id=experiment.id,
         algorithms=canonical_algs,
@@ -184,7 +183,6 @@ def freeze_experiment_config_endpoint(
 )
 def start_experiment_training_endpoint(
     id: UUID,
-    background_tasks: BackgroundTasks,
     current_user: User = Depends(require_permission("TRAIN")),
     db: Session = Depends(get_db),
 ):
@@ -203,8 +201,8 @@ def start_experiment_training_endpoint(
     eff_metric = exp.selection_metric or ("rmse" if exp.task_type == "REGRESSION" else "f1_macro")
     eff_direction = exp.selection_direction or ("MINIMIZE" if eff_metric in ["rmse", "mae", "mse"] else "MAXIMIZE")
 
-    background_tasks.add_task(
-        ExperimentService.run_experiment_background,
+    # Submit task to durable persistent execution layer
+    submit_experiment_task(
         project_id=exp.project_id,
         experiment_id=exp.id,
         algorithms=algorithms,

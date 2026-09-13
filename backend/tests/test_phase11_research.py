@@ -43,7 +43,7 @@ client = TestClient(app)
 # -----------------------------------------------------------------------------
 def test_pre_registration_manifest_integrity():
     """Verify pre-registration manifest exists, is valid JSON, and freezes all protocol parameters."""
-    manifest_path = Path("research/pre_registration_manifest.json")
+    manifest_path = RESEARCH_DIR / "pre_registration_manifest.json"
     assert manifest_path.exists(), "Pre-registration manifest not found"
 
     with open(manifest_path, "r", encoding="utf-8") as f:

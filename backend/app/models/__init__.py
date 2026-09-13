@@ -23,6 +23,7 @@ from app.models.explainability_summary import ExplainabilitySummary
 from app.models.deployment_gate import DeploymentGate
 from app.models.prediction_log import PredictionLog
 from app.models.reproducibility import ReproducibilityRun
+from app.models.durable_task import DurableTask
 
 __all__ = [
     "Base",
@@ -51,5 +52,6 @@ __all__ = [
     "Deployment",
     "PredictionLog",
     "ReproducibilityRun",
+    "DurableTask",
 ]
 

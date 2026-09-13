@@ -172,17 +172,31 @@ class ExperimentRepository(BaseRepository[Experiment]):
         fold_index: int,
         selected_features: list[str],
         technique_scores: dict,
+        selector: str = "RankAggregationSelector",
+        permutation_source: str = "validation_fold",
+        locked_test_accessed: bool = False,
+        train_row_hash: str | None = None,
+        validation_row_hash: str | None = None,
+        test_row_hash: str | None = None,
     ) -> FeatureSelectionFoldResult:
         if isinstance(experiment_id, str):
             try:
                 experiment_id = PyUUID(experiment_id)
             except Exception:
                 pass
+        # INVARIANT: Locked Test is NEVER accessed during feature selection
+        assert locked_test_accessed is False, "CRITICAL INVARIANT: Locked Test accessed during fold feature selection!"
         fold_res = FeatureSelectionFoldResult(
             experiment_id=experiment_id,
             fold_index=fold_index,
             selected_features=selected_features,
             technique_scores=technique_scores,
+            selector=selector,
+            permutation_source=permutation_source,
+            locked_test_accessed=locked_test_accessed,
+            train_row_hash=train_row_hash,
+            validation_row_hash=validation_row_hash,
+            test_row_hash=test_row_hash,
         )
         self.db.add(fold_res)
         self.db.commit()

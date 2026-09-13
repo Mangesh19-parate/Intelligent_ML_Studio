@@ -1,6 +1,6 @@
 """
-Durable Task State Machine and Models for Asynchronous Job Orchestration.
-Supports state tracking across QUEUED, RUNNING, SUCCEEDED, FAILED, TIMED_OUT, and CANCELLED.
+Durable Task State Machine and Persistence Helpers for ML Studio (P0.1).
+Backs task records into PostgreSQL/SQLite via the DurableTask SQLAlchemy model.
 """
 
 from enum import Enum

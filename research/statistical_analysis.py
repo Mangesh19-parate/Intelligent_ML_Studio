@@ -161,33 +161,46 @@ def analyze_research_results(
                 method_stability[m] = {"mean_stability": 1.0, "feature_stabilities": {}}
         stability_summaries[ds] = method_stability
 
-        # 2. Extract paired scores for primary comparison (Exp B vs Exp A)
+        # 2. Extract paired scores using Hierarchical Dataset -> Repeat -> Fold structure
         metric_col = "cv_metric_value" if "cv_metric_value" in df_ds.columns else "metric_value"
         df_exp_a = df_ds[df_ds["method"].str.upper() == "RANK_AGGREGATION"].sort_values(["run_index", "fold_index"])
         df_exp_b = df_ds[df_ds["method"].str.upper() == "RANK_AGGREGATION_STABILITY"].sort_values(["run_index", "fold_index"])
 
+        # Aggregate across folds within each repeat (run_index) to form independent units of analysis
+        repeat_means_a = df_exp_a.groupby("run_index")[metric_col].mean().to_numpy()
+        repeat_means_b = df_exp_b.groupby("run_index")[metric_col].mean().to_numpy()
+
         primary_comparison = {}
-        if len(df_exp_a) > 0 and len(df_exp_b) > 0 and len(df_exp_a) == len(df_exp_b):
+        if len(repeat_means_a) > 0 and len(repeat_means_b) > 0 and len(repeat_means_a) == len(repeat_means_b):
             primary_comparison = compute_paired_statistics(
-                scores_a=df_exp_a[metric_col].to_numpy(),
-                scores_b=df_exp_b[metric_col].to_numpy(),
+                scores_a=repeat_means_a,
+                scores_b=repeat_means_b,
                 metric_name=metric_name,
                 higher_is_better=higher_is_better,
             )
+            # Annotate hierarchical unit metadata
+            primary_comparison["unit_of_analysis"] = "repeat_mean"
+            primary_comparison["n_repeats"] = len(repeat_means_a)
+            primary_comparison["n_folds_per_repeat"] = len(df_exp_a) // len(repeat_means_a) if len(repeat_means_a) > 0 else 5
+            primary_comparison["fold_level_raw_scores_a"] = [round(float(x), 6) for x in df_exp_a[metric_col].to_numpy()]
+            primary_comparison["fold_level_raw_scores_b"] = [round(float(x), 6) for x in df_exp_b[metric_col].to_numpy()]
 
-        # 3. Pairwise comparisons of Exp B against all other baselines
+        # 3. Pairwise comparisons of Exp B against all other baselines at repeat level
         baseline_comparisons = {}
         for b_method in METHODS:
             if b_method in ["RANK_AGGREGATION_STABILITY", "RANK_AGGREGATION"]:
                 continue
             df_base = df_ds[df_ds["method"].str.upper() == b_method.upper()].sort_values(["run_index", "fold_index"])
-            if len(df_base) == len(df_exp_b) and len(df_base) > 0:
+            base_repeat_means = df_base.groupby("run_index")[metric_col].mean().to_numpy()
+            if len(base_repeat_means) == len(repeat_means_b) and len(base_repeat_means) > 0:
                 baseline_comparisons[b_method] = compute_paired_statistics(
-                    scores_a=df_base[metric_col].to_numpy(),
-                    scores_b=df_exp_b[metric_col].to_numpy(),
+                    scores_a=base_repeat_means,
+                    scores_b=repeat_means_b,
                     metric_name=metric_name,
                     higher_is_better=higher_is_better,
                 )
+                baseline_comparisons[b_method]["unit_of_analysis"] = "repeat_mean"
+                baseline_comparisons[b_method]["n_repeats"] = len(base_repeat_means)
 
         # Compute stability gain: Exp B vs Exp A
         stab_a = method_stability.get("RANK_AGGREGATION", {}).get("mean_stability", 0.0)
@@ -199,7 +212,9 @@ def analyze_research_results(
             "task_type": task_type,
             "metric": metric_name,
             "higher_is_better": higher_is_better,
-            "n_folds_evaluated": len(df_exp_b),
+            "statistical_hierarchy": "Dataset -> Repeat (Unit of Inference) -> Fold (Within-Repeat Estimation)",
+            "n_repeats_evaluated": len(repeat_means_b),
+            "total_folds_evaluated": len(df_exp_b),
             "stability_experiment_a": stab_a,
             "stability_experiment_b": stab_b,
             "stability_gain_absolute": stab_gain,

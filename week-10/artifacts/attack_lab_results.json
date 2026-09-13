@@ -1,9 +1,9 @@
 {
   "lab_version": "1.0.0",
-  "executed_at": "2026-09-13T09:18:33.142535+00:00",
+  "executed_at": "2026-09-13T10:01:23.968305+00:00",
   "manifest": {
     "manifest_version": "1.0.0",
-    "timestamp": "2026-09-13T09:18:32.942474+00:00",
+    "timestamp": "2026-09-13T10:01:22.895086+00:00",
     "dataset": {
       "name": "Synthetic Leakage Benchmark",
       "samples": 200,

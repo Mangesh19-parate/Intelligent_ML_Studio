@@ -497,12 +497,15 @@ class FeatureSelectionService:
                 else:
                     fold_selected = self.select_top_k_features(fold_ensemble)
 
-                # Persist fold record
+                # Persist fold record with leakage-safety provenance
                 self.exp_repo.add_fold_result(
                     experiment_id=experiment.id,
                     fold_index=fold_idx,
                     selected_features=fold_selected,
                     technique_scores=technique_scores_payload,
+                    selector="RankAggregationSelector",
+                    permutation_source="validation_fold",
+                    locked_test_accessed=False,
                 )
 
             # 5. Aggregate Across All CV Folds

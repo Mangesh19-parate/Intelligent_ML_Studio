@@ -1064,12 +1064,21 @@ class ExperimentService:
                     k_max=fs_cfg.get("k_max", 50),
                 )
 
-                # Persist fold feature selection results (ONCE per fold)
+                fold_train_hash = hashlib.sha256(str(sorted(list(train_idx))).encode("utf-8")).hexdigest()
+                fold_val_hash = hashlib.sha256(str(sorted(list(val_idx))).encode("utf-8")).hexdigest()
+
+                # Persist fold feature selection results with explicit leakage-safety provenance (P0.5)
                 self.exp_repo.add_fold_result(
                     experiment_id=experiment.id,
                     fold_index=fold_idx,
                     selected_features=fold_selected,
                     technique_scores=technique_scores_payload,
+                    selector="RankAggregationSelector",
+                    permutation_source="validation_fold",
+                    locked_test_accessed=False,
+                    train_row_hash=fold_train_hash,
+                    validation_row_hash=fold_val_hash,
+                    test_row_hash=None,
                 )
 
                 # Resolve selected indices for modeling

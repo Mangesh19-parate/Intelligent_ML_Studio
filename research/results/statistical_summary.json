@@ -7,6 +7,11 @@
     "adult_income"
   ],
   "alpha_parameter": 0.7,
+  "preregistered_criteria": {
+    "practical_stability_delta": 0.05,
+    "saturated_stability_threshold": 0.95,
+    "minimum_non_saturated_replications": 2
+  },
   "dataset_results": {
     "california_housing": {
       "task_type": "REGRESSION",
@@ -742,11 +747,25 @@
     }
   },
   "overall_conclusions": {
-    "decision": "SUPPORTED",
+    "decision": "PARTIALLY_SUPPORTED",
     "datasets_evaluated_count": 4,
-    "datasets_with_stability_gain_count": 4,
+    "non_saturated_datasets": [
+      "breast_cancer",
+      "adult_income"
+    ],
+    "datasets_with_meaningful_gain": [
+      "adult_income"
+    ],
+    "saturated_datasets": [
+      "california_housing",
+      "bike_sharing"
+    ],
+    "datasets_with_stability_maintained": [
+      "california_housing",
+      "bike_sharing"
+    ],
     "datasets_with_predictive_parity_count": 4,
-    "small_n_qualification": "Evaluation conducted across N=4 benchmark datasets. Folds within repeated cross-validation exhibit overlapping training sets and are not independent experimental units. Dataset-level aggregation is the primary unit of comparison.",
+    "small_n_qualification": "Evaluation conducted across N=4 benchmark datasets. Folds within repeated cross-validation exhibit overlapping training sets and are not independent experimental units. Dataset-level aggregation and practical effect thresholds (\u0394S >= 0.05) are the primary basis of comparison.",
     "scope_qualification": "Findings are strictly qualified to the evaluated benchmark datasets and fixed reference-model protocol (ADR-014, SRS \u00a79)."
   }
 }

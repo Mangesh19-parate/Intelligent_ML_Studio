@@ -1,0 +1,21 @@
+# Preregistered Research Protocol Configuration (Day 14 Frozen Benchmark)
+stability:
+  practical_delta: 0.05       # Minimum absolute stability increase required to claim meaningful gain (ΔS >= 0.05)
+  saturated_threshold: 0.95   # Baseline stability above which dataset is considered saturated
+
+performance:
+  max_relative_degradation: 0.01  # Maximum allowable downstream performance loss (1%)
+
+replication:
+  minimum_non_saturated_datasets: 2  # Minimum distinct benchmark datasets required to show practical gain
+
+inference:
+  confidence_level: 0.95
+  alpha_significance: 0.05
+  alpha_stability_weight: 0.7        # Frozen ensemble stability weighting parameter
+
+reference_model:
+  algorithm: RandomForest
+  cv_folds: 5
+  repeats: 8
+  base_seed: 1000

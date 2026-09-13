@@ -209,35 +209,58 @@ def analyze_research_results(
             "method_stability_summary": {m: v["mean_stability"] for m, v in method_stability.items()},
         }
 
-    # Dynamic Predetermined Hypothesis Decision Rule
-    datasets_with_stability_gain = 0
+    # Preregistered Hypothesis Decision Rule (protocol.yaml / SRS §9)
+    PRACTICAL_DELTA = 0.05        # Predefined practical stability threshold (ΔS >= 0.05)
+    SATURATED_THRESHOLD = 0.95    # Benchmark saturation ceiling
+
+    non_saturated_datasets = []
+    datasets_with_meaningful_gain = []
+    saturated_datasets = []
+    datasets_with_stability_maintained = []
     datasets_with_predictive_parity = 0
     total_datasets_evaluated = len(dataset_reports)
 
     for ds, rep in dataset_reports.items():
+        stab_a = rep.get("stability_experiment_a", 0.0)
         stab_gain = rep.get("stability_gain_absolute", 0.0)
-        if stab_gain >= 0.0:
-            datasets_with_stability_gain += 1
+        
+        if stab_a < SATURATED_THRESHOLD:
+            non_saturated_datasets.append(ds)
+            if stab_gain >= PRACTICAL_DELTA:
+                datasets_with_meaningful_gain.append(ds)
+        else:
+            saturated_datasets.append(ds)
+            if stab_gain >= 0.0:
+                datasets_with_stability_maintained.append(ds)
         
         prim = rep.get("primary_comparison_exp_b_vs_exp_a", {})
-        # Non-significant performance degradation rule
-        # Higher is better: negative mean_diff is degradation; Lower is better: positive mean_diff is degradation
         mean_diff = prim.get("mean_diff", 0.0)
         higher_better = rep.get("higher_is_better", True)
         is_significant = prim.get("is_significant", False)
         
         if higher_better:
-            degraded = (mean_diff < -0.05 and is_significant)
+            degraded = (mean_diff < -0.01 and is_significant)
         else:
-            degraded = (mean_diff > 0.05 * abs(prim.get("mean_a", 1.0)) and is_significant)
+            degraded = (mean_diff > 0.01 * abs(prim.get("mean_a", 1.0)) and is_significant)
         
         if not degraded:
             datasets_with_predictive_parity += 1
 
-    if total_datasets_evaluated > 0 and datasets_with_stability_gain == total_datasets_evaluated and datasets_with_predictive_parity == total_datasets_evaluated:
+    # Multi-level Decision Logic
+    # 1. Non-saturated benchmarks (Adult Income & Breast Cancer) must demonstrate ΔS >= 0.05
+    # 2. Saturated benchmarks (California Housing & Bike Sharing) must maintain stability
+    # 3. All benchmarks must maintain downstream predictive parity
+    min_required_gains = 2
+    if (
+        len(datasets_with_meaningful_gain) >= min_required_gains
+        and len(datasets_with_stability_maintained) == len(saturated_datasets)
+        and datasets_with_predictive_parity == total_datasets_evaluated
+    ):
         h1_decision = "SUPPORTED"
-    elif datasets_with_stability_gain > 0 and datasets_with_predictive_parity == total_datasets_evaluated:
+    elif len(datasets_with_meaningful_gain) > 0 and datasets_with_predictive_parity == total_datasets_evaluated:
         h1_decision = "PARTIALLY_SUPPORTED"
+    elif datasets_with_predictive_parity < total_datasets_evaluated:
+        h1_decision = "NOT_SUPPORTED"
     else:
         h1_decision = "INCONCLUSIVE"
 
@@ -246,16 +269,24 @@ def analyze_research_results(
         "study_identifier": "AGY-RES-2026-09",
         "datasets_evaluated": DATASETS,
         "alpha_parameter": ALPHA,
+        "preregistered_criteria": {
+            "practical_stability_delta": PRACTICAL_DELTA,
+            "saturated_stability_threshold": SATURATED_THRESHOLD,
+            "minimum_non_saturated_replications": min_required_gains,
+        },
         "dataset_results": dataset_reports,
         "overall_conclusions": {
             "decision": h1_decision,
             "datasets_evaluated_count": total_datasets_evaluated,
-            "datasets_with_stability_gain_count": datasets_with_stability_gain,
+            "non_saturated_datasets": non_saturated_datasets,
+            "datasets_with_meaningful_gain": datasets_with_meaningful_gain,
+            "saturated_datasets": saturated_datasets,
+            "datasets_with_stability_maintained": datasets_with_stability_maintained,
             "datasets_with_predictive_parity_count": datasets_with_predictive_parity,
             "small_n_qualification": (
                 f"Evaluation conducted across N={total_datasets_evaluated} benchmark datasets. "
                 "Folds within repeated cross-validation exhibit overlapping training sets and are not independent experimental units. "
-                "Dataset-level aggregation is the primary unit of comparison."
+                "Dataset-level aggregation and practical effect thresholds (ΔS >= 0.05) are the primary basis of comparison."
             ),
             "scope_qualification": "Findings are strictly qualified to the evaluated benchmark datasets and fixed reference-model protocol (ADR-014, SRS §9)."
         }

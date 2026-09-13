@@ -7,8 +7,8 @@ on:
     branches: [ main ]
 
 jobs:
-  backend-test:
-    name: Backend Test & Invariant Verification
+  backend-and-research-verification:
+    name: Backend Tests, Invariants & Research Acceptance
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -33,7 +33,7 @@ jobs:
       run: |
         ruff check backend/app
 
-    - name: Run Alembic Migrations Test
+    - name: Run Alembic Database Migrations Test
       env:
         DATABASE_URL: sqlite:///./ci_test.db
         AUTO_CREATE_TABLES: false
@@ -41,16 +41,37 @@ jobs:
         cd backend
         alembic upgrade head
 
-    - name: Run Backend Pytest Suite
+    - name: Run System Integrity & Invariant Suite
       env:
         DATABASE_URL: sqlite:///./ci_test.db
         JWT_SECRET: ci-test-secret-key-32-chars-length!!
       run: |
         pytest backend/tests/test_system_integrity.py
         pytest backend/tests/test_lineage_and_reproducibility.py
+        pytest backend/tests/test_durable_tasks.py
+        pytest backend/tests/test_feature_selection_isolation.py
+
+    - name: Run Complete Backend Pytest Suite
+      env:
+        DATABASE_URL: sqlite:///./ci_test.db
+        JWT_SECRET: ci-test-secret-key-32-chars-length!!
+      run: |
+        pytest backend/tests/
+
+    - name: Run Research Track Acceptance Checks
+      run: |
+        python research/acceptance_check.py
+        python research/statistical_analysis.py
+
+    - name: Run QA Acceptance Suite
+      env:
+        DATABASE_URL: sqlite:///./ci_test.db
+        JWT_SECRET: ci-test-secret-key-32-chars-length!!
+      run: |
+        python qa/run_acceptance_suite.py
 
   frontend-build:
-    name: Frontend Build & Type Check
+    name: Frontend Production Build
     runs-on: ubuntu-latest
 
     steps:

@@ -20,6 +20,12 @@ router = APIRouter(prefix="/auth", tags=["Authentication"])
     status_code=status.HTTP_201_CREATED,
     summary="Sign up a new user (hardcodes role to USER, rejects any role key with 400)"
 )
+@router.post(
+    "/register",
+    response_model=UserResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Register alias for signup"
+)
 async def signup(
     request: Request,
     payload: SignupRequest,

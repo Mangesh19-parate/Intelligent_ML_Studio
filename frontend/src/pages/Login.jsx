@@ -8,7 +8,6 @@ export const Login = () => {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('dev@mlstudio.io');
   const [password, setPassword] = useState('password123');
-  const [roleName, setRoleName] = useState('USER');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -21,7 +20,7 @@ export const Login = () => {
     setSubmitting(true);
     try {
       if (isRegister) {
-        await register(fullName, email, password, roleName);
+        await register(fullName, email, password);
       } else {
         await login(email, password);
       }
@@ -108,23 +107,6 @@ export const Login = () => {
               />
             </div>
           </div>
-
-          {isRegister && (
-            <div>
-              <label className="block text-xs font-semibold text-[var(--color-text-muted)] mb-1.5">
-                Assigned Identity Role
-              </label>
-              <select
-                value={roleName}
-                onChange={(e) => setRoleName(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--color-bg)] border border-[var(--color-border)] text-text text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] transition-all"
-              >
-                <option value="USER">USER (Standard • READ, EDIT_DATA, TRAIN, EXPORT)</option>
-                <option value="ADMIN">ADMIN (Full Governance • MANAGE_USERS & Overrides)</option>
-              </select>
-            </div>
-          )}
-
 
           <button
             type="submit"

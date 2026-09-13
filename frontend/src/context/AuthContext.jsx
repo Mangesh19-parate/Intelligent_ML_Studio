@@ -56,8 +56,8 @@ export const AuthProvider = ({ children }) => {
     return userData;
   };
 
-  const register = async (fullName, email, password, roleName) => {
-    await authApi.register(fullName, email, password, roleName);
+  const register = async (fullName, email, password) => {
+    await authApi.register(fullName, email, password);
     return await login(email, password);
   };
 

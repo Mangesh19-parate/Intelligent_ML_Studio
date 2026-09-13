@@ -38,8 +38,8 @@ apiClient.interceptors.response.use(
 
 export const authApi = {
   login: (email, password) => apiClient.post('/auth/login', { email, password }),
-  register: (fullName, email, password, roleName = 'USER') =>
-    apiClient.post('/auth/register', { full_name: fullName, email, password, role_name: roleName }),
+  register: (fullName, email, password) =>
+    apiClient.post('/auth/signup', { full_name: fullName, email, password }),
   getMe: () => apiClient.get('/auth/me'),
 };
 

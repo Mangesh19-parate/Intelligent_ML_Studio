@@ -193,3 +193,145 @@ def test_model_passport_zero_mutation_guarantee(client, db_session, create_test_
     assert resp.status_code == status.HTTP_200_OK
     assert auditor.mutation_count == 0, f"Expected 0 mutations, got {auditor.mutations}"
     assert auditor.select_count > 0
+
+
+from app.models.reproducibility import ReproducibilityRun
+from app.services.experiment_service import ExperimentService
+from app.models.dataset import Dataset
+from app.models.dataset_column import DatasetColumn
+from app.models.dataset_split import DatasetSplit
+from app.models.transformation_config import TransformationConfig
+import hashlib
+
+@pytest.fixture
+def integrity_regression_setup(db_session, tmp_path, create_test_user):
+    user = create_test_user("engineer_integrity@test.com", "USER")
+    project = Project(
+        id=uuid.uuid4(),
+        owner_id=user.id,
+        project_name="Housing Price Integrity",
+        task_type="REGRESSION",
+        target_column="price",
+        pipeline_stage="SPLIT",
+    )
+    db_session.add(project)
+    db_session.commit()
+
+    np.random.seed(42)
+    n_samples = 120
+    df = pd.DataFrame({
+        "sqft": np.random.uniform(500, 3500, n_samples),
+        "bedrooms": np.random.randint(1, 6, n_samples).astype(float),
+        "bathrooms": np.random.uniform(1.0, 4.0, n_samples),
+        "price": np.random.uniform(100_000, 800_000, n_samples),
+    })
+
+    data_bytes = df.to_csv(index=False).encode("utf-8")
+    content_hash = hashlib.sha256(data_bytes).hexdigest()
+    dataset_path = str(tmp_path / "housing_integrity.csv")
+    with open(dataset_path, "wb") as f:
+        f.write(data_bytes)
+
+    dataset = Dataset(
+        id=uuid.uuid4(),
+        project_id=project.id,
+        version_number=1,
+        file_path=dataset_path,
+        row_count=n_samples,
+        column_count=4,
+        content_hash=content_hash,
+    )
+    db_session.add(dataset)
+    db_session.commit()
+
+    for col in df.columns:
+        db_session.add(
+            DatasetColumn(
+                id=uuid.uuid4(),
+                dataset_id=dataset.id,
+                column_name=col,
+                data_type="NUMERIC",
+                unique_count=len(df[col].unique()),
+                missing_percentage=0.0,
+                is_target=(col == "price"),
+            )
+        )
+
+    indices = np.arange(n_samples)
+    np.random.shuffle(indices)
+    dev_split = DatasetSplit(
+        id=uuid.uuid4(),
+        dataset_id=dataset.id,
+        split_type="DEVELOPMENT",
+        split_seed=42,
+        row_indices=indices[:96].tolist(),
+    )
+    test_split = DatasetSplit(
+        id=uuid.uuid4(),
+        dataset_id=dataset.id,
+        split_type="LOCKED_TEST",
+        split_seed=42,
+        row_indices=indices[96:].tolist(),
+    )
+    db_session.add_all([dev_split, test_split])
+
+    t1 = TransformationConfig(
+        id=uuid.uuid4(),
+        project_id=project.id,
+        column_name="sqft",
+        scaling_strategy="STANDARD",
+        is_active=True,
+    )
+    db_session.add(t1)
+    db_session.commit()
+
+    return {"project": project, "dataset": dataset, "df": df}
+
+def test_reproducibility_run_persists_audit_record(db_session, create_test_user, integrity_regression_setup):
+    """
+    INVARIANT: Reproducibility replay creates a dedicated, immutable ReproducibilityRun record
+    without creating a new Experiment or touching the Locked Test partition (SRS v9 §4).
+    """
+    project = integrity_regression_setup["project"]
+
+    service = ExperimentService(db_session)
+    exp_data = service.run_experiment(
+        project_id=project.id,
+        algorithms=["LinearRegression"],
+        folds=5,
+        seed=42,
+        selection_metric="rmse",
+        selection_direction="MINIMIZE",
+        auto_finalize=True,
+    )
+    exp_id = exp_data["experiment_id"]
+
+    # Initial count of ReproducibilityRun records
+    initial_repro_count = db_session.query(ReproducibilityRun).filter(ReproducibilityRun.source_experiment_id == exp_id).count()
+    initial_exp_count = db_session.query(Experiment).count()
+
+    # Execute deterministic reproduction
+    repro_result = service.reproduce_experiment(exp_id)
+
+    # Assertions
+    assert repro_result["status"] == "REPRODUCED"
+    assert repro_result["passed"] is True
+    assert repro_result["locked_test_accessed"] is False
+    assert "id" in repro_result
+    assert repro_result["id"] is not None
+
+    # Verify database persistence
+    after_repro_count = db_session.query(ReproducibilityRun).filter(ReproducibilityRun.source_experiment_id == exp_id).count()
+    after_exp_count = db_session.query(Experiment).count()
+
+    assert after_repro_count == initial_repro_count + 1
+    assert after_exp_count == initial_exp_count  # Zero experiment pollution
+
+    persisted_run = db_session.query(ReproducibilityRun).filter(ReproducibilityRun.id == repro_result["id"]).first()
+    assert persisted_run is not None
+    assert persisted_run.source_experiment_id == exp_id
+    assert persisted_run.status == "REPRODUCED"
+    assert persisted_run.locked_test_accessed is False
+    assert persisted_run.absolute_tolerance == 0.001
+    assert persisted_run.relative_tolerance == 0.01
+

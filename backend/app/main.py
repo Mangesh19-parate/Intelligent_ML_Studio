@@ -13,10 +13,17 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Initialize database tables and seed canonical RBAC permissions on startup
+    # Production security guard
+    if settings.ENV == "production":
+        if not settings.JWT_SECRET or settings.JWT_SECRET.startswith("dev-jwt-secret"):
+            raise RuntimeError("CRITICAL: Insecure development JWT_SECRET detected in production environment.")
+
+    # Initialize database tables and seed canonical RBAC permissions
+    # In production, schema migrations are strictly managed via Alembic
     try:
-        Base.metadata.create_all(bind=engine)
-        sync_database_schema(engine)
+        if settings.AUTO_CREATE_TABLES and settings.ENV != "production":
+            Base.metadata.create_all(bind=engine)
+            sync_database_schema(engine)
         with SessionLocal() as db:
             seed_rbac_data(db)
         logger.info("Database initialized and RBAC seeded successfully.")

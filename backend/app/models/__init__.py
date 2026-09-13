@@ -21,8 +21,8 @@ from app.models.trained_model import TrainedModel
 from app.models.model_metric import ModelMetric
 from app.models.explainability_summary import ExplainabilitySummary
 from app.models.deployment_gate import DeploymentGate
-from app.models.deployment import Deployment
 from app.models.prediction_log import PredictionLog
+from app.models.reproducibility import ReproducibilityRun
 
 __all__ = [
     "Base",
@@ -50,5 +50,6 @@ __all__ = [
     "DeploymentGate",
     "Deployment",
     "PredictionLog",
+    "ReproducibilityRun",
 ]
 

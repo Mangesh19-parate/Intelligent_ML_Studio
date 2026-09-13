@@ -131,11 +131,13 @@ Adult Income:       Mean Diff = +0.000392 F1-Macro (t=0.8041, p=0.426) [Statisti
 
 ---
 
-## 5. Statistical Hypothesis Evaluation
+## 5. Statistical Hypothesis Evaluation & Methodological Nuance
 
-1. **Stability Gain**: On higher-dimensional datasets (`breast_cancer` with 30 features and `adult_income` with 100 features), adding cross-fold stability weighting (`RANK_AGGREGATION_STABILITY`) increased selection stability from 0.7143/0.7500 up to 0.8333/0.8824 (+16.7% to +17.6% relative improvement), consistently outperforming individual perturbation/wrapper/embedded methods.
-2. **Predictive Invariance**: Across all 4 datasets and 160 paired CV evaluations, the predictive performance differences between Experiment A and Experiment B were statistically non-significant ($p > 0.15$ in all Wilcoxon signed-rank and paired t-tests).
-3. **Conclusion**: **H1 is supported under the evaluated benchmark datasets and protocol.**
+1. **Selective Stability Gain**: On higher-dimensional, noisier tabular domains (`breast_cancer` with 30 features and `adult_income` with 100 features), incorporating cross-fold stability weighting (`RANK_AGGREGATION_STABILITY`) increased selection stability from 0.7143/0.7500 up to 0.8333/0.8824 (+16.7% to +17.6% relative improvement), consistently outperforming individual baseline selectors.
+2. **Saturation on Low-Dimensional Benchmarks**: On low-dimensional datasets (`california_housing` with 8 features and `bike_sharing` with 12 features), both proposed methods reach a stability ceiling ($S = 1.0$), demonstrating that stability-aware aggregation is most beneficial in underdetermined or high-variance feature regimes.
+3. **Predictive Invariance & Effect Sizes**: Across all 4 datasets and 160 paired CV evaluations, the predictive performance differences between Experiment A and Experiment B were statistically non-significant ($p > 0.15$ in all Wilcoxon signed-rank tests), with negligible Cohen's $d$ effect sizes ($|d| < 0.05$).
+4. **Methodological Note on Sample Units**: While 40 folds per dataset illustrate intra-dataset dispersion, cross-validation folds are correlated. We therefore emphasize dataset-level paired effect sizes over naive fold-level p-values.
+5. **Conclusion**: **The proposed stability-aware selector improved feature-subset stability on the evaluated higher-dimensional benchmarks while producing statistically comparable predictive performance under the preregistered protocol.**
 
 ---
 
@@ -144,13 +146,13 @@ Adult Income:       Mean Diff = +0.000392 F1-Macro (t=0.8041, p=0.426) [Statisti
 The project contributions are categorized across four distinct domains:
 
 ### 6.1 Engineering Contribution (Claimed)
-- Designed and delivered a production-ready, leak-free Machine Learning Studio platform featuring structural dataset validation, an uncoupled backend/frontend architecture, Celery/Redis asynchronous execution, and cryptographic model provenance (SHA-256 pipeline hashing).
+- Designed and delivered a leak-free Machine Learning Studio platform featuring structural dataset validation, an uncoupled FastAPI/React architecture, asynchronous background task execution with DB state persistence, and cryptographic model provenance (SHA-256 pipeline hashing).
 
 ### 6.2 Integrative Contribution (Claimed)
 - Successfully integrated automated pre-split data hygiene, strict Development vs Locked Test isolation, cross-validation leak protection, and post-hoc model explainability (SHAP & Permutation Importance) into an end-to-end interactive workflow.
 
 ### 6.3 Research Contribution (Claimed under Protocol Scope)
-- *Framing per SRS §9.4:* **Experimental results support the proposed method under the evaluated datasets and protocol.** Rank aggregation combined with selection stability demonstrated consistent improvements in feature-selection stability on moderate-to-high dimensional tasks while maintaining downstream predictive performance comparable to full feature sets and individual baseline selectors.
+- *Framing per SRS §9.4:* **Experimental results support the proposed method under the evaluated datasets and protocol.** Rank aggregation combined with selection stability demonstrated consistent improvements in feature-selection stability on moderate-to-high dimensional tasks while maintaining downstream predictive performance comparable to full feature sets and individual baseline selectors. Generalization beyond the evaluated benchmark suite remains an open direction.
 
 ### 6.4 Educational / Pedagogical Contribution (Claimed)
 - Serves as an exemplar implementation of rigorous empirical ML benchmarking, demonstrating how to prevent methodological leakage in both platform architecture and experimental research pipelines.

@@ -1,0 +1,74 @@
+name: Intelligent ML Studio CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  backend-test:
+    name: Backend Test & Invariant Verification
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12"]
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+        cache: 'pip'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        if [ -f backend/requirements.txt ]; then pip install -r backend/requirements.txt; fi
+        pip install pytest pytest-cov ruff
+
+    - name: Lint with Ruff
+      run: |
+        ruff check backend/app
+
+    - name: Run Alembic Migrations Test
+      env:
+        DATABASE_URL: sqlite:///./ci_test.db
+        AUTO_CREATE_TABLES: false
+      run: |
+        cd backend
+        alembic upgrade head
+
+    - name: Run Backend Pytest Suite
+      env:
+        DATABASE_URL: sqlite:///./ci_test.db
+        JWT_SECRET: ci-test-secret-key-32-chars-length!!
+      run: |
+        pytest backend/tests/test_system_integrity.py
+        pytest backend/tests/test_lineage_and_reproducibility.py
+
+  frontend-build:
+    name: Frontend Build & Type Check
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Node.js 20
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20
+        cache: 'npm'
+        cache-dependency-path: frontend/package.json
+
+    - name: Install frontend dependencies
+      run: |
+        cd frontend
+        npm install
+
+    - name: Build frontend production bundle
+      run: |
+        cd frontend
+        npm run build

@@ -16,6 +16,15 @@ class Settings(BaseSettings):
         description="Database connection string"
     )
     
+    ENV: str = Field(
+        default="development",
+        description="Application environment: development, testing, production"
+    )
+    AUTO_CREATE_TABLES: bool = Field(
+        default=True,
+        description="Auto create tables via create_all (only allowed in development/testing; production must use alembic)"
+    )
+    
     # JWT Security configuration
     JWT_SECRET: str = Field(
         default="dev-jwt-secret-key-change-in-production-1234567890",
@@ -34,8 +43,13 @@ class Settings(BaseSettings):
     # Git versioning
     GIT_COMMIT_HASH: str | None = None
     
-    # CORS
-    BACKEND_CORS_ORIGINS: list[str] = ["*"]
+    # CORS (explicit origins with local dev defaults)
+    BACKEND_CORS_ORIGINS: list[str] = [
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:8000",
+        "http://127.0.0.1:8000",
+    ]
     
     model_config = SettingsConfigDict(
         env_file=(

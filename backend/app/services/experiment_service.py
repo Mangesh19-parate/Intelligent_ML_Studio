@@ -35,6 +35,7 @@ from app.models.feature_selection_snapshot import FeatureSelectionSnapshot
 from app.models.experiment import Experiment
 from app.models.trained_model import TrainedModel
 from app.models.model_metric import ModelMetric
+from app.models.reproducibility import ReproducibilityRun
 from app.repositories.project_repository import ProjectRepository
 from app.repositories.dataset_repository import DatasetRepository
 from app.repositories.experiment_repository import ExperimentRepository
@@ -2304,7 +2305,27 @@ class ExperimentService:
         is_reproduced = (diff <= abs_tol) or (rel_diff <= rel_tol)
         reproduce_status = "REPRODUCED" if is_reproduced else "REPRODUCIBILITY_FAILED"
 
+        # Persist separate immutable ReproducibilityRun audit record (SRS v9 §4)
+        repro_run = ReproducibilityRun(
+            source_experiment_id=original_exp.id,
+            status=reproduce_status,
+            expected_metric=expected_val,
+            observed_metric=observed_val,
+            difference=diff,
+            absolute_tolerance=abs_tol,
+            relative_tolerance=rel_tol,
+            code_version=getattr(original_exp, "code_version", None),
+            dataset_hash=getattr(original_exp, "dataset_content_hash", None),
+            config_hash=hashlib.sha256(str(getattr(original_exp, "experiment_config", None) or "").encode("utf-8")).hexdigest() if getattr(original_exp, "experiment_config", None) else None,
+            locked_test_accessed=False,
+        )
+        self.db.add(repro_run)
+        self.db.commit()
+        self.db.refresh(repro_run)
+
         return {
+            "id": repro_run.id,
+            "reproducibility_run_id": repro_run.id,
             "status": reproduce_status,
             "passed": is_reproduced,
             "metric_name": metric_name,
@@ -2318,6 +2339,7 @@ class ExperimentService:
             "original_experiment_id": original_exp.id,
             "source_experiment_id": original_exp.id,
             "reproduced_experiment_id": None,
+            "locked_test_accessed": False,
             "tolerance": {
                 "metric_absolute_tolerance": abs_tol,
                 "metric_relative_tolerance": rel_tol,
@@ -2331,6 +2353,7 @@ class ExperimentService:
                 "folds": folds,
                 "algorithm": algorithm_name,
             },
+            "created_at": repro_run.created_at.isoformat() if repro_run.created_at else None,
         }
 
     @classmethod

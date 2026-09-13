@@ -32,6 +32,9 @@ data/
 *.sqlite
 *.sqlite3
 *.pkl
+*.joblib
+.coverage
+htmlcov/
 
 # Node
 node_modules/

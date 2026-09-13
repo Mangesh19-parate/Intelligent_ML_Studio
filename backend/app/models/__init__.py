@@ -24,6 +24,7 @@ from app.models.deployment_gate import DeploymentGate
 from app.models.prediction_log import PredictionLog
 from app.models.reproducibility import ReproducibilityRun
 from app.models.durable_task import DurableTask
+from app.models.revoked_token import RevokedToken
 
 __all__ = [
     "Base",
@@ -53,5 +54,6 @@ __all__ = [
     "PredictionLog",
     "ReproducibilityRun",
     "DurableTask",
+    "RevokedToken",
 ]
 

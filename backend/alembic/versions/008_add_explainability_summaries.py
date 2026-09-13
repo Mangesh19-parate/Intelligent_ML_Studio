@@ -42,6 +42,11 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.drop_constraint('chk_explainability_summary_explainer_type', 'explainability_summaries', type_='check')
+    bind = op.get_bind()
+    if bind.dialect.name != "sqlite":
+        try:
+            op.drop_constraint('chk_explainability_summary_explainer_type', 'explainability_summaries', type_='check')
+        except Exception:
+            pass
     op.drop_index(op.f('ix_explainability_summaries_model_id'), table_name='explainability_summaries')
     op.drop_table('explainability_summaries')

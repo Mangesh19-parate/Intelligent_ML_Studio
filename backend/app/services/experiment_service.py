@@ -1582,18 +1582,20 @@ class ExperimentService:
         }
 
         try:
-            # 1. WRITE ARTIFACT
-            joblib.dump(fitted_pipeline, artifact_file)
+            # 1. WRITE & SIGN ARTIFACT (P1.4 Cryptographic Manifest)
+            from app.core.artifact_signing import save_signed_model_artifact
+            artifact_checksum = save_signed_model_artifact(
+                artifact=fitted_pipeline,
+                file_path=artifact_file,
+                metadata={
+                    "model_id": str(winning_model.id),
+                    "experiment_id": str(experiment.id),
+                    "algorithm": winning_model.algorithm_name,
+                }
+            )
 
             if not artifact_file.exists():
                 raise IOError(f"Artifact file '{artifact_file}' was not created on disk.")
-
-            # 2. VERIFY CHECKSUM
-            hasher = hashlib.sha256()
-            with open(artifact_file, "rb") as f:
-                while chunk := f.read(65536):
-                    hasher.update(chunk)
-            artifact_checksum = hasher.hexdigest()
 
             if not artifact_checksum or len(artifact_checksum) != 64:
                 raise ValueError(f"Computed invalid SHA-256 checksum: {artifact_checksum}")

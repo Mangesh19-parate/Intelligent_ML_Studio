@@ -12,6 +12,8 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 def get_password_hash(password: str) -> str:
     return pwd_context.hash(password)
 
+import uuid
+
 def create_access_token(subject: str | Any, expires_delta: timedelta | None = None) -> str:
     if expires_delta:
         expire = datetime.now(timezone.utc) + expires_delta
@@ -21,7 +23,8 @@ def create_access_token(subject: str | Any, expires_delta: timedelta | None = No
     to_encode = {
         "exp": expire,
         "sub": str(subject),
-        "type": "access"
+        "type": "access",
+        "jti": str(uuid.uuid4()),
     }
     return jwt.encode(to_encode, settings.JWT_SECRET, algorithm=settings.JWT_ALGORITHM)
 
@@ -34,7 +37,8 @@ def create_refresh_token(subject: str | Any, expires_delta: timedelta | None = N
     to_encode = {
         "exp": expire,
         "sub": str(subject),
-        "type": "refresh"
+        "type": "refresh",
+        "jti": str(uuid.uuid4()),
     }
     return jwt.encode(to_encode, settings.JWT_SECRET, algorithm=settings.JWT_ALGORITHM)
 

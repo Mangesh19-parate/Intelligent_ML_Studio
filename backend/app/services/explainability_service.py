@@ -100,11 +100,12 @@ class ExplainabilityService:
             )
 
         try:
-            artifact = joblib.load(artifact_file)
+            from app.core.artifact_signing import verify_and_load_model_artifact
+            artifact = verify_and_load_model_artifact(artifact_file)
         except Exception as e:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail=f"Failed to deserialize model artifact: {str(e)}",
+                detail=f"Cryptographic verification or deserialization failed for model artifact: {str(e)}",
             )
 
         return artifact, model

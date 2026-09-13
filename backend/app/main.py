@@ -38,6 +38,9 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+from app.core.logging_middleware import StructuredLoggingMiddleware
+
+app.add_middleware(StructuredLoggingMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.BACKEND_CORS_ORIGINS,

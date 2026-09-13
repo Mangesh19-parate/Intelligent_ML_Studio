@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic import Field
+from pydantic import Field, model_validator
 
 _BACKEND_DIR = Path(__file__).resolve().parent.parent.parent
 _ROOT_DIR = _BACKEND_DIR.parent
@@ -62,6 +62,27 @@ class Settings(BaseSettings):
         case_sensitive=True,
         extra="ignore"
     )
+
+    @model_validator(mode="after")
+    def validate_production_hygiene(self) -> "Settings":
+        known_dev_secrets = {
+            "dev-jwt-secret-key-change-in-production-1234567890",
+            "secret",
+            "password",
+            "changeme",
+            "default",
+            "secretkey",
+        }
+        if self.ENV.lower() == "production":
+            if self.JWT_SECRET in known_dev_secrets or len(self.JWT_SECRET) < 32:
+                raise ValueError(
+                    "Production security hygiene violation: JWT_SECRET must be set to a secure, non-default secret with at least 32 characters in production."
+                )
+            if "*" in self.BACKEND_CORS_ORIGINS:
+                raise ValueError(
+                    "Production security hygiene violation: Wildcard CORS origin '*' is strictly prohibited in production."
+                )
+        return self
 
     @property
     def sync_database_url(self) -> str:

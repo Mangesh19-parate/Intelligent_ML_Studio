@@ -114,6 +114,9 @@ class AuthService:
         )
 
     def refresh_access_token(self, refresh_token_str: str) -> TokenResponse:
+        import hashlib
+        from app.models.revoked_token import RevokedToken
+
         payload = decode_token(refresh_token_str)
         if not payload or payload.get("type") != "refresh":
             raise HTTPException(
@@ -129,6 +132,25 @@ class AuthService:
         if not user or not user.is_active:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found or inactive.")
 
+        token_hash = hashlib.sha256(refresh_token_str.encode("utf-8")).hexdigest()
+        
+        # P1.3 REUSE DETECTION: Check if token was previously consumed
+        existing_revocation = self.db.query(RevokedToken).filter(RevokedToken.token_hash == token_hash).first()
+        if existing_revocation:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Refresh token reuse detected. This token was already rotated."
+            )
+
+        # Invalidate the consumed refresh token
+        revoked_record = RevokedToken(
+            token_hash=token_hash,
+            user_id=user.id,
+        )
+        self.db.add(revoked_record)
+        self.db.commit()
+
+        # Issue rotated token pair
         new_access = create_access_token(subject=str(user.id))
         new_refresh = create_refresh_token(subject=str(user.id))
         user_response = self._build_user_response(user)

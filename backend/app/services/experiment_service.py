@@ -22,6 +22,7 @@ from app.config.contract import REPRODUCIBILITY_TOLERANCE
 from app.config.state_machines import (
     ExperimentState,
     ModelState,
+    EvaluationContext,
     can_transition,
     validate_transition,
     InvalidStateTransitionError,
@@ -1498,6 +1499,7 @@ class ExperimentService:
             else:
                 X_dev_trans = np.asarray(X_arr, dtype=np.float64)
 
+        fallback_imp = None
         if np.isnan(X_dev_trans).any():
             fallback_imp = SimpleImputer(strategy="mean")
             X_dev_trans = fallback_imp.fit_transform(X_dev_trans)
@@ -1562,6 +1564,7 @@ class ExperimentService:
             "target_column": target_col,
             "feature_names_in": candidate_cols,
             "transformer": transformer,
+            "fallback_imputer": fallback_imp,
             "selected_feature_names": final_selected,
             "selected_indices": selected_indices,
             "estimator": trainer.estimator if hasattr(trainer, "estimator") else trainer,
@@ -1738,9 +1741,12 @@ class ExperimentService:
             else:
                 X_test_trans = np.asarray(X_t_arr, dtype=np.float64)
 
+        # CRITICAL P0 INVARIANT: Zero learned operations / fitting on Locked Test
+        dev_fallback_imp = fitted_pipeline.get("fallback_imputer")
+        if dev_fallback_imp is not None and np.isnan(X_test_trans).any():
+            X_test_trans = dev_fallback_imp.transform(X_test_trans)
         if np.isnan(X_test_trans).any():
-            fallback_imp = SimpleImputer(strategy="mean")
-            X_test_trans = fallback_imp.fit_transform(X_test_trans)
+            X_test_trans = np.nan_to_num(X_test_trans, nan=0.0)
 
         X_test_selected = X_test_trans[:, selected_indices]
 
@@ -2205,8 +2211,8 @@ class ExperimentService:
             X_va_f = X_dev_raw.iloc[val_idx]
             y_va_f = y_dev_raw.iloc[val_idx]
 
-            # Fit transformation on train fold only
-            tr_pipeline = self.trans_service.build_pipeline(project.id)
+            # Fit transformation on train fold only from immutable experiment snapshot
+            tr_pipeline = self.trans_service.build_pipeline_from_snapshot(original_exp.id, project.id)
             X_tr_trans = tr_pipeline.fit_transform(X_tr_f)
             if hasattr(X_tr_trans, "toarray"):
                 X_tr_trans = X_tr_trans.toarray()

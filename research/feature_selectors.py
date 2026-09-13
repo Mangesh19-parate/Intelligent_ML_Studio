@@ -227,7 +227,7 @@ def select_features(
     k_features: int | float | None = None,
     seed: int = 42,
     stability_vector: np.ndarray | None = None,
-    alpha: float = 0.5,
+    alpha: float = 0.7,
 ) -> SelectionResult:
     """
     Runs feature selection for any of the 8 methods and returns selected feature names.

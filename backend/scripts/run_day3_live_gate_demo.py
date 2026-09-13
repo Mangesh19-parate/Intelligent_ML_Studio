@@ -80,8 +80,8 @@ def run_live_gate_demo():
     approver = db.query(User).filter(User.email == "approver@demo.com").first()
 
     print(f"\n[1] Seeded Demonstration Accounts:")
-    print(f"    - Trainer:  {trainer.email} (ID: {trainer.id}) -> Role: ML_ENGINEER (TRAIN, EDIT_DATA, READ, EXPORT)")
-    print(f"    - Approver: {approver.email} (ID: {approver.id}) -> Role: ML_ENGINEER + DEPLOY override")
+    print(f"    - Trainer:  {trainer.email} (ID: {trainer.id}) -> Role: USER (TRAIN, EDIT_DATA, READ, EXPORT)")
+    print(f"    - Approver: {approver.email} (ID: {approver.id}) -> Role: USER + DEPLOY override")
 
     trainer_token = create_access_token(subject=str(trainer.id))
     approver_token = create_access_token(subject=str(approver.id))

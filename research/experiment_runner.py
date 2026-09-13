@@ -214,7 +214,7 @@ class ExperimentRunner:
                         "alpha": float(self.alpha),
                         "timestamp": datetime.now(timezone.utc).isoformat(),
                     }
-                    fold_records.append(rec)
+                fold_records.append(rec)
             else:
                 # -------------------------------------------------------------
                 # Standard 1-Pass Feature Selection (Baselines + Method A)

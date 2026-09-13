@@ -38,7 +38,7 @@ apiClient.interceptors.response.use(
 
 export const authApi = {
   login: (email, password) => apiClient.post('/auth/login', { email, password }),
-  register: (fullName, email, password, roleName = 'ML_ENGINEER') =>
+  register: (fullName, email, password, roleName = 'USER') =>
     apiClient.post('/auth/register', { full_name: fullName, email, password, role_name: roleName }),
   getMe: () => apiClient.get('/auth/me'),
 };

@@ -124,7 +124,7 @@ db_exp = SessionLocal()
 service_exp = ExperimentService(db_exp)
 exp_data = service_exp.run_experiment(
     project_id=uuid.UUID(project_id),
-    algorithms=["LinearRegression", "Ridge", "RandomForestRegressor", "GradientBoostingRegressor"],
+    algorithms=["LinearRegression", "RandomForestRegressor", "GradientBoostingRegressor"],
     folds=5,
     seed=42,
     selection_metric="rmse",
@@ -271,7 +271,7 @@ print("T0.3 Classification Happy-Path completed successfully.")
 # T0.4: Governance: Separation of Concerns & Self-Approval
 # -------------------------------------------------------------
 print("\n>>> Executing T0.4: Governance Self-Approval Enforcement...")
-trainer_headers, trainer_id = create_or_get_user("trainer@demo.com", "ML_ENGINEER", "Demo Trainer")
+trainer_headers, trainer_id = create_or_get_user("trainer@demo.com", "USER", "Demo Trainer")
 approver_headers, approver_id = create_or_get_user("approver@demo.com", "ADMIN", "Demo Approver")
 
 # Setup clean experiment and model for governance gate testing
@@ -288,6 +288,9 @@ db.flush()
 gov_exp = Experiment(
     project_id=gov_proj.id,
     status=ExperimentState.REGISTERED.value,
+    selection_metric="RMSE",
+    selection_direction="MINIMIZE",
+    deployment_threshold_frozen_at_creation=True,
     experiment_config={"deployment_threshold": {"metric": "RMSE", "min_value": 50.0}},
     code_version="git:v1.0.0",
     python_version="3.13.0",
@@ -369,7 +372,7 @@ gate_data = res_approver.json().get("gate", {})
 gov_report = f"""# T0.4 — Governance: Live Self-Approval Rejection & Authorized Approval
 
 ## 1. Test Setup
-- **Model Creator / Trainer**: `trainer@demo.com` (Role: `ML_ENGINEER`, ID: `{trainer_id}`)
+- **Model Creator / Trainer**: `trainer@demo.com` (Role: `USER`, ID: `{trainer_id}`)
 - **Independent Approver**: `approver@demo.com` (Role: `ADMIN`, ID: `{approver_id}`)
 - **Trained Model ID**: `{gov_model_id}`
 

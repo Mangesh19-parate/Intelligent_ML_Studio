@@ -7,7 +7,7 @@ Implements the explicit Four-Phase execution protocol:
     Phase 2 — Compute stability:
         Stability_j = selection frequency for feature j across Phase 1's completed runs.
     Phase 3 — Apply the combined score:
-        FinalScore_j = alpha * BaseScore_j + (1 - alpha) * Stability_j (alpha = 0.7 default / 0.5 protocol).
+        FinalScore_j = alpha * BaseScore_j + (1 - alpha) * Stability_j (alpha = 0.7).
     Phase 4 — Evaluate RANK_AGGREGATION_STABILITY:
         Select Top-K by FinalScore_j and evaluate predictive performance via canonical CV path.
 """

@@ -46,16 +46,25 @@ from fastapi import Request, HTTPException
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
+import uuid
+
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request: Request, exc: HTTPException):
+    request_id = request.headers.get("x-request-id") or str(uuid.uuid4())
+    msg = exc.detail if isinstance(exc.detail, str) else str(exc.detail)
     return JSONResponse(
         status_code=exc.status_code,
         content={
             "detail": exc.detail,
             "error": {
                 "status_code": exc.status_code,
-                "message": exc.detail if isinstance(exc.detail, str) else str(exc.detail),
+                "code": f"HTTP_{exc.status_code}",
+                "message": msg,
+                "details": [
+                    {"loc": [str(request.url.path)], "message": msg, "code": f"HTTP_{exc.status_code}"}
+                ],
                 "path": str(request.url.path),
+                "request_id": request_id,
                 "timestamp": datetime.now(timezone.utc).isoformat(),
             },
         },
@@ -64,15 +73,26 @@ async def http_exception_handler(request: Request, exc: HTTPException):
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    request_id = request.headers.get("x-request-id") or str(uuid.uuid4())
+    formatted_details = [
+        {
+            "loc": [str(x) for x in err.get("loc", [])],
+            "message": err.get("msg", "Validation error"),
+            "code": err.get("type", "VALUE_ERROR"),
+        }
+        for err in exc.errors()
+    ]
     return JSONResponse(
         status_code=422,
         content={
             "detail": exc.errors(),
             "error": {
                 "status_code": 422,
+                "code": "REQUEST_VALIDATION_ERROR",
                 "message": "Request validation failed",
-                "details": exc.errors(),
+                "details": formatted_details,
                 "path": str(request.url.path),
+                "request_id": request_id,
                 "timestamp": datetime.now(timezone.utc).isoformat(),
             },
         },

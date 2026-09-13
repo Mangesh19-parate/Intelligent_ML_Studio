@@ -42,7 +42,7 @@ export const AdminConsole = () => {
     full_name: '',
     email: '',
     password: '',
-    role_name: 'ML_ENGINEER',
+    role_name: 'USER',
   });
   const [userError, setUserError] = useState('');
   const [userSuccess, setUserSuccess] = useState('');
@@ -130,7 +130,7 @@ export const AdminConsole = () => {
       await adminApi.createUser(newUserForm);
       setUserSuccess(`User ${newUserForm.email} created successfully`);
       setShowAddUserModal(false);
-      setNewUserForm({ full_name: '', email: '', password: '', role_name: 'ML_ENGINEER' });
+      setNewUserForm({ full_name: '', email: '', password: '', role_name: 'USER' });
       fetchUsers();
     } catch (err) {
       setUserError(err.response?.data?.detail || 'Failed to create user');
@@ -173,7 +173,7 @@ export const AdminConsole = () => {
     }
   };
 
-  const ROLES = ['ADMIN', 'ML_ENGINEER', 'DATA_STEWARD', 'DEPLOYMENT_MANAGER', 'VIEWER'];
+  const ROLES = ['ADMIN', 'USER'];
   const PERMISSIONS = ['READ', 'EDIT_DATA', 'TRAIN', 'DEPLOY', 'MANAGE_USERS', 'EXPORT'];
 
   const filteredUsers = users.filter((u) => {

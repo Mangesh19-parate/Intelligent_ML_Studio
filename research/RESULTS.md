@@ -23,7 +23,7 @@ To test this systematically, eight methods across two distinct proposed experime
 | `PERMUTATION` | Baseline Selector | Model-agnostic feature permutation importance on validation folds. |
 | `RFE` | Baseline Selector | Recursive Feature Elimination with reference estimator. |
 | `RANK_AGGREGATION` | **Proposed (Experiment A)** | Ensemble aggregation combining normalized rank scores of 4 core selectors (Correlation, Lasso, RF, Permutation). |
-| `RANK_AGGREGATION_STABILITY` | **Proposed (Experiment B)** | Ensemble aggregation combined with cross-fold selection stability weighting ($\alpha = 0.5$). |
+| `RANK_AGGREGATION_STABILITY` | **Proposed (Experiment B)** | Ensemble aggregation combined with cross-fold selection stability weighting ($\alpha = 0.7$). |
 
 ---
 
@@ -35,7 +35,7 @@ The protocol was formally frozen on Day 14 and remained strictly read-only throu
 DATASETS = ["california_housing", "bike_sharing", "breast_cancer", "adult_income"]
 FOLDS = 5
 REPEATS = 8  # 8 repeated runs with seeds 1000..1007
-ALPHA = 0.5  # Stability blending parameter
+ALPHA = 0.7  # Stability blending parameter
 REFERENCE_MODEL = "RandomForest"  # Common downstream estimator
 TOTAL_CV_RUNS = 4 datasets * 8 methods * 8 repeats * 5 folds = 1,280 runs
 ```
@@ -165,7 +165,7 @@ The project contributions are categorized across four distinct domains:
 1. **Physical & Algorithmic Outer Split**: Every dataset was separated at inception into an 80% Development partition and a 20% Locked Test partition (`outer_split.py`).
 2. **Development-Only Stability Computation**: Feature selection stability $S(j)$ was computed exclusively across repeated 5-fold CV runs within the Development partition. Test partition distributions were never observed during rank computation or stability reweighting.
 3. **Single-Touch Locked Test Consumption**: Locked Test evaluation was invoked strictly once per finalized proposed model (`RANK_AGGREGATION` and `RANK_AGGREGATION_STABILITY`), logged with irreversible timestamps and SHA-256 dataset tracking in `locked_test_consumed.json`. Baseline methods never evaluated on the Locked Test partition.
-4. **Frozen Protocol**: Hyperparameters ($\alpha = 0.5$, 8 repeats, 5 folds, RandomForest reference model) were hard-coded in `research/config.py` on Day 14 before running experiments, precluding post-hoc parameter tuning.
+4. **Frozen Protocol**: Hyperparameters ($\alpha = 0.7$, 8 repeats, 5 folds, RandomForest reference model) were hard-coded in `research/config.py` on Day 14 before running experiments, precluding post-hoc parameter tuning.
 
 ### Viva Question 2: "Why should I trust a result from only 4–6 datasets?"
 

@@ -321,20 +321,32 @@ class TransformationService:
             self.db.commit()
 
     def _build_column_pipeline(
-        self, column_name: str, data_type: str, config: TransformationConfig | None
+        self, column_name: str, data_type: str, config: Any | None
     ) -> Pipeline | None:
         """
         Builds a fresh, UNFIT scikit-learn Pipeline for a single column.
+        Supports both live TransformationConfig models and frozen snapshot dictionaries.
         """
-        if not config or not config.is_active:
+        if not config:
             return None
+
+        is_active = getattr(config, "is_active", None)
+        if is_active is None and isinstance(config, dict):
+            is_active = config.get("is_active", True)
+        if not is_active:
+            return None
+
+        def _get_val(k: str):
+            if isinstance(config, dict):
+                return config.get(k)
+            return getattr(config, k, None)
 
         steps = []
         is_numeric = data_type == "NUMERIC"
         is_categorical = data_type in ["CATEGORICAL", "MIXED"]
 
         # 1. Missing Value Imputation
-        missing_strat = (config.missing_value_strategy or "none").lower()
+        missing_strat = (_get_val("missing_value_strategy") or "none").lower()
         if missing_strat != "none":
             if is_numeric:
                 if missing_strat == "mean":
@@ -354,12 +366,12 @@ class TransformationService:
                     steps.append(("imputer", SimpleImputer(strategy="constant", fill_value="missing")))
 
         # 2. Outlier Handling (Numeric only)
-        outlier_strat = (config.outlier_strategy or "none").lower()
+        outlier_strat = (_get_val("outlier_strategy") or "none").lower()
         if is_numeric and outlier_strat != "none":
             steps.append(("outlier_capper", OutlierCapper(strategy=outlier_strat)))
 
         # 3. Scaling (Numeric only)
-        scaling_strat = (config.scaling_strategy or "none").lower()
+        scaling_strat = (_get_val("scaling_strategy") or "none").lower()
         if is_numeric and scaling_strat != "none":
             if scaling_strat == "standard":
                 steps.append(("scaler", StandardScaler()))
@@ -369,7 +381,7 @@ class TransformationService:
                 steps.append(("scaler", RobustScaler()))
 
         # 4. Encoding (Categorical only)
-        encoding_strat = (config.encoding_strategy or "none").lower()
+        encoding_strat = (_get_val("encoding_strategy") or "none").lower()
         if is_categorical and encoding_strat != "none":
             if encoding_strat == "one_hot":
                 steps.append(("encoder", OneHotEncoder(handle_unknown="ignore", sparse_output=False)))
@@ -380,6 +392,42 @@ class TransformationService:
             return None
 
         return Pipeline(steps=steps)
+
+    def build_pipeline_from_snapshot(self, experiment_id: UUID | str, project_id: UUID | str) -> ColumnTransformer:
+        """
+        Builds a scikit-learn ColumnTransformer strictly from the immutable TransformationSnapshot
+        stored at experiment creation, ensuring 100% frozen reproduction.
+        """
+        from app.models.transformation_snapshot import TransformationSnapshot
+        snapshots = (
+            self.db.query(TransformationSnapshot)
+            .filter(TransformationSnapshot.experiment_id == experiment_id)
+            .order_by(TransformationSnapshot.created_at.desc())
+            .all()
+        )
+        if snapshots and snapshots[0].config_json:
+            config_map = snapshots[0].config_json
+            if isinstance(config_map, list):
+                configs = {c.get("column_name"): c for c in config_map if isinstance(c, dict)}
+            elif isinstance(config_map, dict):
+                configs = config_map
+            else:
+                configs = {}
+
+            project, latest_dataset = self._get_project_and_latest_dataset(project_id)
+            columns = self.dataset_repo.get_columns_by_dataset(latest_dataset.id)
+            transformers = []
+            for col in columns:
+                cfg = configs.get(col.column_name)
+                pipe = self._build_column_pipeline(col.column_name, col.data_type, cfg)
+                if pipe is not None:
+                    transformers.append((f"trans_{col.column_name}", pipe, [col.column_name]))
+
+            if not transformers:
+                return ColumnTransformer(transformers=[], remainder="passthrough")
+            return ColumnTransformer(transformers=transformers, remainder="passthrough")
+
+        return self.build_pipeline(project_id)
 
     def build_pipeline(self, project_id: UUID | str) -> ColumnTransformer:
         """

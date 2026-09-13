@@ -385,3 +385,30 @@ def validate_deployment_approval_state_legality(
             ],
         )
 
+
+# ============================================================================
+# 5. EVALUATION CONTEXT & TEST LEAKAGE INVARIANT GUARD
+# ============================================================================
+
+class EvaluationContext(str, Enum):
+    """
+    Explicit runtime evaluation context to enforce zero-leakage invariants.
+    """
+    DEVELOPMENT = "DEVELOPMENT"
+    CROSS_VALIDATION = "CROSS_VALIDATION"
+    LOCKED_TEST = "LOCKED_TEST"
+
+    @classmethod
+    def assert_fit_allowed(cls, context: EvaluationContext | str):
+        """
+        Guarantees that learned fitting, feature selection, or threshold tuning
+        cannot execute when operating within the LOCKED_TEST evaluation context.
+        """
+        ctx_val = context.value if isinstance(context, EvaluationContext) else str(context)
+        if ctx_val == cls.LOCKED_TEST.value:
+            raise RuntimeError(
+                "Invariant Violation: Learned fitting operations (fit / fit_transform / selection) "
+                "are strictly prohibited under LOCKED_TEST evaluation context."
+            )
+
+

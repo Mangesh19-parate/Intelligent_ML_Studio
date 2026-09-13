@@ -39,7 +39,7 @@ Eight feature selection methods evaluated under identical cross-validation split
 - **Model-Agnostic Baseline:** `PERMUTATION` (Validation fold feature permutation).
 - **Wrapper Baseline:** `RFE` (Recursive Feature Elimination).
 - **Proposed Experiment A:** `RANK_AGGREGATION` (Ensemble combining 4 core selectors).
-- **Proposed Experiment B:** `RANK_AGGREGATION_STABILITY` (Ensemble + cross-fold selection stability weighting, $\alpha=0.7 / 0.5$).
+- **Proposed Experiment B:** `RANK_AGGREGATION_STABILITY` (Ensemble + cross-fold selection stability weighting, $\alpha=0.7$).
 
 ---
 

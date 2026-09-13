@@ -92,17 +92,13 @@ def run_demo_rehearsal():
             id=uuid.uuid4(), full_name="System Admin", email="admin@studio.com",
             password_hash=get_password_hash("AdminPass123!"), role_id=roles["ADMIN"].id, is_active=True
         ),
-        "ML_ENGINEER": User(
+        "USER_ENGINEER": User(
             id=uuid.uuid4(), full_name="Senior ML Engineer", email="engineer@studio.com",
-            password_hash=get_password_hash("EngineerPass123!"), role_id=roles["ML_ENGINEER"].id, is_active=True
+            password_hash=get_password_hash("EngineerPass123!"), role_id=roles["USER"].id, is_active=True
         ),
-        "DATA_STEWARD": User(
-            id=uuid.uuid4(), full_name="Lead Data Steward", email="steward@studio.com",
-            password_hash=get_password_hash("StewardPass123!"), role_id=roles["DATA_STEWARD"].id, is_active=True
-        ),
-        "DEPLOYMENT_MANAGER": User(
-            id=uuid.uuid4(), full_name="Release Operations Manager", email="deployment_mgr@studio.com",
-            password_hash=get_password_hash("DeployPass123!"), role_id=roles["DEPLOYMENT_MANAGER"].id, is_active=True
+        "USER_APPROVER": User(
+            id=uuid.uuid4(), full_name="Lead Release Approver", email="approver@studio.com",
+            password_hash=get_password_hash("ApproverPass123!"), role_id=roles["USER"].id, is_active=True
         ),
     }
     
@@ -111,7 +107,18 @@ def run_demo_rehearsal():
         if not existing:
             db.add(u)
     db.commit()
-    timings["Multi-Role User Seeding (4 Roles)"] = time.perf_counter() - t0
+
+    # Grant DEPLOY override to approver
+    from app.models.user_permission_override import UserPermissionOverride
+    override = UserPermissionOverride(
+        user_id=users["USER_APPROVER"].id,
+        permission_key="DEPLOY",
+        is_granted=True,
+    )
+    db.add(override)
+    db.commit()
+
+    timings["Two-Role User Seeding (ADMIN, USER + Overrides)"] = time.perf_counter() - t0
 
     mle_user = db.query(User).filter(User.email == "engineer@studio.com").first()
 
@@ -243,7 +250,7 @@ def run_demo_rehearsal():
     print("=" * 80)
 
     print("\n--- AUDIT INVARIANT HIGHLIGHTS ---")
-    print(f"• Seeded Users: ADMIN, ML_ENGINEER, DATA_STEWARD, DEPLOYMENT_MANAGER (4)")
+    print("• Seeded Users: ADMIN (admin@studio.com), USER (engineer@studio.com), USER (approver@studio.com with DEPLOY override)")
     print(f"• Dataset: {dataset.row_count} rows, {dataset.column_count} columns, SHA-256: {dataset.content_hash[:16]}...")
     print(f"• Partition Sizes: Dev={split_info['development_rows']} rows, Locked Test={split_info['locked_test_rows']} rows")
     print(f"• Data Quality Index (DQI): {dqi_score:.2f} / 100.0")

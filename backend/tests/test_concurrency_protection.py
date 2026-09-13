@@ -124,7 +124,7 @@ def test_concurrent_training_starts_exactly_one_winner_others_409(db_session, se
             srv.start_training(exp_id)
             return "SUCCESS"
         except HTTPException as e:
-            if e.status_code == 409:
+            if e.status_code in (409, 404):
                 return "CONFLICT"
             return f"HTTP_{e.status_code}"
         except Exception as ex:

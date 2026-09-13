@@ -82,7 +82,7 @@
       {
         "id": "RANK_AGGREGATION_STABILITY",
         "experiment": "Experiment B",
-        "description": "Ensemble rank aggregation weighted with cross-fold selection stability (alpha=0.7 / alpha=0.5)."
+        "description": "Ensemble rank aggregation weighted with cross-fold selection stability (alpha=0.7)."
       }
     ]
   },

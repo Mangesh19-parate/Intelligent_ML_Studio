@@ -42,7 +42,7 @@ def run_demo():
     db = Session()
     seed_rbac_data(db)
 
-    role = db.query(Role).filter(Role.role_name == "ML_ENGINEER").first()
+    role = db.query(Role).filter(Role.role_name == "USER").first()
     user = User(
         id=uuid.uuid4(),
         full_name="Lead ML Engineer",

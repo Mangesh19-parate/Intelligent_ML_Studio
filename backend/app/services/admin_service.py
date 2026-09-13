@@ -143,8 +143,7 @@ class AdminService:
     ) -> UserAdminResponse:
         """
         Sets or updates a granular permission override for a user.
-        E.g. granting DEPLOY override to an ML_ENGINEER or VIEWER,
-        or revoking DEPLOY from a DEPLOYMENT_MANAGER.
+        E.g. granting DEPLOY override to a standard USER or revoking EXPORT.
         """
         uid = PyUUID(str(user_id)) if not isinstance(user_id, PyUUID) else user_id
         user = self.db.query(User).filter(User.id == uid).first()

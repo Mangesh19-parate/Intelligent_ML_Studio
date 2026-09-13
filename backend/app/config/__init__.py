@@ -43,12 +43,14 @@ from .state_machines import (
     DeploymentState,
     DEPLOYMENT_VALID_TRANSITIONS,
     InvalidStateTransitionError,
+    EvaluationContext,
     can_transition,
     validate_transition,
     get_valid_transitions,
 )
 
 __all__ = [
+    "EvaluationContext",
     "ALGORITHM_SET",
     "FEATURE_SELECTION_DEFAULTS",
     "HASH_ALGORITHM",

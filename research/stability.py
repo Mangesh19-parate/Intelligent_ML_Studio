@@ -105,11 +105,11 @@ class StabilityScorer:
     blends stability with rank importance scores.
     """
 
-    def __init__(self, alpha: float = 0.5):
+    def __init__(self, alpha: float = 0.7):
         """
         Args:
             alpha: Weight assigned to feature importance (0.0 <= alpha <= 1.0).
-                   Stability receives weight (1.0 - alpha). Default: 0.5.
+                   Stability receives weight (1.0 - alpha). Default: 0.7.
         """
         if not (0.0 <= alpha <= 1.0):
             raise ValueError(f"alpha must be in [0.0, 1.0], got {alpha}")

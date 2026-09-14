@@ -15,13 +15,15 @@ def get_password_hash(password: str) -> str:
 import uuid
 
 def create_access_token(subject: str | Any, expires_delta: timedelta | None = None) -> str:
+    now = datetime.now(timezone.utc)
     if expires_delta:
-        expire = datetime.now(timezone.utc) + expires_delta
+        expire = now + expires_delta
     else:
-        expire = datetime.now(timezone.utc) + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+        expire = now + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     
     to_encode = {
         "exp": expire,
+        "iat": now.timestamp(),
         "sub": str(subject),
         "type": "access",
         "jti": str(uuid.uuid4()),
@@ -29,13 +31,15 @@ def create_access_token(subject: str | Any, expires_delta: timedelta | None = No
     return jwt.encode(to_encode, settings.JWT_SECRET, algorithm=settings.JWT_ALGORITHM)
 
 def create_refresh_token(subject: str | Any, expires_delta: timedelta | None = None) -> str:
+    now = datetime.now(timezone.utc)
     if expires_delta:
-        expire = datetime.now(timezone.utc) + expires_delta
+        expire = now + expires_delta
     else:
-        expire = datetime.now(timezone.utc) + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
+        expire = now + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
     
     to_encode = {
         "exp": expire,
+        "iat": now.timestamp(),
         "sub": str(subject),
         "type": "refresh",
         "jti": str(uuid.uuid4()),

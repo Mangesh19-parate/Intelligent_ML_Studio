@@ -37,6 +37,7 @@ TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engin
 def setup_test_storage(tmp_path_factory):
     tmp_storage = tmp_path_factory.mktemp("storage")
     settings.STORAGE_LOCAL_DIR = str(tmp_storage)
+    settings.ENV = "testing"
 
 @pytest.fixture(scope="function")
 def db_session(tmp_path):

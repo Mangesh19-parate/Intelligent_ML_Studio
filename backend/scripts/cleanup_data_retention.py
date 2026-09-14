@@ -19,19 +19,25 @@ from app.models.durable_task import DurableTask
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger("DataRetention")
 
-def purge_expired_records(retention_days: int = 90):
+from sqlalchemy.orm import Session
+
+def purge_expired_records(retention_days: int = 90, db: Session | None = None):
     """
     Purges prediction audit logs and finished durable tasks older than retention_days.
     """
     cutoff_date = datetime.now(timezone.utc) - timedelta(days=retention_days)
     logger.info(f"Purging audit records older than {cutoff_date.isoformat()} ({retention_days} days retention)...")
 
-    db = SessionLocal()
+    should_close = False
+    if db is None:
+        db = SessionLocal()
+        should_close = True
+
     try:
         # 1. Purge aged prediction logs
         deleted_logs = (
             db.query(PredictionLog)
-            .filter(PredictionLog.created_at < cutoff_date)
+            .filter(PredictionLog.requested_at < cutoff_date)
             .delete(synchronize_session=False)
         )
 
@@ -52,7 +58,8 @@ def purge_expired_records(retention_days: int = 90):
         logger.error(f"Failed to execute data retention purge: {e}")
         raise
     finally:
-        db.close()
+        if should_close:
+            db.close()
 
 if __name__ == "__main__":
     days = int(sys.argv[1]) if len(sys.argv) > 1 else 90

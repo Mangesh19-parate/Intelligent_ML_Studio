@@ -1,5 +1,5 @@
 import uuid
-from sqlalchemy import Column, String, Boolean, ForeignKey, Uuid
+from sqlalchemy import Column, String, Boolean, ForeignKey, Uuid, DateTime
 from sqlalchemy.orm import relationship
 from app.core.database import Base
 from app.models.base import TimestampMixin
@@ -13,6 +13,7 @@ class User(Base, TimestampMixin):
     password_hash = Column(String, nullable=False)
     role_id = Column(Uuid(as_uuid=True), ForeignKey("roles.id", ondelete="RESTRICT"), nullable=False)
     is_active = Column(Boolean, default=True, nullable=False)
+    password_changed_at = Column(DateTime(timezone=True), nullable=True)
 
     role = relationship("Role", back_populates="users", lazy="joined")
     projects = relationship("Project", back_populates="owner", cascade="all, delete-orphan")

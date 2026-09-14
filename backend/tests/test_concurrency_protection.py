@@ -149,12 +149,10 @@ def test_concurrent_training_starts_exactly_one_winner_others_409(db_session, se
 # 3. API LEVEL CONCURRENCY ENDPOINT PROTECTION
 # =============================================================================
 
-def test_api_start_experiment_training_endpoint_concurrency(client, create_test_user, auth_headers, setup_experiment):
+def test_api_start_experiment_training_endpoint_concurrency(client, auth_headers, setup_experiment):
     """Verifies that the /experiments/{id}/start API endpoint returns 409 on duplicate start."""
-    user = create_test_user(email=f"api_conc_{uuid.uuid4().hex[:8]}@example.com", role_name="USER")
+    user, _, exp = setup_experiment
     headers = auth_headers(user)
-
-    _, _, exp = setup_experiment
 
     # First API call: starts training
     resp1 = client.post(f"/api/v1/experiments/{exp.id}/start", headers=headers)

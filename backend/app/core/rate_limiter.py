@@ -59,8 +59,14 @@ def rate_limit_auth(
 ):
     """
     FastAPI dependency for rate-limiting authentication requests per client IP.
+    Automatically bypasses in testing environment unless 'x-enforce-rate-limit' header is set.
     """
+    from app.core.config import settings
+
     async def dependency(request: Request):
+        if settings.ENV.lower() == "testing" and not request.headers.get("x-enforce-rate-limit"):
+            return
+
         client_ip = (
             request.headers.get("x-forwarded-for", "").split(",")[0].strip()
             or request.client.host
@@ -75,3 +81,4 @@ def rate_limit_auth(
             window_seconds=window_seconds,
         )
     return dependency
+

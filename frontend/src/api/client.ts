@@ -92,6 +92,8 @@ export const datasetApi = {
   getColumns: (datasetId: string) => apiClient.get<{ columns: string[] }>(`/datasets/${datasetId}/columns`),
   profile: (datasetId: string) => apiClient.post<DatasetProfile>(`/datasets/${datasetId}/profile`),
   getProfile: (datasetId: string) => apiClient.get<DatasetProfile>(`/datasets/${datasetId}/profile`),
+  getEdaReport: (datasetId: string, maxSampleRows = 1000) =>
+    apiClient.get<any>(`/datasets/${datasetId}/eda-report?max_sample_rows=${maxSampleRows}`),
 };
 
 export const datasetSplitApi = {

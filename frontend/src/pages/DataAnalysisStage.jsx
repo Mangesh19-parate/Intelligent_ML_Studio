@@ -6,6 +6,8 @@ import { TaskTypeSelector } from '../components/TaskTypeSelector';
 import { RecommendationsList } from '../components/RecommendationsList';
 import { CorrelationHeatmap } from '../components/CorrelationHeatmap';
 import { ColumnStatsTable } from '../components/ColumnStatsTable';
+import { ComprehensiveProfilingReport } from '../components/ComprehensiveProfilingReport';
+import { InteractiveEDAStudio } from '../components/InteractiveEDAStudio';
 import {
   BarChart3,
   ShieldCheck,
@@ -18,6 +20,8 @@ import {
   Layers,
   Database,
   Info,
+  FileText,
+  PieChart,
 } from 'lucide-react';
 
 export const DataAnalysisStage = () => {
@@ -31,7 +35,9 @@ export const DataAnalysisStage = () => {
   const [selectedDataset, setSelectedDataset] = useState(null);
   const [splitSummary, setSplitSummary] = useState(null);
   const [profilingReport, setProfilingReport] = useState(null);
+  const [edaReport, setEdaReport] = useState(null);
   const [recommendations, setRecommendations] = useState([]);
+  const [activeTab, setActiveTab] = useState('profiling'); // 'profiling' | 'eda'
 
   const [loading, setLoading] = useState(true);
   const [profilingRunning, setProfilingRunning] = useState(false);
@@ -60,7 +66,7 @@ export const DataAnalysisStage = () => {
     loadProjects();
   }, []);
 
-  // When selected project changes, load dataset, split, and profiling report
+  // When selected project changes, load dataset, split, profiling and eda report
   useEffect(() => {
     if (!selectedProjectId) {
       setLoading(false);
@@ -83,6 +89,7 @@ export const DataAnalysisStage = () => {
           setSelectedDataset(null);
           setSplitSummary(null);
           setProfilingReport(null);
+          setEdaReport(null);
           setRecommendations([]);
           setLoading(false);
           return;
@@ -96,12 +103,19 @@ export const DataAnalysisStage = () => {
           const splitResp = await datasetSplitApi.getSplit(activeDataset.id);
           setSplitSummary(splitResp.data);
 
-          // If split exists, attempt to load profiling report
+          // If split exists, attempt to load profiling report & eda report
           try {
             const profResp = await datasetApi.getProfile(activeDataset.id);
             setProfilingReport(profResp.data);
           } catch {
             setProfilingReport(null);
+          }
+
+          try {
+            const edaResp = await datasetApi.getEdaReport(activeDataset.id);
+            setEdaReport(edaResp.data);
+          } catch {
+            setEdaReport(null);
           }
 
           // Load recommendations
@@ -114,6 +128,7 @@ export const DataAnalysisStage = () => {
         } catch {
           setSplitSummary(null);
           setProfilingReport(null);
+          setEdaReport(null);
           setRecommendations([]);
         }
       } catch (err) {
@@ -140,6 +155,13 @@ export const DataAnalysisStage = () => {
     try {
       const resp = await datasetApi.profile(selectedDataset.id);
       setProfilingReport(resp.data);
+
+      try {
+        const edaResp = await datasetApi.getEdaReport(selectedDataset.id);
+        setEdaReport(edaResp.data);
+      } catch (e) {
+        console.warn('EDA report fetch after profile warning', e);
+      }
 
       const projResp = await projectApi.get(selectedProjectId);
       setCurrentProject(projResp.data);
@@ -301,26 +323,73 @@ export const DataAnalysisStage = () => {
         </div>
       ) : (
         <div className="space-y-8">
-          {/* 1. Task Type Suggestion & Confidence Selector */}
-          <TaskTypeSelector
-            projectId={selectedProjectId}
-            currentTaskType={currentProject?.task_type}
-            taskTypeConfidence={currentProject?.task_type_confidence}
-            taskTypeSuggestion={profilingReport.task_type_suggestion}
-            onTaskTypeConfirmed={handleTaskTypeConfirmed}
-          />
+          {/* Top Section Navigation Tabs */}
+          <div className="flex items-center gap-2 p-1.5 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl w-fit shadow-xs">
+            <button
+              onClick={() => setActiveTab('profiling')}
+              id="tab-btn-profiling"
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                activeTab === 'profiling'
+                  ? 'bg-[var(--color-accent)] text-white shadow-sm'
+                  : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-hover)]'
+              }`}
+            >
+              <FileText className="w-4 h-4" />
+              <span>Data Profiling & Summary Report</span>
+            </button>
 
-          {/* 2. Data Quality Index (DQI) with Effective Weights */}
-          <DataQualityCard dqiData={profilingReport.data_quality_index} />
+            <button
+              onClick={() => setActiveTab('eda')}
+              id="tab-btn-eda"
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                activeTab === 'eda'
+                  ? 'bg-[var(--color-accent)] text-white shadow-sm'
+                  : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-hover)]'
+              }`}
+            >
+              <PieChart className="w-4 h-4" />
+              <span>Exploratory Data Analysis (EDA)</span>
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/20 text-current font-black ml-1">
+                Visual Studio
+              </span>
+            </button>
+          </div>
 
-          {/* 3. Traceable Prescriptive Recommendation Cards */}
-          <RecommendationsList recommendations={recommendations} projectId={selectedProjectId} />
+          {/* Tab 1: Profiling Section */}
+          {activeTab === 'profiling' && (
+            <div className="space-y-8 animate-in fade-in duration-300">
+              {/* 1. Task Type Suggestion & Confidence Selector */}
+              <TaskTypeSelector
+                projectId={selectedProjectId}
+                currentTaskType={currentProject?.task_type}
+                taskTypeConfidence={currentProject?.task_type_confidence}
+                taskTypeSuggestion={profilingReport.task_type_suggestion}
+                onTaskTypeConfirmed={handleTaskTypeConfirmed}
+              />
 
-          {/* 4. Pearson Correlation Matrix Heatmap */}
-          <CorrelationHeatmap correlationData={profilingReport.correlation_matrix} />
+              {/* 2. Data Quality Index (DQI) with Effective Weights */}
+              <DataQualityCard dqiData={profilingReport.data_quality_index} />
 
-          {/* 5. Column Distribution Statistics Table */}
-          <ColumnStatsTable columnStats={profilingReport.column_stats} />
+              {/* 3. Comprehensive pandas-profiling / ydata-profiling Style Report */}
+              {edaReport && <ComprehensiveProfilingReport edaReport={edaReport} />}
+
+              {/* 4. Traceable Prescriptive Recommendation Cards */}
+              <RecommendationsList recommendations={recommendations} projectId={selectedProjectId} />
+
+              {/* 5. Pearson Correlation Matrix Heatmap */}
+              <CorrelationHeatmap correlationData={profilingReport.correlation_matrix} />
+
+              {/* 6. Column Distribution Statistics Table */}
+              <ColumnStatsTable columnStats={profilingReport.column_stats} />
+            </div>
+          )}
+
+          {/* Tab 2: Interactive EDA Visualizations Section */}
+          {activeTab === 'eda' && (
+            <div className="animate-in fade-in duration-300">
+              <InteractiveEDAStudio edaReport={edaReport} />
+            </div>
+          )}
         </div>
       )}
     </div>

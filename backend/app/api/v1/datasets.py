@@ -272,3 +272,29 @@ def get_dataset_profile(
 
     return report
 
+@router.get(
+    "/datasets/{id}/eda-report",
+    response_model=dict,
+    status_code=status.HTTP_200_OK,
+    summary="Get comprehensive EDA & pandas-profiling report on Development partition"
+)
+def get_dataset_eda_report(
+    id: UUID,
+    max_sample_rows: int = Query(default=1000, ge=10, le=5000),
+    current_user: User = Depends(require_permission("READ")),
+    db: Session = Depends(get_db),
+):
+    dataset_service = DatasetService(db)
+    dataset = dataset_service.dataset_repo.get_by_id(id)
+    if not dataset:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Dataset not found")
+
+    project_service = ProjectService(db)
+    project_service.get_project_by_id(dataset.project_id, current_user)
+
+    from app.services.data_profiling_service import DataProfilingService
+    profiling_service = DataProfilingService(db)
+    eda_report = profiling_service.generate_eda_report(dataset.id, max_sample_rows=max_sample_rows)
+    return eda_report
+
+

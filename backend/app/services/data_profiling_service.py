@@ -494,3 +494,199 @@ class DataProfilingService:
             return None
 
         return report.report_json
+
+    def generate_eda_report(self, dataset_id: UUID | str, max_sample_rows: int = 1000) -> dict:
+        """
+        Generates a comprehensive EDA & pandas-profiling / ydata-profiling style report:
+        1. Overview metrics (Observations, Variables, Missingness, Duplicates, Memory, Type counts, DQI)
+        2. Detailed per-variable profiles (Quantiles, Histograms, Skewness, Kurtosis, Top categories)
+        3. Automated warnings (High cardinality, Skewness, Collinearity, Missingness)
+        4. Pearson & Spearman correlation matrices
+        5. Subsampled records for interactive Plotly univariate, bivariate, and multivariate plots
+        """
+        dataset = self.dataset_repo.get_by_id(dataset_id)
+        if not dataset:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Dataset not found")
+
+        df_dev = self.split_service.get_development_data(dataset.id)
+        total_rows = len(df_dev)
+        total_cols = len(df_dev.columns)
+
+        # Overview statistics
+        missing_cells = int(df_dev.isna().sum().sum())
+        total_cells = total_rows * total_cols
+        missing_pct = round(float((missing_cells / total_cells * 100.0) if total_cells > 0 else 0.0), 2)
+        duplicate_rows = int(df_dev.duplicated().sum())
+        duplicate_pct = round(float((duplicate_rows / total_rows * 100.0) if total_rows > 0 else 0.0), 2)
+        memory_size_kb = round(float(df_dev.memory_usage(deep=True).sum() / 1024.0), 2)
+
+        type_counts = {"Numeric": 0, "Categorical": 0, "Datetime": 0, "Boolean": 0}
+        variables = {}
+        warnings_list = []
+
+        # 1. Compute Variables Breakdown
+        for col in df_dev.columns:
+            series = df_dev[col]
+            non_null = series.dropna()
+            col_type, is_mixed = self._infer_series_type(series)
+            distinct_cnt = int(series.nunique(dropna=False))
+            distinct_pct = round(float(distinct_cnt / total_rows * 100.0) if total_rows > 0 else 0.0, 2)
+            null_cnt = int(series.isna().sum())
+            null_pct = round(float(null_cnt / total_rows * 100.0) if total_rows > 0 else 0.0, 2)
+
+            var_info = {
+                "name": str(col),
+                "type": col_type.capitalize(),
+                "is_mixed": is_mixed,
+                "distinct_count": distinct_cnt,
+                "distinct_percentage": distinct_pct,
+                "missing_count": null_cnt,
+                "missing_percentage": null_pct,
+            }
+
+            if col_type == "numeric":
+                type_counts["Numeric"] += 1
+                num_s = pd.to_numeric(non_null, errors="coerce").dropna()
+                zeros_cnt = int((num_s == 0).sum())
+                zeros_pct = round(float(zeros_cnt / len(num_s) * 100.0) if len(num_s) > 0 else 0.0, 2)
+                var_info["zeros_count"] = zeros_cnt
+                var_info["zeros_percentage"] = zeros_pct
+
+                if len(num_s) > 0:
+                    q25 = float(num_s.quantile(0.25))
+                    q50 = float(num_s.quantile(0.50))
+                    q75 = float(num_s.quantile(0.75))
+                    iqr = q75 - q25
+                    mean_val = float(num_s.mean())
+                    std_val = float(num_s.std()) if len(num_s) > 1 else 0.0
+                    var_val = float(num_s.var()) if len(num_s) > 1 else 0.0
+                    min_val = float(num_s.min())
+                    max_val = float(num_s.max())
+                    skew_val = float(num_s.skew()) if len(num_s) > 2 else 0.0
+                    kurt_val = float(num_s.kurt()) if len(num_s) > 3 else 0.0
+
+                    counts, bin_edges = np.histogram(num_s, bins=min(20, max(5, distinct_cnt)))
+                    
+                    var_info.update({
+                        "mean": round(mean_val, 4),
+                        "std": round(std_val, 4),
+                        "variance": round(var_val, 4),
+                        "min": round(min_val, 4),
+                        "q25": round(q25, 4),
+                        "median": round(q50, 4),
+                        "q75": round(q75, 4),
+                        "max": round(max_val, 4),
+                        "iqr": round(iqr, 4),
+                        "skewness": round(skew_val, 4),
+                        "kurtosis": round(kurt_val, 4),
+                        "histogram": {
+                            "bins": [round(float(b), 4) for b in bin_edges],
+                            "counts": [int(c) for c in counts]
+                        }
+                    })
+
+                    if abs(skew_val) > 2.0:
+                        warnings_list.append({"column": str(col), "type": "High Skewness", "message": f"Column '{col}' has high skewness ({skew_val:.2f})"})
+                    if zeros_pct > 30.0:
+                        warnings_list.append({"column": str(col), "type": "High Zero Count", "message": f"Column '{col}' has {zeros_pct}% zeros"})
+                else:
+                    var_info.update({"mean": None, "median": None, "std": None, "min": None, "max": None, "iqr": None})
+
+            elif col_type == "datetime":
+                type_counts["Datetime"] += 1
+                try:
+                    dt_s = pd.to_datetime(non_null)
+                    var_info.update({
+                        "min_date": dt_s.min().isoformat() if pd.notna(dt_s.min()) else None,
+                        "max_date": dt_s.max().isoformat() if pd.notna(dt_s.max()) else None,
+                    })
+                except Exception:
+                    pass
+
+            else:  # Categorical / Boolean
+                if col_type == "boolean":
+                    type_counts["Boolean"] += 1
+                else:
+                    type_counts["Categorical"] += 1
+
+                val_counts = non_null.value_counts()
+                top_cats = [
+                    {"value": str(v), "count": int(c), "percentage": round(float(c / len(non_null) * 100.0), 2)}
+                    for v, c in val_counts.head(10).items()
+                ]
+                var_info["top_categories"] = top_cats
+
+                if distinct_cnt > 50 and distinct_pct > 70:
+                    warnings_list.append({"column": str(col), "type": "High Cardinality", "message": f"Column '{col}' has high cardinality ({distinct_cnt} distinct categories)"})
+
+            if null_pct > 20.0:
+                warnings_list.append({"column": str(col), "type": "High Missingness", "message": f"Column '{col}' has {null_pct}% missing values"})
+            if distinct_cnt == 1:
+                warnings_list.append({"column": str(col), "type": "Constant Variable", "message": f"Column '{col}' contains a single constant value"})
+
+            variables[col] = var_info
+
+        # 2. Correlation Matrices (Pearson & Spearman)
+        numeric_cols = [c for c in df_dev.columns if pd.api.types.is_numeric_dtype(df_dev[c]) and not pd.api.types.is_bool_dtype(df_dev[c])]
+        pearson_matrix = {"columns": numeric_cols, "matrix": []}
+        spearman_matrix = {"columns": numeric_cols, "matrix": []}
+
+        if len(numeric_cols) >= 2:
+            num_df = df_dev[numeric_cols].apply(pd.to_numeric, errors="coerce")
+            p_corr = num_df.corr(method="pearson").fillna(0.0)
+            s_corr = num_df.corr(method="spearman").fillna(0.0)
+
+            for col_i in numeric_cols:
+                p_row, s_row = [], []
+                for col_j in numeric_cols:
+                    val_p = float(p_corr.loc[col_i, col_j])
+                    val_s = float(s_corr.loc[col_i, col_j])
+                    p_row.append(round(val_p, 4))
+                    s_row.append(round(val_s, 4))
+                    if col_i != col_j and abs(val_p) > 0.85:
+                        pair_id = tuple(sorted([str(col_i), str(col_j)]))
+                        if not any(w.get("pair") == pair_id for w in warnings_list):
+                            warnings_list.append({
+                                "column": f"{col_i} & {col_j}",
+                                "type": "High Correlation",
+                                "pair": pair_id,
+                                "message": f"Strong collinearity (r = {val_p:.2f}) between '{col_i}' and '{col_j}'"
+                            })
+                pearson_matrix["matrix"].append(p_row)
+                spearman_matrix["matrix"].append(s_row)
+
+        # 3. Clean pair tags from warnings
+        for w in warnings_list:
+            w.pop("pair", None)
+
+        # 4. Subsampled Data for Interactive Plotly Rendering
+        sample_df = df_dev.sample(n=min(len(df_dev), max_sample_rows), random_state=42) if len(df_dev) > max_sample_rows else df_dev
+        sample_records = sample_df.replace({np.nan: None}).to_dict(orient="records")
+
+        # 5. Composite DQI
+        dqi_obj = self.compute_dqi(df_dev, self._compute_column_stats(df_dev), duplicate_rows, total_rows)
+
+        return {
+            "overview": {
+                "row_count": total_rows,
+                "column_count": total_cols,
+                "memory_size_kb": memory_size_kb,
+                "missing_cells": missing_cells,
+                "missing_percentage": missing_pct,
+                "duplicate_rows": duplicate_rows,
+                "duplicate_percentage": duplicate_pct,
+                "variable_types": type_counts,
+                "dqi_score": dqi_obj.get("overall_index", 100),
+            },
+            "variables": variables,
+            "warnings": warnings_list,
+            "correlations": {
+                "pearson": pearson_matrix,
+                "spearman": spearman_matrix,
+            },
+            "sample_records": sample_records,
+            "columns_metadata": [
+                {"name": str(c), "type": variables[c]["type"], "is_numeric": variables[c]["type"] == "Numeric"}
+                for c in df_dev.columns
+            ]
+        }

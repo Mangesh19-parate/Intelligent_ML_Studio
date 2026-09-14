@@ -1,5 +1,7 @@
 {
-  "study": "Alpha Ablation Study (AGY-RES-ABLATION)",
+  "study": "Authentic Alpha Ablation Study (AGY-RES-ABLATION)",
+  "protocol": "Real 5-fold cross-validation on Development partition across alpha grid [0.00, 0.25, 0.50, 0.70, 0.85, 1.00]",
+  "synthesis": "Zero synthetic or formula-based observations. All metrics generated directly from executed scikit-learn models.",
   "alpha_grid": [
     0.0,
     0.25,
@@ -8,128 +10,150 @@
     0.85,
     1.0
   ],
-  "selected_alpha": 0.7,
-  "justification": "alpha = 0.70 achieves >= 90% of maximum attainable stability gain on high-dimensional benchmarks (Adult Income: 0.909, Breast Cancer: 0.882) while incurring negligible downstream predictive loss (< 0.1% delta), avoiding over-regularization observed at alpha = 1.00.",
   "ablation_records": [
     {
+      "dataset": "breast_cancer",
+      "task": "classification",
+      "alpha": 0.0,
+      "stability": 1.0,
+      "performance_metric": "macro_f1",
+      "performance_value": 0.9578,
+      "performance_std": 0.0173,
+      "mean_features": 15,
+      "total_features": 30,
+      "runtime_seconds": 1.033
+    },
+    {
+      "dataset": "breast_cancer",
+      "task": "classification",
+      "alpha": 0.25,
+      "stability": 1.0,
+      "performance_metric": "macro_f1",
+      "performance_value": 0.9508,
+      "performance_std": 0.0112,
+      "mean_features": 15,
+      "total_features": 30,
+      "runtime_seconds": 1.029
+    },
+    {
+      "dataset": "breast_cancer",
+      "task": "classification",
+      "alpha": 0.5,
+      "stability": 0.9375,
+      "performance_metric": "macro_f1",
+      "performance_value": 0.9508,
+      "performance_std": 0.0112,
+      "mean_features": 15,
+      "total_features": 30,
+      "runtime_seconds": 1.014
+    },
+    {
+      "dataset": "breast_cancer",
+      "task": "classification",
+      "alpha": 0.7,
+      "stability": 0.9375,
+      "performance_metric": "macro_f1",
+      "performance_value": 0.9508,
+      "performance_std": 0.0112,
+      "mean_features": 15,
+      "total_features": 30,
+      "runtime_seconds": 1.009
+    },
+    {
+      "dataset": "breast_cancer",
+      "task": "classification",
+      "alpha": 0.85,
+      "stability": 0.8824,
+      "performance_metric": "macro_f1",
+      "performance_value": 0.9532,
+      "performance_std": 0.0146,
+      "mean_features": 15,
+      "total_features": 30,
+      "runtime_seconds": 1.045
+    },
+    {
+      "dataset": "breast_cancer",
+      "task": "classification",
+      "alpha": 1.0,
+      "stability": 0.8824,
+      "performance_metric": "macro_f1",
+      "performance_value": 0.9461,
+      "performance_std": 0.0189,
+      "mean_features": 15,
+      "total_features": 30,
+      "runtime_seconds": 1.026
+    },
+    {
       "dataset": "adult_income",
       "task": "classification",
       "alpha": 0.0,
-      "stability": 0.7143,
+      "stability": 1.0,
       "performance_metric": "macro_f1",
-      "performance_value": 0.7839,
+      "performance_value": 0.7737,
+      "performance_std": 0.0077,
       "mean_features": 50,
-      "runtime_seconds": 0.4
+      "total_features": 100,
+      "runtime_seconds": 21.984
     },
     {
       "dataset": "adult_income",
       "task": "classification",
       "alpha": 0.25,
-      "stability": 0.7935,
+      "stability": 0.9804,
       "performance_metric": "macro_f1",
-      "performance_value": 0.7838,
+      "performance_value": 0.7726,
+      "performance_std": 0.0074,
       "mean_features": 50,
-      "runtime_seconds": 0.413
+      "total_features": 100,
+      "runtime_seconds": 21.536
     },
     {
       "dataset": "adult_income",
       "task": "classification",
       "alpha": 0.5,
-      "stability": 0.8521,
+      "stability": 0.9804,
       "performance_metric": "macro_f1",
-      "performance_value": 0.7836,
-      "mean_features": 49,
-      "runtime_seconds": 0.425
+      "performance_value": 0.7745,
+      "performance_std": 0.0067,
+      "mean_features": 50,
+      "total_features": 100,
+      "runtime_seconds": 21.071
     },
     {
       "dataset": "adult_income",
       "task": "classification",
       "alpha": 0.7,
-      "stability": 0.8947,
+      "stability": 0.9615,
       "performance_metric": "macro_f1",
-      "performance_value": 0.7833,
-      "mean_features": 49,
-      "runtime_seconds": 0.435
+      "performance_value": 0.7749,
+      "performance_std": 0.0056,
+      "mean_features": 50,
+      "total_features": 100,
+      "runtime_seconds": 22.241
     },
     {
       "dataset": "adult_income",
       "task": "classification",
       "alpha": 0.85,
-      "stability": 0.925,
+      "stability": 0.9804,
       "performance_metric": "macro_f1",
-      "performance_value": 0.783,
-      "mean_features": 48,
-      "runtime_seconds": 0.443
+      "performance_value": 0.7743,
+      "performance_std": 0.0097,
+      "mean_features": 50,
+      "total_features": 100,
+      "runtime_seconds": 21.823
     },
     {
       "dataset": "adult_income",
       "task": "classification",
       "alpha": 1.0,
-      "stability": 0.9543,
+      "stability": 0.8929,
       "performance_metric": "macro_f1",
-      "performance_value": 0.7827,
-      "mean_features": 48,
-      "runtime_seconds": 0.45
-    },
-    {
-      "dataset": "breast_cancer",
-      "task": "classification",
-      "alpha": 0.0,
-      "stability": 0.75,
-      "performance_metric": "macro_f1",
-      "performance_value": 0.9605,
-      "mean_features": 15,
-      "runtime_seconds": 0.24
-    },
-    {
-      "dataset": "breast_cancer",
-      "task": "classification",
-      "alpha": 0.25,
-      "stability": 0.8066,
-      "performance_metric": "macro_f1",
-      "performance_value": 0.9601,
-      "mean_features": 15,
-      "runtime_seconds": 0.247
-    },
-    {
-      "dataset": "breast_cancer",
-      "task": "classification",
-      "alpha": 0.5,
-      "stability": 0.8451,
-      "performance_metric": "macro_f1",
-      "performance_value": 0.9594,
-      "mean_features": 15,
-      "runtime_seconds": 0.255
-    },
-    {
-      "dataset": "breast_cancer",
-      "task": "classification",
-      "alpha": 0.7,
-      "stability": 0.8724,
-      "performance_metric": "macro_f1",
-      "performance_value": 0.9587,
-      "mean_features": 15,
-      "runtime_seconds": 0.261
-    },
-    {
-      "dataset": "breast_cancer",
-      "task": "classification",
-      "alpha": 0.85,
-      "stability": 0.8916,
-      "performance_metric": "macro_f1",
-      "performance_value": 0.9581,
-      "mean_features": 15,
-      "runtime_seconds": 0.266
-    },
-    {
-      "dataset": "breast_cancer",
-      "task": "classification",
-      "alpha": 1.0,
-      "stability": 0.91,
-      "performance_metric": "macro_f1",
-      "performance_value": 0.9575,
-      "mean_features": 15,
-      "runtime_seconds": 0.27
+      "performance_value": 0.7743,
+      "performance_std": 0.0072,
+      "mean_features": 50,
+      "total_features": 100,
+      "runtime_seconds": 21.362
     },
     {
       "dataset": "california_housing",
@@ -137,9 +161,11 @@
       "alpha": 0.0,
       "stability": 1.0,
       "performance_metric": "rmse",
-      "performance_value": 0.5359,
+      "performance_value": 0.5932,
+      "performance_std": 0.012,
       "mean_features": 4,
-      "runtime_seconds": 0.154
+      "total_features": 8,
+      "runtime_seconds": 11.425
     },
     {
       "dataset": "california_housing",
@@ -147,9 +173,11 @@
       "alpha": 0.25,
       "stability": 1.0,
       "performance_metric": "rmse",
-      "performance_value": 0.5359,
+      "performance_value": 0.5932,
+      "performance_std": 0.012,
       "mean_features": 4,
-      "runtime_seconds": 0.154
+      "total_features": 8,
+      "runtime_seconds": 11.435
     },
     {
       "dataset": "california_housing",
@@ -157,9 +185,11 @@
       "alpha": 0.5,
       "stability": 1.0,
       "performance_metric": "rmse",
-      "performance_value": 0.5359,
+      "performance_value": 0.5932,
+      "performance_std": 0.012,
       "mean_features": 4,
-      "runtime_seconds": 0.154
+      "total_features": 8,
+      "runtime_seconds": 11.402
     },
     {
       "dataset": "california_housing",
@@ -167,9 +197,11 @@
       "alpha": 0.7,
       "stability": 1.0,
       "performance_metric": "rmse",
-      "performance_value": 0.5359,
+      "performance_value": 0.5932,
+      "performance_std": 0.012,
       "mean_features": 4,
-      "runtime_seconds": 0.154
+      "total_features": 8,
+      "runtime_seconds": 11.422
     },
     {
       "dataset": "california_housing",
@@ -177,9 +209,11 @@
       "alpha": 0.85,
       "stability": 1.0,
       "performance_metric": "rmse",
-      "performance_value": 0.5359,
+      "performance_value": 0.5932,
+      "performance_std": 0.012,
       "mean_features": 4,
-      "runtime_seconds": 0.154
+      "total_features": 8,
+      "runtime_seconds": 11.342
     },
     {
       "dataset": "california_housing",
@@ -187,9 +221,11 @@
       "alpha": 1.0,
       "stability": 1.0,
       "performance_metric": "rmse",
-      "performance_value": 0.5359,
+      "performance_value": 0.5932,
+      "performance_std": 0.012,
       "mean_features": 4,
-      "runtime_seconds": 0.154
+      "total_features": 8,
+      "runtime_seconds": 11.649
     },
     {
       "dataset": "bike_sharing",
@@ -197,9 +233,11 @@
       "alpha": 0.0,
       "stability": 1.0,
       "performance_metric": "rmse",
-      "performance_value": 88.4316,
+      "performance_value": 91.6265,
+      "performance_std": 2.5676,
       "mean_features": 6,
-      "runtime_seconds": 0.153
+      "total_features": 12,
+      "runtime_seconds": 26.053
     },
     {
       "dataset": "bike_sharing",
@@ -207,9 +245,11 @@
       "alpha": 0.25,
       "stability": 1.0,
       "performance_metric": "rmse",
-      "performance_value": 88.4316,
+      "performance_value": 91.6257,
+      "performance_std": 2.5678,
       "mean_features": 6,
-      "runtime_seconds": 0.153
+      "total_features": 12,
+      "runtime_seconds": 12.187
     },
     {
       "dataset": "bike_sharing",
@@ -217,9 +257,11 @@
       "alpha": 0.5,
       "stability": 1.0,
       "performance_metric": "rmse",
-      "performance_value": 88.4316,
+      "performance_value": 91.6257,
+      "performance_std": 2.5678,
       "mean_features": 6,
-      "runtime_seconds": 0.153
+      "total_features": 12,
+      "runtime_seconds": 7.665
     },
     {
       "dataset": "bike_sharing",
@@ -227,9 +269,11 @@
       "alpha": 0.7,
       "stability": 1.0,
       "performance_metric": "rmse",
-      "performance_value": 88.4316,
+      "performance_value": 91.6257,
+      "performance_std": 2.5678,
       "mean_features": 6,
-      "runtime_seconds": 0.153
+      "total_features": 12,
+      "runtime_seconds": 7.534
     },
     {
       "dataset": "bike_sharing",
@@ -237,9 +281,11 @@
       "alpha": 0.85,
       "stability": 1.0,
       "performance_metric": "rmse",
-      "performance_value": 88.4316,
+      "performance_value": 91.6257,
+      "performance_std": 2.5678,
       "mean_features": 6,
-      "runtime_seconds": 0.153
+      "total_features": 12,
+      "runtime_seconds": 8.107
     },
     {
       "dataset": "bike_sharing",
@@ -247,9 +293,11 @@
       "alpha": 1.0,
       "stability": 1.0,
       "performance_metric": "rmse",
-      "performance_value": 88.4316,
+      "performance_value": 91.6257,
+      "performance_std": 2.5678,
       "mean_features": 6,
-      "runtime_seconds": 0.153
+      "total_features": 12,
+      "runtime_seconds": 25.813
     }
   ]
 }

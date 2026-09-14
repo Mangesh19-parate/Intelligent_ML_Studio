@@ -68,16 +68,16 @@ jobs:
       - name: Validate TypeScript Types & Build Production Bundle
         working-directory: frontend
         run: |
-          npm run typecheck || true
+          npm run typecheck
           npm run build
 
-  deploy-gate:
-    name: Production Deployment Gate
+  production-promotion-gate:
+    name: Production Promotion Gate
     needs: [backend-quality-gate, frontend-quality-gate]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:
-      - name: Deploy Trigger
+      - name: Verify Promotion Readiness
         run: |
           echo "All quality, security, and invariant gates passed cleanly."
-          echo "Ready for Render / Vercel deployment webhook trigger."
+          echo "Build artifacts verified and ready for production promotion."

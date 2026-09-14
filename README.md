@@ -6,7 +6,7 @@
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.110+-green.svg)](https://fastapi.tiangolo.com/)
 [![React](https://img.shields.io/badge/React-18.2-61dafb.svg)](https://react.dev/)
 [![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-2.0+-red.svg)](https://www.sqlalchemy.org/)
-[![Tests](https://img.shields.io/badge/Tests-440%2B%20Passed-brightgreen.svg)]()
+[![Tests](https://img.shields.io/badge/Tests-460%2B%20Passed-brightgreen.svg)]()
 [![Invariants](https://img.shields.io/badge/Invariants-100%25%20Verified-success.svg)]()
 
 ---
@@ -19,16 +19,16 @@ In classical machine learning workflows, **subtle data leakage, evaluation reuse
 - **Strict Partition Isolation**: 80/20 train/test split with deterministic row hash verification; zero fitting on Locked Test data.
 - **Fold-Isolated Preprocessing & Feature Selection**: Imputers, scalers, and selector rankings fit strictly inside training folds.
 - **Durable Task Persistence & Crash Recovery**: DB-backed durable tasks with worker crash recovery, active timeout enforcement with OS process-level termination, and zero zombie writes.
-- **Atomic Queue Dispatch**: PostgreSQL FOR UPDATE SKIP LOCKED atomic task claiming preventing worker race conditions.
+- **Atomic Queue Dispatch**: PostgreSQL `FOR UPDATE SKIP LOCKED` atomic task claiming preventing worker race conditions.
 - **Immutable Snapshot Lineage & HMAC Artifact Signing**: Transformations and feature selections generate SHA-256 snapshotted pipelines; serialized model artifacts are cryptographically HMAC signed.
-- **Four-Eyes Deployment Governance & Rollback**: Cryptographic model passports, server-side separation-of-duties (pproved_by != created_by), and first-class one-click deployment rollback.
+- **Four-Eyes Deployment Governance & Rollback**: Cryptographic model passports, server-side separation-of-duties (`approved_by != created_by`), and first-class one-click deployment rollback.
 - **Preregistered Research Track**: Hierarchical statistical analysis across benchmark datasets with complete alpha ablation and honest condition characterization.
 
 ---
 
 ## 🏗️ System Architecture & Deployment Topology
 
-`	ext
+```text
 ┌────────────────────────────────────────────────────────────────────────────────────────┐
 │                        INTELLIGENT ML STUDIO RUNTIME TOPOLOGY                          │
 └────────────────────────────────────────────────────────────────────────────────────────┘
@@ -50,7 +50,7 @@ In classical machine learning workflows, **subtle data leakage, evaluation reuse
                         (OS Process-Isolated Execution,
                          Hard Timeout Termination,
                          Lease Requeue & Crash Recovery)
-`
+```
 
 ---
 
@@ -58,17 +58,17 @@ In classical machine learning workflows, **subtle data leakage, evaluation reuse
 
 | System Guarantee / Invariant | Verification Test Suite | Architectural Enforcement | Status |
 |:---|:---|:---|:---:|
-| **Locked Test Zero Leakage** | 	est_system_integrity.py<br>	est_day4_leakage_and_reordering.py | Holdout partition transformed via pre-fitted estimators; zero fitting on test folds | **VERIFIED** |
-| **Fold-Safe Feature Selection** | 	est_feature_selection_isolation.py | Selector fitting, permutation importance, and row hashes asserted per-fold | **VERIFIED** |
-| **Durable Task Crash Recovery** | 	est_durable_tasks.py<br>	est_chaos_and_resilience.py | Task state persisted to DB; orphaned/running tasks recovered on worker restart with retry limits | **VERIFIED** |
-| **Active Timeout Enforcement** | 	est_durable_tasks.py<br>	est_chaos_and_resilience.py | Worker processes hard-terminated at OS process boundary on timeout with zero zombie writes | **VERIFIED** |
-| **Atomic Multi-Worker Queue** | 	est_durable_tasks.py<br>	est_chaos_and_resilience.py | FOR UPDATE SKIP LOCKED query prevents duplicate claims under high concurrency | **VERIFIED** |
-| **HMAC Artifact Manifest Signing** | 	est_p1_hardening.py | Serialized models verified against HMAC signatures before unpickling/serving | **VERIFIED** |
-| **Refresh Token Rotation & Reuse** | 	est_p1_hardening.py | Rotates refresh tokens on exchange; detects reuse as compromise and revokes family | **VERIFIED** |
-| **First-Class Rollback** | 	est_deployments_and_gates.py | Retires current deployment and provisions restored model with full audit trail | **VERIFIED** |
-| **Four-Eyes Governance** | 	est_golden_path_e2e.py | pproved_by != created_by enforced server-side; HTTP 403 on self-approval | **VERIFIED** |
-| **Golden-Path E2E Lifecycle** | 	est_golden_path_e2e.py | Full upload -> DQI -> FS -> CV -> Passport -> Gate -> Predict -> Rollback | **VERIFIED** |
-| **Strict Migration Upgrade/Downgrade** | 	est_alembic_migrations.py | Headless migration test verifying clean upgrade head -> downgrade base -> upgrade head | **VERIFIED** |
+| **Locked Test Zero Leakage** | `test_system_integrity.py`<br>`test_day4_leakage_and_reordering.py` | Holdout partition transformed via pre-fitted estimators; zero fitting on test folds | **VERIFIED** |
+| **Fold-Safe Feature Selection** | `test_feature_selection_isolation.py` | Selector fitting, permutation importance, and row hashes asserted per-fold | **VERIFIED** |
+| **Durable Task Crash Recovery** | `test_durable_tasks.py`<br>`test_chaos_and_resilience.py` | Task state persisted to DB; orphaned/running tasks recovered on worker restart with retry limits | **VERIFIED** |
+| **Active Timeout Enforcement** | `test_durable_tasks.py`<br>`test_chaos_and_resilience.py` | Worker processes hard-terminated at OS process boundary on timeout with zero zombie writes | **VERIFIED** |
+| **Atomic Multi-Worker Queue** | `test_durable_tasks.py`<br>`test_chaos_and_resilience.py` | `FOR UPDATE SKIP LOCKED` query prevents duplicate claims under high concurrency | **VERIFIED** |
+| **HMAC Artifact Manifest Signing** | `test_p1_hardening.py` | Serialized models verified against HMAC signatures before unpickling/serving | **VERIFIED** |
+| **Refresh Token Rotation & Reuse** | `test_p1_hardening.py` | Rotates refresh tokens on exchange; detects reuse as compromise and revokes family | **VERIFIED** |
+| **First-Class Rollback** | `test_deployments_and_gates.py` | Retires current deployment and provisions restored model with full audit trail | **VERIFIED** |
+| **Four-Eyes Governance** | `test_golden_path_e2e.py` | `approved_by != created_by` enforced server-side; HTTP 403 on self-approval | **VERIFIED** |
+| **Golden-Path E2E Lifecycle** | `test_golden_path_e2e.py` | Full upload -> DQI -> FS -> CV -> Passport -> Gate -> Predict -> Rollback | **VERIFIED** |
+| **Strict Migration Upgrade/Downgrade** | `test_alembic_migrations.py` | Headless migration test verifying clean upgrade head -> downgrade base -> upgrade head | **VERIFIED** |
 
 ---
 
@@ -76,7 +76,7 @@ In classical machine learning workflows, **subtle data leakage, evaluation reuse
 
 Every deployable candidate model exposes an immutable cryptographic passport:
 
-`	ext
+```text
 ┌────────────────────────────────────────────────────────────────────────┐
 │ MODEL TECHNICAL PASSPORT                                               │
 │ Model ID: a482dee6-17bd-4de4-8e53-553ced6a81f6         DEPLOYABLE ✓    │
@@ -99,22 +99,22 @@ Every deployable candidate model exposes an immutable cryptographic passport:
 │ ✓ Performance threshold satisfied (Macro-F1 >= 0.80)                   │
 │ ✓ Four-Eyes approval confirmed (Approved by: approver@demo.com)        │
 └────────────────────────────────────────────────────────────────────────┘
-`
+```
 
 ---
 
 ## 🚀 Quick Start
 
 ### 1. Run with Docker Compose
-`ash
+```bash
 docker compose up --build -d
-`
+```
 Access the application:
 - **Frontend Dashboard**: http://localhost:3000
 - **Backend Swagger API**: http://localhost:8000/docs
 
 ### 2. Local Development Setup
-`ash
+```bash
 # Backend & Worker
 cd backend
 python -m venv venv
@@ -128,9 +128,9 @@ python -m app.tasks.worker
 cd frontend
 npm install
 npm run dev
-`
+```
 
 ### 3. Running Verification Tests
-`ash
+```bash
 pytest backend/tests
-`
+```

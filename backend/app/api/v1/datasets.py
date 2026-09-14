@@ -209,6 +209,9 @@ def get_development_preview(
     if not dataset:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Dataset not found")
 
+    project_service = ProjectService(db)
+    project_service.get_project_by_id(dataset.project_id, current_user)
+
     split_service = DatasetSplitService(db)
     preview = split_service.get_development_preview(dataset.id, limit=limit)
     return DatasetDevelopmentPreviewResponse.model_validate(preview)

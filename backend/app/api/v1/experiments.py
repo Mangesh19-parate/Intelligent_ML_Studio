@@ -20,6 +20,7 @@ from app.schemas.experiment import (
 )
 from app.schemas.model_metric import SelectionRecordResponse, ModelMetricResponse
 from app.services.experiment_service import ExperimentService
+from app.services.project_service import ProjectService
 from app.tasks.experiment_tasks import submit_experiment_task
 
 router = APIRouter(tags=["Model Training Experiments"])
@@ -36,16 +37,11 @@ def create_experiment(
     current_user: User = Depends(require_permission("TRAIN")),
     db: Session = Depends(get_db),
 ):
-    project_repo = ProjectRepository(db)
+    project_service = ProjectService(db)
     exp_repo = ExperimentRepository(db)
     service = ExperimentService(db)
 
-    project = project_repo.get_by_id(id)
-    if not project:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Project not found"
-        )
+    project = project_service.get_project_by_id(id, current_user)
 
     if not project.target_column:
         raise HTTPException(
@@ -137,6 +133,14 @@ def freeze_experiment_config_endpoint(
     db: Session = Depends(get_db),
 ):
     service = ExperimentService(db)
+    exp_repo = ExperimentRepository(db)
+    exp = exp_repo.get_by_id(id)
+    if not exp:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Experiment not found")
+    
+    project_service = ProjectService(db)
+    project_service.get_project_by_id(exp.project_id, current_user)
+
     override_dict = payload.model_dump(exclude_unset=True) if payload else None
     exp = service.freeze_experiment_config(id, config_override=override_dict)
 
@@ -187,6 +191,14 @@ def start_experiment_training_endpoint(
     db: Session = Depends(get_db),
 ):
     service = ExperimentService(db)
+    exp_repo = ExperimentRepository(db)
+    exp_record = exp_repo.get_by_id(id)
+    if not exp_record:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Experiment not found")
+    
+    project_service = ProjectService(db)
+    project_service.get_project_by_id(exp_record.project_id, current_user)
+
     exp = service.start_training(id)
 
     algorithms = None
@@ -266,6 +278,9 @@ def get_experiment(
             detail="Experiment not found"
         )
 
+    project_service = ProjectService(db)
+    project_service.get_project_by_id(experiment.project_id, current_user)
+
     models_res = [
         TrainedModelResponse(
             id=m.id,
@@ -332,6 +347,9 @@ def get_experiment_selection(
             detail="Experiment not found"
         )
 
+    project_service = ProjectService(db)
+    project_service.get_project_by_id(experiment.project_id, current_user)
+
     task_type = experiment.task_type or "REGRESSION"
     sel_metric = experiment.selection_metric or ("rmse" if task_type == "REGRESSION" else "f1_macro")
     sel_dir = experiment.selection_direction or ("MINIMIZE" if sel_metric in ["rmse", "mae", "mse"] else "MAXIMIZE")
@@ -357,6 +375,14 @@ def finalize_experiment_endpoint(
     current_user: User = Depends(require_permission("TRAIN")),
     db: Session = Depends(get_db),
 ):
+    exp_repo = ExperimentRepository(db)
+    exp = exp_repo.get_by_id(id)
+    if not exp:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Experiment not found")
+    
+    project_service = ProjectService(db)
+    project_service.get_project_by_id(exp.project_id, current_user)
+
     service = ExperimentService(db)
     return service.finalize_experiment(id)
 
@@ -386,6 +412,9 @@ def list_project_experiments(
     current_user: User = Depends(require_permission("READ")),
     db: Session = Depends(get_db),
 ):
+    project_service = ProjectService(db)
+    project_service.get_project_by_id(id, current_user)
+
     exp_repo = ExperimentRepository(db)
     experiments = exp_repo.get_by_project(id)
 

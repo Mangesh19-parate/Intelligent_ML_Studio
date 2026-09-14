@@ -10,6 +10,7 @@ from app.schemas.auth import (
     RefreshTokenRequest,
     UserResponse,
 )
+from app.core.rate_limiter import rate_limit_auth
 from app.services.auth_service import AuthService
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
@@ -18,13 +19,15 @@ router = APIRouter(prefix="/auth", tags=["Authentication"])
     "/signup",
     response_model=UserResponse,
     status_code=status.HTTP_201_CREATED,
-    summary="Sign up a new user (hardcodes role to USER, rejects any role key with 400)"
+    summary="Sign up a new user (hardcodes role to USER, rejects any role key with 400)",
+    dependencies=[Depends(rate_limit_auth(max_requests=10, window_seconds=60))]
 )
 @router.post(
     "/register",
     response_model=UserResponse,
     status_code=status.HTTP_201_CREATED,
-    summary="Register alias for signup"
+    summary="Register alias for signup",
+    dependencies=[Depends(rate_limit_auth(max_requests=10, window_seconds=60))]
 )
 async def signup(
     request: Request,
@@ -42,7 +45,8 @@ async def signup(
     "/login",
     response_model=TokenResponse,
     status_code=status.HTTP_200_OK,
-    summary="User login with JWT generation"
+    summary="User login with JWT generation",
+    dependencies=[Depends(rate_limit_auth(max_requests=15, window_seconds=60))]
 )
 def login(
     payload: LoginRequest,

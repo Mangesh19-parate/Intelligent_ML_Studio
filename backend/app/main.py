@@ -39,7 +39,9 @@ app = FastAPI(
 )
 
 from app.core.logging_middleware import StructuredLoggingMiddleware
+from app.core.security_headers import SecurityHeadersMiddleware
 
+app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(StructuredLoggingMiddleware)
 app.add_middleware(
     CORSMiddleware,

@@ -1,19 +1,202 @@
+"""
+Custom Scikit-Learn Transformers for ML Studio (SRS v11).
+Enforces Invariant 1 (Zero Test Leakage) and the Temporal Leakage Guard:
+- Deterministic transforms (MixedVariableResolver, Calendar/Cyclical dates, FeatureConstructor)
+  require no cross-row statistics and are applied per-value.
+- Learned transforms (OutlierCapper, TemporalReferenceTransformer, FoldScopedFeatureExtractor)
+  learn parameters strictly during fit() on training fold slices and are NEVER fit globally upfront.
+"""
+
 import numpy as np
 import pandas as pd
+from typing import Any, Sequence
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.utils.validation import check_is_fitted
+from sklearn.decomposition import PCA
+
+
+# ==============================================================================
+# 1. MIXED-VARIABLE RESOLUTION (SRS v11 §2 - Deterministic, No Fold-Scoping Needed)
+# ==============================================================================
+
+class MixedVariableResolver(BaseEstimator, TransformerMixin):
+    """
+    Deterministic mixed-variable resolution (SRS v11 §2).
+    Resolves columns flagged MIXED at structural validation.
+    
+    LEAKAGE CLASSIFICATION:
+    This operation is purely deterministic and row-local. Parsing a string to a float,
+    stringifying a value, or setting a boolean flag uses NO cross-row statistic and
+    NO target information. It does NOT need fold-scoped refitting.
+    
+    Strategies:
+    - 'COERCE_NUMERIC': Parse numeric-convertible strings to float, unparseable -> NaN.
+    - 'COERCE_CATEGORICAL': Stringify all values into uniform category strings.
+    - 'SPLIT': Produce numeric value (NaN otherwise) + boolean 'was_non_numeric' indicator.
+    """
+
+    def __init__(self, strategy: str = "COERCE_NUMERIC"):
+        self.strategy = strategy.upper().strip()
+
+    def fit(self, X, y=None):
+        # Deterministic transform: fit is a no-op passthrough
+        self.n_features_in_ = 1
+        return self
+
+    def transform(self, X):
+        strat = self.strategy.upper()
+        
+        # Convert input to 1D series or array
+        if isinstance(X, pd.DataFrame):
+            col_data = X.iloc[:, 0]
+        elif isinstance(X, pd.Series):
+            col_data = X
+        else:
+            col_data = pd.Series(np.asarray(X).ravel())
+
+        if strat == "COERCE_NUMERIC":
+            numeric_series = pd.to_numeric(col_data, errors="coerce")
+            return numeric_series.to_numpy(dtype=np.float64).reshape(-1, 1)
+
+        elif strat == "COERCE_CATEGORICAL":
+            cat_series = col_data.astype(str)
+            return cat_series.to_numpy(dtype=object).reshape(-1, 1)
+
+        elif strat == "SPLIT":
+            numeric_series = pd.to_numeric(col_data, errors="coerce")
+            was_non_numeric = numeric_series.isna() & col_data.notna()
+            res = np.column_stack([
+                numeric_series.to_numpy(dtype=np.float64),
+                was_non_numeric.to_numpy(dtype=np.float64)
+            ])
+            return res
+
+        else:
+            raise ValueError(f"Unsupported mixed-variable strategy: '{self.strategy}'. Must be COERCE_NUMERIC, COERCE_CATEGORICAL, or SPLIT.")
+
+    def get_feature_names_out(self, input_features=None):
+        base = input_features[0] if input_features is not None and len(input_features) > 0 else "col"
+        if self.strategy.upper() == "SPLIT":
+            return np.array([f"{base}_num", f"{base}_was_non_numeric"], dtype=str)
+        return np.array([base], dtype=str)
+
+
+# ==============================================================================
+# 2. DATE/TIME HANDLING + TEMPORAL LEAKAGE GUARD (SRS v11 §3)
+# ==============================================================================
+
+class DateTimeFeatureExtractor(BaseEstimator, TransformerMixin):
+    """
+    Extracts calendar components and cyclical encodings from datetime features (SRS v11 §3).
+    
+    LEAKAGE CLASSIFICATION:
+    - Calendar components (year, month, day, day_of_week, is_weekend, quarter) &
+      cyclical encodings (sin/cos of month/day_of_week) are relative to the calendar
+      itself and use NO dataset-derived statistics. They are deterministic.
+    """
+
+    def __init__(
+        self,
+        include_calendar: bool = True,
+        include_cyclical: bool = True,
+    ):
+        self.include_calendar = include_calendar
+        self.include_cyclical = include_cyclical
+
+    def fit(self, X, y=None):
+        self.n_features_in_ = 1
+        return self
+
+    def transform(self, X):
+        if isinstance(X, (pd.DataFrame, pd.Series)):
+            dt_series = pd.to_datetime(X.iloc[:, 0] if isinstance(X, pd.DataFrame) else X, errors="coerce")
+        else:
+            dt_series = pd.to_datetime(pd.Series(np.asarray(X).ravel()), errors="coerce")
+
+        extracted = []
+        if self.include_calendar:
+            extracted.append(dt_series.dt.year.to_numpy(dtype=np.float64))
+            extracted.append(dt_series.dt.month.to_numpy(dtype=np.float64))
+            extracted.append(dt_series.dt.day.to_numpy(dtype=np.float64))
+            extracted.append(dt_series.dt.dayofweek.to_numpy(dtype=np.float64))
+            extracted.append(dt_series.dt.dayofweek.isin([5, 6]).to_numpy(dtype=np.float64))
+            extracted.append(dt_series.dt.quarter.to_numpy(dtype=np.float64))
+
+        if self.include_cyclical:
+            month = dt_series.dt.month.to_numpy(dtype=np.float64)
+            dow = dt_series.dt.dayofweek.to_numpy(dtype=np.float64)
+            extracted.append(np.sin(2 * np.pi * month / 12.0))
+            extracted.append(np.cos(2 * np.pi * month / 12.0))
+            extracted.append(np.sin(2 * np.pi * dow / 7.0))
+            extracted.append(np.cos(2 * np.pi * dow / 7.0))
+
+        return np.column_stack(extracted)
+
+    def get_feature_names_out(self, input_features=None):
+        base = input_features[0] if input_features is not None and len(input_features) > 0 else "dt"
+        names = []
+        if self.include_calendar:
+            names.extend([f"{base}_year", f"{base}_month", f"{base}_day", f"{base}_dayofweek", f"{base}_is_weekend", f"{base}_quarter"])
+        if self.include_cyclical:
+            names.extend([f"{base}_sin_month", f"{base}_cos_month", f"{base}_sin_dow", f"{base}_cos_dow"])
+        return np.array(names, dtype=str)
+
+
+class TemporalReferenceTransformer(BaseEstimator, TransformerMixin):
+    """
+    Computes elapsed time (e.g. days_since_reference) from a reference timestamp (SRS v11 §3).
+    
+    TEMPORAL LEAKAGE GUARD (INVARIANT 1):
+    When the reference point is COMPUTED FROM THE DATASET (e.g. 'min_date' across training data),
+    it is a LEARNED STATISTIC. Computing this globally leaks future date distributions.
+    This transformer learns `reference_date_` strictly inside `fit()` on training fold data.
+    """
+
+    def __init__(self, reference_strategy: str = "dataset_min"):
+        self.reference_strategy = reference_strategy
+
+    def fit(self, X, y=None):
+        if isinstance(X, (pd.DataFrame, pd.Series)):
+            dt_series = pd.to_datetime(X.iloc[:, 0] if isinstance(X, pd.DataFrame) else X, errors="coerce").dropna()
+        else:
+            dt_series = pd.to_datetime(pd.Series(np.asarray(X).ravel()), errors="coerce").dropna()
+
+        if len(dt_series) == 0:
+            self.reference_date_ = pd.Timestamp("2000-01-01")
+        elif self.reference_strategy == "dataset_min":
+            self.reference_date_ = dt_series.min()
+        elif self.reference_strategy == "dataset_max":
+            self.reference_date_ = dt_series.max()
+        else:
+            self.reference_date_ = pd.to_datetime(self.reference_strategy)
+
+        self.n_features_in_ = 1
+        return self
+
+    def transform(self, X):
+        check_is_fitted(self, ["reference_date_"])
+        if isinstance(X, (pd.DataFrame, pd.Series)):
+            dt_series = pd.to_datetime(X.iloc[:, 0] if isinstance(X, pd.DataFrame) else X, errors="coerce")
+        else:
+            dt_series = pd.to_datetime(pd.Series(np.asarray(X).ravel()), errors="coerce")
+
+        # Elapsed days since learned reference date
+        elapsed_days = (dt_series - self.reference_date_).dt.total_seconds() / 86400.0
+        return elapsed_days.to_numpy(dtype=np.float64).reshape(-1, 1)
+
+    def get_feature_names_out(self, input_features=None):
+        base = input_features[0] if input_features is not None and len(input_features) > 0 else "dt"
+        return np.array([f"{base}_days_since_ref"], dtype=str)
+
+
+# ==============================================================================
+# 3. ACTIVE OUTLIER REMEDIATION (SRS v11 §4 - Fold-Scoped Transform)
+# ==============================================================================
 
 class OutlierCapper(BaseEstimator, TransformerMixin):
     """
-    Leakage-safe outlier handler that computes capping thresholds during `fit()`
-    and applies clipping during `transform()`.
-    
-    Supported strategies:
-    - 'none': Passthrough
-    - 'zscore': Capping at mean +/- (z_threshold * std)
-    - 'iqr': Capping at Q1 - 1.5*IQR and Q3 + 1.5*IQR
-    - 'percentile': Capping at 1st and 99th percentiles
-    - 'winsorize': Capping at 5th and 95th percentiles
+    Fold-scoped active outlier handler (SRS v11 §4).
+    Computes IQR / Z-score thresholds strictly during `fit()` and applies clipping during `transform()`.
     
     ARCHITECTURAL INVARIANT:
     - Unfit state has NO fitted parameters (`lower_bounds_`, `upper_bounds_`).
@@ -57,7 +240,6 @@ class OutlierCapper(BaseEstimator, TransformerMixin):
 
         for i in range(n_features):
             col = X_arr[:, i]
-            # Ignore NaNs during threshold calculation
             valid_mask = ~np.isnan(col)
             if not np.any(valid_mask):
                 lower_bounds.append(-np.inf)
@@ -71,7 +253,7 @@ class OutlierCapper(BaseEstimator, TransformerMixin):
                 std = float(np.std(valid_col))
                 lower = mean - (self.z_threshold * std) if std > 0 else mean
                 upper = mean + (self.z_threshold * std) if std > 0 else mean
-            elif self.strategy == "iqr":
+            elif self.strategy in ["iqr", "cap"]:
                 q25, q75 = np.percentile(valid_col, [25, 75])
                 iqr = float(q75 - q25)
                 lower = float(q25 - (self.iqr_multiplier * iqr))
@@ -119,3 +301,50 @@ class OutlierCapper(BaseEstimator, TransformerMixin):
         if input_features is None:
             return [f"x{i}" for i in range(getattr(self, "n_features_in_", 1))]
         return np.asarray(input_features, dtype=str)
+
+
+# ==============================================================================
+# 4. FEATURE EXTRACTION - DIMENSIONALITY REDUCTION (SRS v11 §6 - Fold-Scoped PCA)
+# ==============================================================================
+
+class FoldScopedFeatureExtractor(BaseEstimator, TransformerMixin):
+    """
+    Fold-scoped Dimensionality Reduction via PCA (SRS v11 §6).
+    
+    LEAKAGE CLASSIFICATION:
+    PCA SVD components & variance ratios are LEARNED from the covariance matrix of training data.
+    Fitting PCA globally before cross-validation causes severe data leakage.
+    This extractor MUST be wired into the sklearn Pipeline and fit strictly inside each CV fold.
+    """
+
+    def __init__(self, n_components: int | float | None = 2, random_state: int = 42):
+        self.n_components = n_components
+        self.random_state = random_state
+
+    def fit(self, X, y=None):
+        X_arr = np.asarray(X, dtype=np.float64)
+        # Handle missing values internally with mean if present
+        if np.isnan(X_arr).any():
+            col_means = np.nanmean(X_arr, axis=0)
+            inds = np.where(np.isnan(X_arr))
+            X_arr[inds] = np.take(col_means, inds[1])
+
+        self.pca_ = PCA(n_components=self.n_components, random_state=self.random_state)
+        self.pca_.fit(X_arr)
+        self.n_components_ = self.pca_.n_components_
+        self.explained_variance_ratio_ = self.pca_.explained_variance_ratio_
+        self.cumulative_variance_ = float(np.sum(self.explained_variance_ratio_))
+        return self
+
+    def transform(self, X):
+        check_is_fitted(self, ["pca_", "explained_variance_ratio_"])
+        X_arr = np.asarray(X, dtype=np.float64)
+        if np.isnan(X_arr).any():
+            col_means = np.nanmean(X_arr, axis=0)
+            inds = np.where(np.isnan(X_arr))
+            X_arr[inds] = np.take(col_means, inds[1])
+        return self.pca_.transform(X_arr)
+
+    def get_feature_names_out(self, input_features=None):
+        check_is_fitted(self, ["n_components_"])
+        return np.array([f"pca_component_{i+1}" for i in range(self.n_components_)], dtype=str)

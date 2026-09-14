@@ -36,6 +36,15 @@ export interface Project {
   updated_at: string;
 }
 
+export interface ProjectSnapshot {
+  project: Project;
+  dataset?: Dataset | null;
+  split?: DatasetSplit | null;
+  transformations?: TransformationConfig[];
+  experiments?: Experiment[];
+  deployments?: Deployment[];
+}
+
 export interface Dataset {
   id: UUID;
   project_id: UUID;
@@ -53,6 +62,18 @@ export interface DatasetColumn {
   column_name: string;
   data_type: 'NUMERIC' | 'CATEGORICAL' | 'DATETIME' | 'BOOLEAN' | 'TEXT';
   is_target: boolean;
+}
+
+export interface DatasetProfile {
+  dataset_id: UUID;
+  row_count: number;
+  column_count: number;
+  missing_cells: number;
+  missing_percentage: number;
+  duplicate_rows: number;
+  data_quality_index: number;
+  column_summaries: Record<string, any>;
+  recommendations?: Recommendation[];
 }
 
 export interface DatasetSplit {
@@ -87,6 +108,19 @@ export interface TransformationConfig {
   is_active: boolean;
 }
 
+export interface FeatureImportanceResponse {
+  features: Array<{
+    feature_name: string;
+    importance_score: number;
+    stability_score?: number;
+    rank: number;
+    is_selected: boolean;
+  }>;
+  selection_threshold: number;
+  total_features: number;
+  selected_count: number;
+}
+
 export interface Experiment {
   id: UUID;
   project_id: UUID;
@@ -119,6 +153,19 @@ export interface ModelMetric {
   fold_number?: number | null;
 }
 
+export interface ModelLeaderboardItem {
+  model_id: UUID;
+  algorithm_name: string;
+  status: string;
+  is_winning_model: boolean;
+  cv_score: number;
+  locked_test_score?: number | null;
+  generalization_gap?: number | null;
+  metrics: Record<string, number>;
+  hyperparameters?: Record<string, any>;
+  created_at: string;
+}
+
 export interface DeploymentGate {
   id: UUID;
   model_id: UUID;
@@ -143,6 +190,14 @@ export interface Deployment {
   log_retention_days: number;
 }
 
+export interface PredictionResponse {
+  prediction: any;
+  probabilities?: Record<string, number> | null;
+  explanation?: Record<string, number> | null;
+  latency_ms: number;
+  model_id: UUID;
+}
+
 export interface PredictionLog {
   id: UUID;
   deployment_id: UUID;
@@ -156,6 +211,17 @@ export interface PredictionLog {
   explanation_latency_ms?: number | null;
   status: 'SUCCESS' | 'VALIDATION_ERROR' | 'SYSTEM_ERROR';
   requested_at: string;
+}
+
+export interface AuditLogRecord {
+  id: UUID;
+  event_type: string;
+  user_id?: UUID | null;
+  resource_type?: string | null;
+  resource_id?: UUID | null;
+  details?: Record<string, any> | null;
+  ip_address?: string | null;
+  created_at: string;
 }
 
 export interface DurableTask {

@@ -21,6 +21,8 @@ EXCLUDE_DIRS = {
     ".git",
     ".github",
     ".agents",
+    "brain",
+    "dist_export",
     "node_modules",
     "dist",
     "build",
@@ -64,11 +66,11 @@ def should_exclude(rel_path: Path) -> bool:
 
     # Check parent/ancestor directory exclusion
     for part in parts[:-1]:
-        if part in EXCLUDE_DIRS:
+        if part in EXCLUDE_DIRS or part.startswith("week-"):
             return True
 
     # Check directory itself
-    if parts[-1] in EXCLUDE_DIRS:
+    if parts[-1] in EXCLUDE_DIRS or parts[-1].startswith("week-"):
         return True
 
     # Check filename & extension

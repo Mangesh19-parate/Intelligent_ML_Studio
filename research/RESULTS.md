@@ -116,6 +116,19 @@ To assess sensitivity to the blending parameter $\alpha \in [0, 1]$ in $Score(j)
 
 ---
 
+### 3.4 Dataset Condition & Operating Regime Matrix
+
+To address the scientific question: *"Under what dataset conditions does stability-aware feature aggregation provide a meaningful advantage over standard rank aggregation?"*, the evaluated benchmarks are categorized by domain characteristics:
+
+| Benchmark Dataset | Features ($p$) | Sample/Feature Ratio ($N/p$) | Baseline Selector Instability | Observed Stability Gain ($\Delta S$) | Performance Impact ($\Delta \text{Metric}$) | Operating Regime & Decision |
+|---|---|---|---|---|---|---|
+| **Adult Income** | 100 | ~325:1 | **High** ($S_{LASSO} = 0.588$) | **+0.1190** (+16.7%) | +0.0004 F1 (Invariant) | **High Gain**: High dimensionality & collinearity benefit substantially from stability regularization. |
+| **Breast Cancer** | 30 | ~19:1 | **High** ($S_{PERM} = 0.652$) | **+0.1324** (+17.6%) | -0.0026 F1 (Invariant) | **High Gain**: High variance among individual selectors is smoothed by stability ensemble. |
+| **California Housing** | 8 | ~2,580:1 | **Zero** ($S_{all} = 1.000$) | **0.0000** (Ceiling) | 0.0000 RMSE (Invariant) | **Saturated**: Low dimensionality yields deterministic rankings across all methods. |
+| **Bike Sharing** | 12 | ~1,448:1 | **Low** ($S_{LASSO} = 0.857$) | **0.0000** (Ceiling) | 0.0000 RMSE (Invariant) | **Saturated**: Low feature count allows rank aggregation to saturate stability without $\alpha$ weighting. |
+
+---
+
 ## 4. Visualizations & Stability Comparisons
 
 ### 4.1 Selection Stability Comparison (Higher is More Stable)

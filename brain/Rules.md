@@ -4,7 +4,7 @@ Engineering rules the system must satisfy, distinct from `Agents.md` (which gove
 
 ## The Six Invariants (never violated, structurally enforced)
 
-1. No learned preprocessing outside training folds.
+1. No learned preprocessing outside training folds. Extends to feature extraction (PCA-style dimensionality reduction), active outlier remediation bounds (IQR/Q1/Q3), and any date/time feature referencing a dataset-derived statistic (Temporal Leakage Guard) — all are learned parameters and must be fold-scoped. Purely deterministic operations (mixed-variable type coercion, feature construction via fixed arithmetic, calendar-relative date/time features) are explicitly exempt from fold-scoping, as they compute no cross-row or target-dependent statistic.
 2. The Locked Test set is never touched for any data-dependent decision, and is permanently consumed after one use.
 3. Every experiment is reproducible under its captured environment.
 4. Every model has full lineage: Model → Experiment → Dataset version → Feature snapshot → Preprocessing snapshot → Evaluation protocol.

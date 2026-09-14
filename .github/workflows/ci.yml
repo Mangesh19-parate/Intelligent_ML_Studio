@@ -49,6 +49,7 @@ jobs:
         pytest backend/tests/test_system_integrity.py
         pytest backend/tests/test_lineage_and_reproducibility.py
         pytest backend/tests/test_durable_tasks.py
+        pytest backend/tests/test_chaos_and_resilience.py
         pytest backend/tests/test_feature_selection_isolation.py
         pytest backend/tests/test_p1_hardening.py
         pytest backend/tests/test_alembic_migrations.py
@@ -97,6 +98,11 @@ jobs:
       run: |
         cd frontend
         npm install
+
+    - name: TypeScript type checking
+      run: |
+        cd frontend
+        npm run typecheck
 
     - name: Build frontend production bundle
       run: |

@@ -52,6 +52,9 @@ jobs:
         pytest backend/tests/test_feature_selection_isolation.py
         pytest backend/tests/test_p1_hardening.py
         pytest backend/tests/test_alembic_migrations.py
+        pytest backend/tests/test_deployments_and_gates.py
+        pytest backend/tests/test_golden_path_e2e.py
+        pytest backend/tests/test_customer_churn_e2e.py
 
     - name: Run Complete Backend Pytest Suite
       env:
@@ -59,6 +62,10 @@ jobs:
         JWT_SECRET: ci-test-secret-key-32-chars-length!!
       run: |
         pytest backend/tests/
+
+    - name: Run Clean Package Export Verification
+      run: |
+        python scripts/export_clean_repo.py --output-dir ./dist_ci
 
     - name: Run Research Track Acceptance Checks
       run: |

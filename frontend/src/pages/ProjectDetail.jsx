@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useSearchParams } from 'react-router-dom';
 import { projectApi, datasetApi, datasetSplitApi } from '../api/client';
 import { DataQualityCard } from '../components/DataQualityCard';
@@ -68,6 +68,7 @@ export const ProjectDetail = () => {
   const [dragOver, setDragOver] = useState(false);
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+  const fileInputRef = useRef(null);
 
   const loadSplitAndPreview = async (datasetId) => {
     try {
@@ -281,17 +282,33 @@ export const ProjectDetail = () => {
               </button>
             )}
 
-            <label className="cursor-pointer inline-flex items-center space-x-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-lg shadow-indigo-500/20 transition-all">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".csv,.xlsx,.xls,.json"
+              className="hidden"
+              disabled={uploading}
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) handleFileUpload(file);
+                e.target.value = '';
+              }}
+            />
+
+            <button
+              type="button"
+              onClick={() => {
+                if (fileInputRef.current) {
+                  fileInputRef.current.value = '';
+                  fileInputRef.current.click();
+                }
+              }}
+              disabled={uploading}
+              className="cursor-pointer inline-flex items-center space-x-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-lg shadow-indigo-500/20 transition-all disabled:opacity-50"
+            >
               <Upload className="w-4 h-4" />
               <span>{uploading ? 'Validating...' : 'Upload Dataset'}</span>
-              <input
-                type="file"
-                accept=".csv,.xlsx,.xls,.json"
-                className="hidden"
-                disabled={uploading}
-                onChange={(e) => handleFileUpload(e.target.files?.[0])}
-              />
-            </label>
+            </button>
           </div>
         </div>
       </div>

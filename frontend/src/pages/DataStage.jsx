@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { projectApi, datasetApi, datasetSplitApi } from '../api/client';
 import {
@@ -48,6 +48,8 @@ export const DataStage = () => {
   const [copiedHash, setCopiedHash] = useState(null);
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+
+  const fileInputRef = useRef(null);
 
   // Quick Create Project Modal state
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -154,8 +156,25 @@ export const DataStage = () => {
     }
   };
 
+  const handleBrowseClick = () => {
+    if (!selectedProjectId) {
+      setError('Please select or create a project first before uploading a dataset.');
+      setShowCreateModal(true);
+      return;
+    }
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+      fileInputRef.current.click();
+    }
+  };
+
   const handleFileUpload = async (file) => {
-    if (!file || !selectedProjectId) return;
+    if (!file) return;
+    if (!selectedProjectId) {
+      setError('Please select or create a project first before uploading a dataset.');
+      setShowCreateModal(true);
+      return;
+    }
     setUploading(true);
     setError('');
     setSuccessMsg('');
@@ -370,16 +389,33 @@ export const DataStage = () => {
                 Max 100MB &bull; Auto SHA-256 deduplicated
               </p>
 
-              <label className="inline-flex items-center space-x-1.5 px-4 py-2 rounded-xl bg-[var(--color-accent)] hover:opacity-90 text-white text-xs font-bold shadow-sm transition cursor-pointer">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".csv,.xlsx,.xls,.json"
+                className="hidden"
+                disabled={uploading}
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) handleFileUpload(file);
+                  e.target.value = '';
+                }}
+              />
+
+              <button
+                type="button"
+                id="browse-files-btn"
+                onClick={handleBrowseClick}
+                disabled={uploading}
+                className={`inline-flex items-center space-x-1.5 px-4 py-2 rounded-xl text-white text-xs font-bold shadow-sm transition ${
+                  uploading
+                    ? 'opacity-60 cursor-not-allowed bg-slate-600'
+                    : 'bg-[var(--color-accent)] hover:opacity-90 cursor-pointer'
+                }`}
+              >
+                <Upload className="w-3.5 h-3.5" />
                 <span>{uploading ? 'Processing...' : 'Browse Files'}</span>
-                <input
-                  type="file"
-                  accept=".csv,.xlsx,.xls,.json"
-                  className="hidden"
-                  disabled={uploading || !selectedProjectId}
-                  onChange={(e) => handleFileUpload(e.target.files?.[0])}
-                />
-              </label>
+              </button>
             </div>
           </div>
 

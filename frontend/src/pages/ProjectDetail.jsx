@@ -505,7 +505,7 @@ export const ProjectDetail = () => {
                   <DataQualityCard dqiData={profilingReport.data_quality_index} />
 
                   {/* Recommendations */}
-                  <RecommendationsList recommendations={recommendations} />
+                  <RecommendationsList recommendations={recommendations} projectId={id} />
 
                   {/* Pearson Correlation Heatmap */}
                   <CorrelationHeatmap correlationData={profilingReport.correlation_matrix} />

@@ -56,6 +56,8 @@ export const projectApi = {
   update: (id, payload) => apiClient.put(`/projects/${id}`, payload),
   updateTaskType: (id, taskType) => apiClient.put(`/projects/${id}/task-type`, { task_type: taskType }),
   getRecommendations: (id) => apiClient.get(`/projects/${id}/recommendations`),
+  updateRecommendationStatus: (id, recId, status) =>
+    apiClient.patch(`/projects/${id}/recommendations/${recId}`, { status }),
   delete: (id) => apiClient.delete(`/projects/${id}`),
 };
 
@@ -138,6 +140,8 @@ export const deploymentApi = {
   getMonitoring: (deploymentId, lookbackHours = 24) =>
     apiClient.get(`/deployments/${deploymentId}/monitoring?lookback_hours=${lookbackHours}`),
   updateStatus: (deploymentId, status) => apiClient.put(`/deployments/${deploymentId}/status`, { status }),
+  rollback: (deploymentId, targetDeploymentId, reason = null) =>
+    apiClient.post(`/deployments/${deploymentId}/rollback`, { target_deployment_id: targetDeploymentId, reason }),
   getLogs: (deploymentId, limit = 50) => apiClient.get(`/deployments/${deploymentId}/logs?limit=${limit}`),
 };
 

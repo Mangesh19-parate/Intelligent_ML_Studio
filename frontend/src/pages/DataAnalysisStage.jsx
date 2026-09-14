@@ -314,7 +314,7 @@ export const DataAnalysisStage = () => {
           <DataQualityCard dqiData={profilingReport.data_quality_index} />
 
           {/* 3. Traceable Prescriptive Recommendation Cards */}
-          <RecommendationsList recommendations={recommendations} />
+          <RecommendationsList recommendations={recommendations} projectId={selectedProjectId} />
 
           {/* 4. Pearson Correlation Matrix Heatmap */}
           <CorrelationHeatmap correlationData={profilingReport.correlation_matrix} />

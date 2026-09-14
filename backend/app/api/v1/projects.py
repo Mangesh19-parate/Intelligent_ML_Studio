@@ -118,6 +118,59 @@ def get_project_recommendations(
         for r in recs
     ]
 
+
+@router.patch(
+    "/{id}/recommendations/{rec_id}",
+    response_model=dict,
+    status_code=status.HTTP_200_OK,
+    summary="Update status of a diagnostic recommendation (e.g. APPLIED, IGNORED, SUGGESTED)"
+)
+def update_recommendation_status(
+    id: UUID,
+    rec_id: UUID,
+    payload: dict,
+    current_user: User = Depends(require_permission("EDIT_DATA")),
+    db: Session = Depends(get_db),
+):
+    service = ProjectService(db)
+    project = service.get_project_by_id(id, current_user)
+
+    from app.models.recommendation import Recommendation
+    rec = (
+        db.query(Recommendation)
+        .filter(Recommendation.id == rec_id, Recommendation.project_id == project.id)
+        .first()
+    )
+    if not rec:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Recommendation not found",
+        )
+
+    new_status = payload.get("status")
+    if new_status not in ["APPLIED", "IGNORED", "SUGGESTED"]:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Invalid status '{new_status}'. Allowed values: APPLIED, IGNORED, SUGGESTED",
+        )
+
+    rec.status = new_status
+    db.add(rec)
+    db.commit()
+    db.refresh(rec)
+
+    return {
+        "id": str(rec.id),
+        "project_id": str(rec.project_id),
+        "finding": rec.finding,
+        "evidence": rec.evidence,
+        "recommended_action": rec.recommended_action,
+        "risk_note": rec.risk_note,
+        "confidence": rec.confidence,
+        "status": rec.status,
+        "created_at": rec.created_at.isoformat() if rec.created_at else None,
+    }
+
 @router.put(
     "/{id}/task-type",
     response_model=ProjectResponse,

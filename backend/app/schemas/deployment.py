@@ -41,6 +41,11 @@ class DeploymentStatusUpdateRequest(BaseModel):
     status: str = Field(..., description="Target status: PAUSED or RETIRED (or LIVE if resuming from PAUSED)")
 
 
+class DeploymentRollbackRequest(BaseModel):
+    target_deployment_id: UUID = Field(..., description="The previous deployment ID whose model should be restored")
+    reason: str | None = Field(None, description="Optional reason for rollback")
+
+
 class PredictionLogResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

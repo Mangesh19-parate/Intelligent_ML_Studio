@@ -10,6 +10,7 @@ from app.models.prediction_log import PredictionLog
 from app.schemas.deployment import (
     DeploymentResponse,
     DeploymentStatusUpdateRequest,
+    DeploymentRollbackRequest,
     PredictionLogResponse,
 )
 from app.services.deployment_service import DeploymentService
@@ -56,6 +57,31 @@ def update_deployment_status(
     """
     service = DeploymentService(db)
     return service.update_status(deployment_id=id, target_status=payload.status)
+
+
+@router.post(
+    "/{id}/rollback",
+    response_model=DeploymentResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Rollback deployment to a previous target deployment (DEPLOY permission required)",
+)
+def rollback_deployment(
+    id: UUID,
+    payload: DeploymentRollbackRequest,
+    current_user: User = Depends(require_permission("DEPLOY")),
+    db: Session = Depends(get_db),
+):
+    """
+    Rolls back current deployment to a previous target deployment's model version.
+    Retires current deployment and provisions a new live deployment for the target model.
+    """
+    service = DeploymentService(db)
+    return service.rollback_to_deployment(
+        current_deployment_id=id,
+        target_deployment_id=payload.target_deployment_id,
+        user_id=current_user.id,
+        reason=payload.reason,
+    )
 
 
 @router.get(

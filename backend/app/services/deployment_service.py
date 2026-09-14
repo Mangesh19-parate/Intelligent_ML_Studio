@@ -169,5 +169,46 @@ class DeploymentService:
         self.db.refresh(deployment)
         return deployment
 
+    def rollback_to_deployment(
+        self,
+        current_deployment_id: UUID | str,
+        target_deployment_id: UUID | str,
+        user_id: UUID | str | None = None,
+        reason: str | None = None,
+    ) -> Deployment:
+        """
+        Rolls back the current deployment to the target deployment's model version.
+        Retires the current deployment and deploys the target model version.
+        """
+        current_dep = self.get_by_id(current_deployment_id)
+        if not current_dep:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Current deployment not found",
+            )
+
+        target_dep = self.get_by_id(target_deployment_id)
+        if not target_dep:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Target deployment to rollback to not found",
+            )
+
+        if str(current_dep.id) == str(target_dep.id):
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Cannot rollback a deployment to itself",
+            )
+
+        # Retire the current deployment
+        if current_dep.status != DeploymentState.RETIRED.value:
+            current_dep.status = DeploymentState.RETIRED.value
+            self.db.add(current_dep)
+            self.db.commit()
+
+        # Provision new deployment for the target model
+        new_deployment = self.deploy(model_id=target_dep.model_id, user_id=user_id)
+        return new_deployment
+
     def get_by_id(self, deployment_id: UUID | str) -> Deployment | None:
         return self.db.query(Deployment).filter(Deployment.id == deployment_id).first()

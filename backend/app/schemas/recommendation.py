@@ -17,3 +17,7 @@ class RecommendationResponse(BaseModel):
     confidence: str
     status: str
     created_at: datetime
+
+
+class RecommendationActionRequest(BaseModel):
+    status: Literal["APPLIED", "IGNORED", "SUGGESTED"]

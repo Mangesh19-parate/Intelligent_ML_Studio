@@ -6,7 +6,7 @@
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.110+-green.svg)](https://fastapi.tiangolo.com/)
 [![React](https://img.shields.io/badge/React-18.2-61dafb.svg)](https://react.dev/)
 [![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-2.0+-red.svg)](https://www.sqlalchemy.org/)
-[![Tests](https://img.shields.io/badge/Tests-428%20Passed-brightgreen.svg)]()
+[![Tests](https://img.shields.io/badge/Tests-435%20Passed-brightgreen.svg)]()
 [![Invariants](https://img.shields.io/badge/Invariants-100%25%20Verified-success.svg)]()
 
 ---
@@ -18,63 +18,55 @@ In classical machine learning workflows, **subtle data leakage, evaluation reuse
 **Intelligent ML Studio** is a reproducible tabular ML experimentation platform engineered to eliminate leakage vectors by architectural construction. It features:
 - **Strict Partition Isolation**: 80/20 train/test split with deterministic row hash verification; zero fitting on Locked Test data.
 - **Fold-Isolated Preprocessing & Feature Selection**: Imputers, scalers, and selector rankings fit strictly inside training folds.
-- **Immutable Snapshot Lineage**: Transformations and feature selections generate SHA-256 snapshotted pipelines that enable byte-for-byte deterministic reproduction.
-- **Four-Eyes Deployment Governance**: Cryptographic model passports and server-side separation-of-duties (`approved_by != created_by`).
-- **Preregistered Research Track**: Comprehensive stability-aware feature selection benchmark evaluating 8 methods across 320 cross-validation runs with $\Delta S \ge 0.05$ decision criteria.
+- **Durable Task Persistence & Crash Recovery**: DB-backed durable tasks with worker crash recovery, active timeout enforcement terminating execution, and zero zombie writes.
+- **Immutable Snapshot Lineage & HMAC Artifact Signing**: Transformations and feature selections generate SHA-256 snapshotted pipelines; serialized model artifacts are cryptographically HMAC signed.
+- **Four-Eyes Deployment Governance & Rollback**: Cryptographic model passports, server-side separation-of-duties (`approved_by != created_by`), and first-class one-click deployment rollback.
+- **Preregistered Research Track**: Hierarchical statistical analysis ($Dataset \to Repeat \to Fold$) across 1,280 runs with complete $\alpha$ ablation and honest null result reporting.
 
 ---
 
-## 🏗️ System Architecture
+## 🏗️ System Architecture & Deployment Topology
 
 ```text
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                          INTELLIGENT ML STUDIO ARCHITECTURE                 │
-└─────────────────────────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│                        INTELLIGENT ML STUDIO RUNTIME TOPOLOGY                          │
+└────────────────────────────────────────────────────────────────────────────────────────┘
 
-  Raw CSV Ingestion ──► Ingestion & Profiling ──► Data Quality Index (DQI)
-                                │
-                        80/20 Outer Split (Deterministic SHA-256)
-                                │
-        ┌───────────────────────┴───────────────────────┐
-        ▼                                               ▼
-┌───────────────────────────────┐       ┌───────────────────────────────┐
-│     DEVELOPMENT PARTITION     │       │     LOCKED TEST PARTITION     │
-│             (80%)             │       │             (20%)             │
-├───────────────────────────────┤       ├───────────────────────────────┤
-│ • 5-Fold Cross Validation     │       │ • Zero Preprocessing Fitting  │
-│ • Fold-Safe Transformations   │       │ • Zero Feature Selection Fit  │
-│ • Multi-Method Selector Voting│       │ • Untouched During CV/Tuning  │
-│ • Out-of-Fold Threshold Tuning│       │ • Single Evaluation Trigger   │
-│ • Algorithm Leaderboard       │       │ • Status: TEST_CONSUMED       │
-└───────────────┬───────────────┘       └───────────────┬───────────────┘
-                │                                       │
-                ▼                                       ▼
-     Winning Model Selection ──────────────► Final Authoritative Eval
-                │                                       │
-                ▼                                       ▼
-     Immutable Snapshot Hash                Model Technical Passport
-  (Transformation & Selection)               (SHA-256 + Metric Drift)
-                │                                       │
-                ▼                                       ▼
-    Deterministic Replay Engine             Four-Eyes Deployment Gate
-  (Persisted ReproducibilityRun)           (approved_by != created_by)
+                           React + Vite Web UI
+                                    │ (REST / JSON / JWT)
+                                    ▼
+                           FastAPI API Gateway
+                                    │
+          ┌─────────────────────────┼─────────────────────────┐
+          │ (SQLAlchemy ORM)        │ (Redis Queue)           │ (HMAC Signing)
+          ▼                         ▼                         ▼
+   PostgreSQL / SQLite      Redis Message Broker      Artifact Storage
+   (ACID State Machines,    (Task Queuing &           (SHA-256 Checksums,
+    Durable Task Records,    Worker Dispatch)          HMAC Signatures)
+    Snapshots, Lineage)             │
+                                    ▼
+                          Celery / Task Worker
+                         (CV Training Loops,
+                          Active Timeouts,
+                          Fold Invariants)
 ```
 
 ---
 
 ## 🛡️ Public Assurance Matrix
 
-| System Invariant / Property | Verification Test Suite | Architectural Enforcement | Result |
+| System Guarantee / Invariant | Verification Test Suite | Architectural Enforcement | Status |
 |:---|:---|:---|:---:|
-| **Locked Test Zero Leakage** | `test_system_integrity.py`<br>`test_day4_leakage_and_reordering.py` | Test partition transformed using pre-fitted transformers or non-learned imputers (`nan_to_num`) | **PASS** |
-| **Fold-Safe Feature Selection** | `test_feature_selection_isolation.py` | Permutation, Lasso, and Correlation selectors execute strictly on training folds | **PASS** |
-| **Deterministic Reproduction** | `test_lineage_and_reproducibility.py` | `build_pipeline_from_snapshot()` builds strictly from immutable snapshot records | **PASS** |
-| **Persisted Replay Audit** | `test_system_integrity.py` | Replays generate immutable `ReproducibilityRun` database records without mutating experiments | **PASS** |
-| **Four-Eyes Separation-of-Duties** | `test_system_integrity.py` | `approved_by != created_by` enforced server-side; HTTP 403 on self-approval | **PASS** |
-| **Deterministic Tie-Breaking** | `test_day2_selectors.py` | 3-tier deterministic sort: `(-score, votes, column_name)` with `TOP_K_PERCENT` | **PASS** |
-| **Single Test Consumption** | `test_day4_locked_test_consumption.py` | Single authoritative evaluation; repeat accesses marked `TEST_REUSED_DIAGNOSTIC` | **PASS** |
-| **Adversarial Attack Lab (4/4)** | `qa/run_acceptance_suite.py` | Global scaling, full-data FS, test thresholding, and test reuse attacks blocked | **PASS** |
-| **Headless Migration Cleanliness** | `alembic upgrade head` | Production database schema migrations driven strictly via Alembic revisions | **PASS** |
+| **Locked Test Zero Leakage** | `test_system_integrity.py`<br>`test_day4_leakage_and_reordering.py` | Holdout partition transformed via pre-fitted estimators; zero fitting on test folds | **VERIFIED** |
+| **Fold-Safe Feature Selection** | `test_feature_selection_isolation.py` | Selector fitting, permutation importance, and row hashes asserted per-fold | **VERIFIED** |
+| **Durable Task Crash Recovery** | `test_durable_tasks.py` | Task state persisted to DB; orphaned/running tasks recovered on worker restart | **VERIFIED** |
+| **Active Timeout Enforcement** | `test_durable_tasks.py` | Worker processes terminated on timeout with zero zombie/post-timeout DB writes | **VERIFIED** |
+| **HMAC Artifact Manifest Signing** | `test_p1_hardening.py` | Serialized models verified against HMAC signatures before unpickling/serving | **VERIFIED** |
+| **Refresh Token Rotation & Reuse** | `test_p1_hardening.py` | Rotates refresh tokens on exchange; detects reuse as compromise and revokes family | **VERIFIED** |
+| **First-Class Rollback** | `test_deployments_and_gates.py` | Retires current deployment and provisions restored model with full audit trail | **VERIFIED** |
+| **Four-Eyes Governance** | `test_golden_path_e2e.py` | `approved_by != created_by` enforced server-side; HTTP 403 on self-approval | **VERIFIED** |
+| **Golden-Path E2E Lifecycle** | `test_golden_path_e2e.py` | Full upload $\to$ DQI $\to$ FS $\to$ CV $\to$ Passport $\to$ Gate $\to$ Predict $\to$ Rollback | **VERIFIED** |
+| **Strict Migration Upgrade/Downgrade** | `test_alembic_migrations.py` | Headless migration test verifying clean `upgrade head -> downgrade base -> upgrade head` | **VERIFIED** |
 
 ---
 

@@ -427,3 +427,75 @@ def test_model_download_joblib_and_pkl(deployed_regression_setup, db_session, cl
     assert res_pkl.status_code == status.HTTP_200_OK
     assert len(res_pkl.content) > 0
     assert res_pkl.headers["Content-Disposition"].endswith('.pkl"')
+
+
+def test_deployment_rollback_lifecycle(deployed_regression_setup, db_session, client, auth_headers):
+    """
+    Test first-class rollback from an active deployment back to a previous model's deployment.
+    - Model v1 trained and deployed (Deployment A).
+    - Model v2 trained and deployed (Deployment B).
+    - Rollback from Deployment B to Deployment A restores Model v1 as active deployment C.
+    - Deployment B becomes RETIRED.
+    """
+    setup = deployed_regression_setup
+    project = setup["project"]
+    headers = auth_headers(setup["owner"])
+    approver_headers = auth_headers(setup["approver"])
+    exp_service = ExperimentService(db_session)
+
+    # 1. Train Model 1 (LinearRegression)
+    exp1 = exp_service.run_experiment(
+        project_id=project.id,
+        algorithms=["LinearRegression"],
+        folds=3,
+        seed=42,
+        selection_metric="RMSE",
+        selection_direction="MINIMIZE",
+        auto_finalize=True,
+        deployment_threshold={"metric": "RMSE", "min_value": 50000.0},
+    )
+    model1_id = exp1["selected_model_id"]
+    client.post(f"/api/v1/models/{model1_id}/deployment-gate/approve", headers=approver_headers)
+    dep1_res = client.post(f"/api/v1/models/{model1_id}/deploy", headers=headers)
+    assert dep1_res.status_code == status.HTTP_200_OK
+    dep1_id = dep1_res.json()["id"]
+
+    # 2. Train Model 2 (Ridge / LinearRegression with different seed)
+    exp2 = exp_service.run_experiment(
+        project_id=project.id,
+        algorithms=["LinearRegression"],
+        folds=3,
+        seed=101,
+        selection_metric="RMSE",
+        selection_direction="MINIMIZE",
+        auto_finalize=True,
+        deployment_threshold={"metric": "RMSE", "min_value": 50000.0},
+    )
+    model2_id = exp2["selected_model_id"]
+    client.post(f"/api/v1/models/{model2_id}/deployment-gate/approve", headers=approver_headers)
+    dep2_res = client.post(f"/api/v1/models/{model2_id}/deploy", headers=headers)
+    assert dep2_res.status_code == status.HTTP_200_OK
+    dep2_id = dep2_res.json()["id"]
+
+    # 3. Execute Rollback from dep2 to dep1
+    rollback_res = client.post(
+        f"/api/v1/deployments/{dep2_id}/rollback",
+        json={"target_deployment_id": dep1_id, "reason": "Model v2 regression in production"},
+        headers=headers,
+    )
+    assert rollback_res.status_code == status.HTTP_200_OK
+    dep3_data = rollback_res.json()
+    assert dep3_data["status"] == "DEPLOYED"
+    assert dep3_data["model_id"] == str(model1_id)
+
+    # 4. Confirm dep2 is now RETIRED
+    dep2_current = client.get(f"/api/v1/deployments/{dep2_id}", headers=headers)
+    assert dep2_current.json()["status"] == "RETIRED"
+
+    # 5. Confirm self-rollback is rejected
+    self_res = client.post(
+        f"/api/v1/deployments/{dep3_data['id']}/rollback",
+        json={"target_deployment_id": dep3_data["id"]},
+        headers=headers,
+    )
+    assert self_res.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY

@@ -660,7 +660,7 @@ class ExperimentService:
         experiment = None
         if experiment_id is not None:
             experiment = self.exp_repo.get_by_id(experiment_id)
-            if experiment and project_id is None:
+            if experiment and not project_id:
                 project_id = experiment.project_id
 
         if not project_id:

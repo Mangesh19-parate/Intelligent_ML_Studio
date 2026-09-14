@@ -664,7 +664,7 @@ class DataProfilingService:
         sample_records = sample_df.replace({np.nan: None}).to_dict(orient="records")
 
         # 5. Composite DQI
-        dqi_obj = self.compute_dqi(df_dev, self._compute_column_stats(df_dev), duplicate_rows, total_rows)
+        dqi_obj = self.compute_data_quality_index(df_dev)
 
         return {
             "overview": {

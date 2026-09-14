@@ -12,6 +12,7 @@ import sys
 from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 from app.core.database import SessionLocal
+import app.models
 from app.models.durable_task import DurableTask
 from app.tasks.task_state import TaskState
 from app.tasks.experiment_tasks import (
@@ -69,6 +70,9 @@ def claim_next_queued_task(db: Session, worker_id: str) -> DurableTask | None:
         return None
 
 
+from app.models.experiment import Experiment
+
+
 def main():
     logger.info("ML Studio Durable Task Worker started (Process Isolation & Atomic Claiming enabled).")
     worker_id = f"worker-daemon"
@@ -89,14 +93,29 @@ def main():
                 exp_id = task.experiment_id
                 timeout_s = task.timeout_seconds
                 logger.info(f"Claimed task {task_id} for experiment {exp_id} (timeout: {timeout_s}s)...")
+
+                exp = db.query(Experiment).filter(Experiment.id == exp_id).first()
+                project_id = str(exp.project_id) if exp else ""
+                cfg = (exp.experiment_config or {}) if exp else {}
+                algorithms = cfg.get("algorithms") or []
+                folds = exp.fold_count or cfg.get("cv", {}).get("folds", 5) if exp else 5
+                seed = exp.cv_seed if (exp and exp.cv_seed is not None) else cfg.get("cv", {}).get("seed", 42)
+                selection_metric = exp.selection_metric if exp else None
+                selection_direction = exp.selection_direction if exp else None
+                deployment_threshold = cfg.get("deployment_threshold") if cfg else None
                 db.close()
 
                 # Execute with process isolation & hard timeout kill
                 run_task_with_timeout_enforcement(
                     task_id=task_id,
-                    project_id="",  # service retrieves from experiment
+                    project_id=project_id,
                     experiment_id=exp_id,
-                    algorithms=[],
+                    algorithms=algorithms,
+                    folds=folds,
+                    seed=seed,
+                    selection_metric=selection_metric,
+                    selection_direction=selection_direction,
+                    deployment_threshold=deployment_threshold,
                     timeout_seconds=timeout_s,
                     worker_id=worker_id,
                 )

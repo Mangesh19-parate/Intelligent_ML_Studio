@@ -21,11 +21,6 @@ from app.services.experiment_service import ExperimentService
 
 logger = logging.getLogger(__name__)
 
-# Background executor in parent process for non-blocking task submission
-TASK_EXECUTOR = concurrent.futures.ThreadPoolExecutor(max_workers=8, thread_name_prefix="ml-task-worker")
-ACTIVE_FUTURES: dict[str, concurrent.futures.Future] = {}
-
-
 def _record_to_model(record: DurableTaskRecord) -> DurableTask:
     return DurableTask(
         id=record.task_id,
@@ -94,7 +89,7 @@ def save_task_record(record: DurableTaskRecord, db: Session | None = None) -> No
 def submit_experiment_task(
     project_id: UUID | str,
     experiment_id: UUID | str,
-    algorithms: list[str],
+    algorithms: list[str] | None = None,
     folds: int = 5,
     seed: int | None = 42,
     threshold: float = 0.0,
@@ -107,7 +102,8 @@ def submit_experiment_task(
     db: Session | None = None,
 ) -> DurableTaskRecord:
     """
-    Submits an experiment task for asynchronous durable execution with DB persistence.
+    Submits an experiment task into the durable database queue.
+    The task is persisted with state QUEUED and claimed exclusively by the standalone worker daemon.
     Enforces idempotency: repeated submissions with the same key return the existing record.
     """
     close_db = False
@@ -132,29 +128,10 @@ def submit_experiment_task(
         db.add(model)
         db.commit()
         db.refresh(model)
-        record = _model_to_record(model)
+        return _model_to_record(model)
     finally:
         if close_db:
             db.close()
-
-    if run_async:
-        future = TASK_EXECUTOR.submit(
-            run_task_with_timeout_enforcement,
-            task_id=record.task_id,
-            project_id=project_id,
-            experiment_id=experiment_id,
-            algorithms=algorithms,
-            folds=folds,
-            seed=seed,
-            threshold=threshold,
-            selection_metric=selection_metric,
-            selection_direction=selection_direction,
-            deployment_threshold=deployment_threshold,
-            timeout_seconds=timeout_seconds,
-        )
-        ACTIVE_FUTURES[record.task_id] = future
-
-    return record
 
 
 def get_task_status(task_id: str, db: Session | None = None) -> DurableTaskRecord | None:

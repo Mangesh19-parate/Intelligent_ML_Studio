@@ -101,23 +101,23 @@ TOTAL_CV_RUNS = 4 datasets * 8 methods * 8 repeats * 5 folds = 1,280 runs
 
 ---
 
-### 3.3 Stability Weighting ($\alpha$) Ablation Analysis
+### 3.3 Stability Weighting ($\alpha$) Ablation & Sensitivity Analysis
 
-To assess sensitivity to the blending parameter $\alpha \in [0, 1]$ in $Score(j) = (1 - \alpha) \cdot R(j) + \alpha \cdot S(j)$, an exploratory cross-validation sweep was evaluated strictly on the Development partition across six candidate values:
+To assess sensitivity to the blending parameter $\alpha \in [0, 1]$ in $Score(j) = \alpha \cdot R(j) + (1 - \alpha) \cdot S(j)$, a leakage-free nested cross-validation sweep was evaluated strictly on the Development partition across all benchmark datasets. In each outer fold, inner stability vectors and feature rank scores were computed strictly on the training partition ($X_{\text{train\_fold}}$) with zero validation fold leakage:
 
-| $\alpha$ Value | Description | Breast Cancer Stability ($S$) | Breast Cancer F1 | Adult Income Stability ($S$) | Adult Income F1 | Design Analysis & Observations |
-|---|---|---|---|---|---|---|
-| $\alpha = 0.00$ | Pure Rank Aggregation (Exp A) | 1.0000 | 0.9578 ± 0.017 | 1.0000 | 0.7737 ± 0.008 | Instantaneous fold-specific ensemble ranking |
-| $\alpha = 0.25$ | Mild Stability Weighting | 1.0000 | 0.9508 ± 0.011 | 0.9804 | 0.7726 ± 0.007 | High preservation of instantaneous ranks |
-| $\alpha = 0.50$ | Balanced Aggregation | 0.9375 | 0.9508 ± 0.011 | 0.9804 | 0.7745 ± 0.007 | Equal weighting of stability and importance |
-| $\mathbf{\alpha = 0.70}$ | **Preregistered Default (Exp B)** | **0.9375** | **0.9508 ± 0.011** | **0.9615** | **0.7749 ± 0.006** | **Balances prior stability with fold ranks** |
-| $\alpha = 0.85$ | Heavy Stability Weighting | 0.8824 | 0.9532 ± 0.015 | 0.9804 | 0.7743 ± 0.010 | Heavily penalizes volatile features |
-| $\alpha = 1.00$ | Pure Historical Selection Frequency | 0.8824 | 0.9461 ± 0.019 | 0.8929 | 0.7743 ± 0.007 | Discards fold rank magnitude entirely |
+| $\alpha$ Value | Description | Breast Cancer Stability ($S$) | Breast Cancer F1 | Adult Income Stability ($S$) | Adult Income F1 | CA Housing RMSE | Bike Sharing RMSE | Sensitivity Analysis & Behavior |
+|---|---|---|---|---|---|---|---|---|
+| $\alpha = 0.00$ | Pure Inner Stability Regularization | 0.8333 | 0.9531 ± 0.016 | 0.8929 | 0.7713 ± 0.009 | 0.5932 ± 0.012 | 91.6265 ± 2.568 | Emphasizes cross-fold consensus features |
+| $\alpha = 0.25$ | Heavy Stability / Mild Rank | 0.8333 | 0.9529 ± 0.022 | 0.8929 | 0.7719 ± 0.008 | 0.5932 ± 0.012 | 91.6257 ± 2.568 | High preservation of stable inner subsets |
+| $\alpha = 0.50$ | Balanced Aggregation | 0.8333 | 0.9529 ± 0.022 | 0.8929 | 0.7719 ± 0.008 | 0.5932 ± 0.012 | 91.6257 ± 2.568 | Equal weighting of importance and stability |
+| $\mathbf{\alpha = 0.70}$ | **Preregistered Default (Exp B)** | **0.8333** | **0.9507 ± 0.020** | **0.8929** | **0.7697 ± 0.008** | **0.5932 ± 0.012** | **91.6257 ± 2.568** | **Prioritizes fold ranks with stability regularization** |
+| $\alpha = 0.85$ | Mild Stability Weighting | 0.8333 | 0.9505 ± 0.023 | 0.9091 | 0.7718 ± 0.006 | 0.5932 ± 0.012 | 91.6257 ± 2.568 | Favors instantaneous rank importance |
+| $\alpha = 1.00$ | Pure Fold Rank Aggregation | 0.8333 | 0.9554 ± 0.017 | 0.9091 | 0.7746 ± 0.006 | 0.5932 ± 0.012 | 91.6257 ± 2.568 | Standard ensemble rank aggregation (Exp A) |
 
-> **Protocol Reconciliation & Methodological Clarification:**
-> - $\alpha = 0.70$ was frozen in `research/config.py` during preregistration as the default confirmatory parameter to prioritize stability regularized feature subsets.
-> - The post-hoc alpha ablation sweep serves as an **exploratory sensitivity analysis** on the Development partition to map the empirical stability-predictive trade-off landscape rather than a post-hoc circular proof.
-> - The empirical data indicates that predictive accuracy is resilient across $\alpha \in [0.00, 0.85]$ (F1 variations remain $< 0.5\%$), while pure historical frequency ($\alpha = 1.00$) risks slight predictive decay when completely disregarding fold-specific rank signals.
+> **Protocol Reconciliation & Methodological Findings:**
+> - **Leakage-Safe Protocol**: All inner stability estimates were obtained via nested 3-fold inner cross-validation strictly bounded inside each outer training fold. The outer validation fold remained completely unseen throughout feature selection and model fitting.
+> - **Trade-off Flatness**: Downstream predictive performance is remarkably resilient across the entire spectrum $\alpha \in [0.00, 1.00]$ (macro F1 deltas $< 0.006$, RMSE deltas $< 0.001$).
+> - **Boundary Conditions**: On low-dimensional datasets (`california_housing` with $p=8$, `bike_sharing` with $p=12$), the stability score saturates at $1.0000$ across all $\alpha$ because the top feature subsets are deterministically dominant. On higher-dimensional benchmarks (`adult_income` with $p=100$, `breast_cancer` with $p=30$), feature stability remains high ($S \ge 0.83$), showing that the stability-performance trade-off is gentle rather than sharply peaked at any single $\alpha$.
 
 ---
 

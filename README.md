@@ -18,11 +18,11 @@ In classical machine learning workflows, **subtle data leakage, evaluation reuse
 **Intelligent ML Studio** is a reproducible tabular ML experimentation platform engineered to eliminate leakage vectors by architectural construction. It features:
 - **Strict Partition Isolation**: 80/20 train/test split with deterministic row hash verification; zero fitting on Locked Test data.
 - **Fold-Isolated Preprocessing & Feature Selection**: Imputers, scalers, and selector rankings fit strictly inside training folds.
-- **Durable Task Persistence & Crash Recovery**: DB-backed durable tasks with worker crash recovery, active timeout enforcement with OS process-level termination, and zero zombie writes.
-- **Atomic Queue Dispatch**: PostgreSQL `FOR UPDATE SKIP LOCKED` atomic task claiming preventing worker race conditions.
+- **DB-Backed Task Queue & Dedicated Worker**: API enqueues tasks exclusively to the `durable_tasks` table; dedicated worker daemon claims tasks via `FOR UPDATE SKIP LOCKED`, executes under OS process isolation, enforces hard timeout termination, and performs lease-based stale-task recovery.
+- **Atomic Multi-Worker Claiming**: PostgreSQL `FOR UPDATE SKIP LOCKED` atomic task claiming preventing worker race conditions across concurrent daemons.
 - **Immutable Snapshot Lineage & HMAC Artifact Signing**: Transformations and feature selections generate SHA-256 snapshotted pipelines; serialized model artifacts are cryptographically HMAC signed.
 - **Four-Eyes Deployment Governance & Rollback**: Cryptographic model passports, server-side separation-of-duties (`approved_by != created_by`), and first-class one-click deployment rollback.
-- **Preregistered Research Track**: Hierarchical statistical analysis across benchmark datasets with complete alpha ablation and honest condition characterization.
+- **Preregistered Research Track**: Hierarchical statistical analysis across benchmark datasets with strict nested cross-validation alpha sensitivity analysis and honest boundary condition characterization.
 
 ---
 

@@ -1,6 +1,7 @@
 import React, { useState, FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { OtpInput } from '../components/auth/OtpInput';
 import {
   Layers,
   Lock,
@@ -122,34 +123,41 @@ export const Login: React.FC = () => {
         {is2FAPrompt ? (
           <form onSubmit={handle2FASubmit} className="space-y-5">
             <div>
-              <label className="block text-xs font-semibold text-[var(--color-text-muted)] mb-1.5">
-                {isBackupCodeMode ? 'Emergency Recovery Key' : '6-Digit Authenticator Code'}
+              <label className="block text-xs font-semibold text-[var(--color-text-muted)] mb-2 text-center">
+                {isBackupCodeMode ? 'Enter 8-Character Emergency Recovery Key' : 'Enter 6-Digit Authenticator Code'}
               </label>
-              <div className="relative">
-                {isBackupCodeMode ? (
+
+              {isBackupCodeMode ? (
+                <div className="relative">
                   <KeyRound className="absolute left-3.5 top-3 w-4 h-4 text-[var(--color-text-muted)]" />
-                ) : (
-                  <Smartphone className="absolute left-3.5 top-3 w-4 h-4 text-[var(--color-text-muted)]" />
-                )}
-                <input
-                  type="text"
-                  required
-                  autoFocus
-                  maxLength={isBackupCodeMode ? 10 : 6}
-                  value={twoFactorCode}
-                  onChange={(e) => setTwoFactorCode(e.target.value)}
-                  placeholder={isBackupCodeMode ? 'XXXX-XXXX' : '123456'}
-                  className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[var(--color-bg)] border border-[var(--color-border)] text-[var(--color-text)] text-sm font-mono tracking-widest focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] transition-all text-center"
-                />
-              </div>
+                  <input
+                    type="text"
+                    required
+                    autoFocus
+                    maxLength={10}
+                    value={twoFactorCode}
+                    onChange={(e) => setTwoFactorCode(e.target.value)}
+                    placeholder="XXXX-XXXX"
+                    className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[var(--color-bg)] border border-[var(--color-border)] text-[var(--color-text)] text-sm font-mono tracking-widest focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] transition-all text-center"
+                  />
+                </div>
+              ) : (
+                <div className="py-2">
+                  <OtpInput
+                    value={twoFactorCode}
+                    onChange={setTwoFactorCode}
+                    disabled={submitting}
+                  />
+                </div>
+              )}
             </div>
 
             <button
               type="submit"
-              disabled={submitting || !twoFactorCode.trim()}
+              disabled={submitting || (isBackupCodeMode ? !twoFactorCode.trim() : twoFactorCode.length !== 6)}
               className="w-full py-3 px-4 rounded-xl bg-[var(--color-accent)] hover:bg-[var(--color-accent-hover)] text-white font-semibold text-sm shadow-md shadow-[var(--color-accent)]/20 flex items-center justify-center space-x-2 transition-all disabled:opacity-50 cursor-pointer"
             >
-              <span>{submitting ? 'Verifying...' : 'Verify & Continue'}</span>
+              <span>{submitting ? 'Verifying Code...' : 'Verify & Enter Dashboard'}</span>
               <ArrowRight className="w-4 h-4" />
             </button>
 

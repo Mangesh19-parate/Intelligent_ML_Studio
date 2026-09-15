@@ -31,6 +31,7 @@ import {
   ShieldAlert,
 } from 'lucide-react';
 import { Button } from '../components/ui/Button';
+import { OtpInput } from '../components/auth/OtpInput';
 import axios from 'axios';
 
 export const LandingPage: React.FC = () => {
@@ -55,11 +56,13 @@ export const LandingPage: React.FC = () => {
   const [is2FAPrompt, setIs2FAPrompt] = useState<boolean>(false);
   const [twoFactorToken, setTwoFactorToken] = useState<string>('');
   const [twoFactorCode, setTwoFactorCode] = useState<string>('');
+  const [isBackupCodeMode, setIsBackupCodeMode] = useState<boolean>(false);
 
   const openSignInModal = (registerMode = false) => {
     setIsRegister(registerMode);
     setAuthError('');
     setIs2FAPrompt(false);
+    setIsBackupCodeMode(false);
     setShowAuthModal(true);
   };
 
@@ -907,20 +910,59 @@ export const LandingPage: React.FC = () => {
             {/* Form */}
             <form onSubmit={handleAuthSubmit} className="space-y-4">
               {is2FAPrompt ? (
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-[var(--color-text)]">
-                    6-Digit Security Code
+                <div className="space-y-3">
+                  <label className="block text-xs font-semibold text-[var(--color-text-muted)] text-center">
+                    {isBackupCodeMode ? 'Enter 8-Character Emergency Recovery Key' : 'Enter 6-Digit Authenticator Code'}
                   </label>
-                  <div className="relative">
-                    <KeyRound className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. 123456"
-                      value={twoFactorCode}
-                      onChange={(e) => setTwoFactorCode(e.target.value)}
-                      className="w-full pl-10 pr-4 py-2.5 text-xs font-mono font-bold tracking-widest rounded-full border border-[var(--color-border)] bg-[var(--color-bg)] text-[var(--color-text)] focus:outline-none focus:border-[var(--color-accent)]"
-                    />
+
+                  {isBackupCodeMode ? (
+                    <div className="relative">
+                      <KeyRound className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
+                      <input
+                        type="text"
+                        required
+                        autoFocus
+                        maxLength={10}
+                        placeholder="XXXX-XXXX"
+                        value={twoFactorCode}
+                        onChange={(e) => setTwoFactorCode(e.target.value)}
+                        className="w-full pl-10 pr-4 py-2.5 text-xs font-mono font-bold tracking-widest rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] text-[var(--color-text)] focus:outline-none focus:border-[var(--color-accent)] text-center"
+                      />
+                    </div>
+                  ) : (
+                    <div className="py-2">
+                      <OtpInput
+                        value={twoFactorCode}
+                        onChange={setTwoFactorCode}
+                        disabled={authSubmitting}
+                      />
+                    </div>
+                  )}
+
+                  <div className="flex items-center justify-between text-xs pt-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsBackupCodeMode(!isBackupCodeMode);
+                        setTwoFactorCode('');
+                        setAuthError('');
+                      }}
+                      className="text-xs text-[var(--color-accent)] hover:underline font-medium cursor-pointer"
+                    >
+                      {isBackupCodeMode ? 'Use Authenticator Code Instead' : 'Lost device? Use Recovery Key'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIs2FAPrompt(false);
+                        setTwoFactorToken('');
+                        setTwoFactorCode('');
+                        setAuthError('');
+                      }}
+                      className="text-xs text-[var(--color-text-muted)] hover:underline cursor-pointer"
+                    >
+                      Back to Sign In
+                    </button>
                   </div>
                 </div>
               ) : (

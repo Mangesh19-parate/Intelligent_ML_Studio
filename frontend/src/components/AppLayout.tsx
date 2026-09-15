@@ -3,6 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Breadcrumbs } from './navigation/Breadcrumbs';
 import { CommandPalette } from './navigation/CommandPalette';
+import { TwoFactorSettingsModal } from './TwoFactorSettingsModal';
 import {
   Layers,
   LayoutDashboard,
@@ -19,6 +20,10 @@ import {
   LogOut,
   LucideIcon,
   Shield,
+  User,
+  ChevronDown,
+  KeyRound,
+  Settings,
 } from 'lucide-react';
 
 interface NavItem {
@@ -36,8 +41,10 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [commandPaletteOpen, setCommandPaletteOpen] = useState<boolean>(false);
+  const [twoFactorModalOpen, setTwoFactorModalOpen] = useState<boolean>(false);
+  const [profileDropdownOpen, setProfileDropdownOpen] = useState<boolean>(false);
 
-  // Global keyboard shortcut for Command Palette (Ctrl+K / Cmd+K)
+  // Global keyboard shortcut for Command Palette & click outside
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent): void => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
@@ -45,9 +52,19 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         setCommandPaletteOpen((prev) => !prev);
       }
     };
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest('#user-profile-menu')) {
+        setProfileDropdownOpen(false);
+      }
+    };
 
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener('click', handleClickOutside);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('click', handleClickOutside);
+    };
   }, []);
 
   const handleLogout = async (): Promise<void> => {
@@ -175,26 +192,81 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
               {darkMode ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4" />}
             </button>
 
-            {/* User Profile / Logout */}
+            {/* User Profile Dropdown */}
             {user && (
-              <div className="flex items-center space-x-2 pl-2 border-l border-[var(--color-border)]">
-                <div className="hidden sm:flex flex-col text-right">
-                  <span className="text-xs font-medium text-[var(--color-text)] leading-tight">
-                    {user.full_name || user.email?.split('@')[0]}
-                  </span>
-                  <span className="text-[10px] text-[var(--color-text-muted)] font-mono">
-                    {roleName}
-                  </span>
-                </div>
-
+              <div id="user-profile-menu" className="relative pl-2 border-l border-[var(--color-border)]">
                 <button
                   type="button"
-                  onClick={handleLogout}
-                  className="p-2 rounded-xl text-rose-500 hover:text-rose-400 hover:bg-rose-500/10 min-h-[38px] min-w-[38px] flex items-center justify-center transition-colors cursor-pointer"
-                  title="Sign Out"
+                  onClick={() => setProfileDropdownOpen((prev) => !prev)}
+                  className="flex items-center space-x-2 p-1.5 rounded-xl hover:bg-[var(--color-surface-hover)] border border-transparent hover:border-[var(--color-border)] transition-all cursor-pointer group"
                 >
-                  <LogOut className="w-4 h-4" />
+                  <div className="w-7 h-7 rounded-lg bg-[var(--color-accent-soft)] text-[var(--color-accent)] border border-[var(--color-accent)]/30 flex items-center justify-center text-xs font-black">
+                    {(user.full_name || user.email || 'U')[0].toUpperCase()}
+                  </div>
+                  <div className="hidden sm:flex flex-col text-left">
+                    <span className="text-xs font-bold text-[var(--color-text)] leading-tight">
+                      {user.full_name || user.email?.split('@')[0]}
+                    </span>
+                    <span className="text-[10px] text-[var(--color-text-muted)] font-mono">
+                      {roleName}
+                    </span>
+                  </div>
+                  <ChevronDown className="w-3.5 h-3.5 text-[var(--color-text-muted)] group-hover:text-[var(--color-text)] transition-transform duration-200" />
                 </button>
+
+                {/* Dropdown Menu */}
+                {profileDropdownOpen && (
+                  <div className="absolute right-0 top-full mt-2 w-64 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl shadow-2xl p-2 z-50 animate-in fade-in zoom-in-95 duration-150 space-y-1">
+                    <div className="p-2.5 border-b border-[var(--color-border)] space-y-0.5">
+                      <div className="text-xs font-bold text-[var(--color-text)] truncate">
+                        {user.full_name || 'Account'}
+                      </div>
+                      <div className="text-[11px] text-[var(--color-text-muted)] truncate font-mono">
+                        {user.email}
+                      </div>
+                      <div className="pt-1 flex items-center gap-1.5">
+                        <span className="text-[9px] font-bold font-mono px-2 py-0.5 rounded-full bg-[var(--color-accent-soft)] text-[var(--color-accent)] border border-[var(--color-accent)]/20">
+                          {roleName}
+                        </span>
+                        <span className="text-[10px] text-[var(--color-text-muted)]">
+                          {userPerms.size} permissions
+                        </span>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setTwoFactorModalOpen(true);
+                        setProfileDropdownOpen(false);
+                      }}
+                      className="w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-medium text-[var(--color-text)] hover:bg-[var(--color-surface-hover)] transition-colors cursor-pointer"
+                    >
+                      <div className="flex items-center space-x-2">
+                        <ShieldCheck className="w-4 h-4 text-[var(--color-accent)]" />
+                        <span>Security & 2FA</span>
+                      </div>
+                      <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded-md font-bold ${
+                        user.is_two_factor_enabled
+                          ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'
+                          : 'bg-[var(--color-surface-hover)] text-[var(--color-text-muted)]'
+                      }`}>
+                        {user.is_two_factor_enabled ? 'Active' : 'Off'}
+                      </span>
+                    </button>
+
+                    <div className="pt-1 border-t border-[var(--color-border)]">
+                      <button
+                        type="button"
+                        onClick={handleLogout}
+                        className="w-full flex items-center space-x-2 px-2.5 py-2 rounded-xl text-xs font-semibold text-rose-500 hover:bg-rose-500/10 transition-colors cursor-pointer"
+                      >
+                        <LogOut className="w-4 h-4" />
+                        <span>Sign Out</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -237,6 +309,12 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       <CommandPalette
         isOpen={commandPaletteOpen}
         onClose={() => setCommandPaletteOpen(false)}
+      />
+
+      {/* Two-Factor Authentication Settings Modal */}
+      <TwoFactorSettingsModal
+        isOpen={twoFactorModalOpen}
+        onClose={() => setTwoFactorModalOpen(false)}
       />
 
       {/* Launch-Ready Footer */}

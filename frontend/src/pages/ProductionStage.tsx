@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { projectApi, modelApi, deploymentApi, predictApi } from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import { Project, ModelItem } from '../types/api';
 import {
   Rocket,
   ShieldCheck,
@@ -13,50 +14,70 @@ import {
   Play,
   Copy,
   Check,
-  Pause,
-  StopCircle,
   RefreshCw,
   FolderOpen,
-  Layers,
   Cpu,
-  Lock,
-  ArrowRight,
-  ArrowLeft,
-  Sliders,
-  Code2,
-  Clock,
-  ExternalLink,
 } from 'lucide-react';
 
-export const ProductionStage = () => {
+interface GateCheckData {
+  gate_passed?: boolean;
+  locked_test_evaluated?: boolean;
+  schema_locked?: boolean;
+  artifact_verified?: boolean;
+  lineage_complete?: boolean;
+  performance_threshold_passed?: boolean;
+  user_approved?: boolean;
+}
+
+interface DeploymentData {
+  id: string;
+  endpoint_path?: string;
+  status?: string;
+}
+
+interface PredictResponse {
+  prediction?: unknown;
+  latency_ms?: number;
+  [key: string]: unknown;
+}
+
+interface AuditLog {
+  id: string;
+  requested_at: string;
+  request_id?: string;
+  status?: string;
+  latency_ms?: number;
+}
+
+export const ProductionStage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const initialProjectId = searchParams.get('project_id');
-  const initialTab = searchParams.get('tab') || 'gate'; // 'gate' | 'predict' | 'monitoring'
+  const initialTab = (searchParams.get('tab') as 'gate' | 'predict' | 'monitoring') || 'gate';
 
-  const [projects, setProjects] = useState([]);
-  const [selectedProjectId, setSelectedProjectId] = useState(initialProjectId || '');
-  const [currentProject, setCurrentProject] = useState(null);
-  const [winningModel, setWinningModel] = useState(null);
-  const [gate, setGate] = useState(null);
-  const [deployment, setDeployment] = useState(null);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [selectedProjectId, setSelectedProjectId] = useState<string>(initialProjectId || '');
+  const [_currentProject, setCurrentProject] = useState<Project | null>(null);
+  const [winningModel, setWinningModel] = useState<ModelItem | null>(null);
+  const [gate, setGate] = useState<GateCheckData | null>(null);
+  const [deployment, setDeployment] = useState<DeploymentData | null>(null);
 
-  const [activeTab, setActiveTab] = useState(initialTab);
-  const [loading, setLoading] = useState(true);
-  const [approving, setApproving] = useState(false);
-  const [deploying, setDeploying] = useState(false);
-  const [error, setError] = useState('');
-  const [successMsg, setSuccessMsg] = useState('');
+  const [activeTab, setActiveTab] = useState<'gate' | 'predict' | 'monitoring'>(initialTab);
+  const [_loading, setLoading] = useState<boolean>(true);
+  const [approving, setApproving] = useState<boolean>(false);
+  const [deploying, setDeploying] = useState<boolean>(false);
+  const [error, setError] = useState<string>('');
+  const [successMsg, setSuccessMsg] = useState<string>('');
 
   // Live Inference Test State
-  const [inputPayload, setInputPayload] = useState('{\n  \n}');
-  const [predicting, setPredicting] = useState(false);
-  const [predictResult, setPredictResult] = useState(null);
-  const [explainResult, setExplainResult] = useState(null);
-  const [copiedUrl, setCopiedUrl] = useState(false);
+  const [inputPayload, setInputPayload] = useState<string>('{\n  \n}');
+  const [predicting, setPredicting] = useState<boolean>(false);
+  const [predictResult, setPredictResult] = useState<PredictResponse | null>(null);
+  const [_explainResult, setExplainResult] = useState<unknown | null>(null);
+  const [copiedUrl, setCopiedUrl] = useState<boolean>(false);
 
   // Monitoring logs
-  const [logs, setLogs] = useState([]);
-  const [loadingLogs, setLoadingLogs] = useState(false);
+  const [logs, setLogs] = useState<AuditLog[]>([]);
+  const [loadingLogs, setLoadingLogs] = useState<boolean>(false);
 
   const { user } = useAuth();
   const userPerms = new Set(
@@ -104,8 +125,9 @@ export const ProductionStage = () => {
 
         // Find winning model
         const expRes = await modelApi.getLeaderboard(selectedProjectId);
-        const lb = expRes.data;
-        const winner = lb?.models?.find((m) => m.is_winner) || (lb?.models?.length ? lb.models[0] : null);
+        const rawLb = expRes.data;
+        const modelsList: ModelItem[] = Array.isArray(rawLb) ? rawLb : (rawLb?.models || rawLb?.leaderboard || []);
+        const winner = modelsList.find((m: ModelItem) => m.is_winning_model || m.is_selected_champion || m.is_winner) || (modelsList.length ? modelsList[0] : null);
         setWinningModel(winner);
 
         if (winner) {
@@ -118,8 +140,8 @@ export const ProductionStage = () => {
         }
 
         // Check active deployment
-        if (projRes.data?.active_deployment) {
-          setDeployment(projRes.data.active_deployment);
+        if ((projRes.data as unknown as { active_deployment?: DeploymentData })?.active_deployment) {
+          setDeployment((projRes.data as unknown as { active_deployment: DeploymentData }).active_deployment);
         } else {
           setDeployment(null);
         }
@@ -141,8 +163,9 @@ export const ProductionStage = () => {
       const res = await modelApi.approveDeploymentGate(winningModel.id);
       setGate(res.data.gate);
       setSuccessMsg('Deployment gate approved successfully.');
-    } catch (err) {
-      setError(err.response?.data?.detail || 'Approval failed.');
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { detail?: string } } };
+      setError(e.response?.data?.detail || 'Approval failed.');
     } finally {
       setApproving(false);
     }
@@ -157,14 +180,15 @@ export const ProductionStage = () => {
       setDeployment(res.data);
       setSuccessMsg('Model successfully deployed to production endpoint!');
       setActiveTab('predict');
-    } catch (err) {
-      setError(err.response?.data?.detail || 'Deployment failed.');
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { detail?: string } } };
+      setError(e.response?.data?.detail || 'Deployment failed.');
     } finally {
       setDeploying(false);
     }
   };
 
-  const [measuredLatency, setMeasuredLatency] = useState(null);
+  const [measuredLatency, setMeasuredLatency] = useState<number | null>(null);
 
   const handleFastPredict = async () => {
     if (!deployment?.id) return;
@@ -177,8 +201,9 @@ export const ProductionStage = () => {
       const res = await predictApi.predict(deployment.id, payload);
       setMeasuredLatency(Math.round(performance.now() - startTime));
       setPredictResult(res.data);
-    } catch (err) {
-      setError(err.response?.data?.detail || 'Prediction failed. Check input JSON.');
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { detail?: string } } };
+      setError(e.response?.data?.detail || 'Prediction failed. Check input JSON.');
     } finally {
       setPredicting(false);
     }
@@ -195,8 +220,9 @@ export const ProductionStage = () => {
       const res = await predictApi.predictExplain(deployment.id, payload);
       setMeasuredLatency(Math.round(performance.now() - startTime));
       setExplainResult(res.data);
-    } catch (err) {
-      setError(err.response?.data?.detail || 'Explainable prediction failed.');
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { detail?: string } } };
+      setError(e.response?.data?.detail || 'Explainable prediction failed.');
     } finally {
       setPredicting(false);
     }
@@ -278,9 +304,9 @@ export const ProductionStage = () => {
       {/* Segmented Navigation Tabs */}
       <div className="flex flex-wrap gap-2 p-1.5 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-full w-fit shadow-sm">
         {[
-          { id: 'gate', label: '1. Pre-Deployment Gate (6 Rules)', icon: ShieldCheck },
-          { id: 'predict', label: '2. Live Prediction API ("Try It")', icon: Zap },
-          { id: 'monitoring', label: '3. Audit Logs & Latency', icon: Activity },
+          { id: 'gate' as const, label: '1. Pre-Deployment Gate (6 Rules)', icon: ShieldCheck },
+          { id: 'predict' as const, label: '2. Live Prediction API ("Try It")', icon: Zap },
+          { id: 'monitoring' as const, label: '3. Audit Logs & Latency', icon: Activity },
         ].map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -491,7 +517,7 @@ export const ProductionStage = () => {
               <button
                 onClick={loadAuditLogs}
                 disabled={loadingLogs}
-                className="p-2 rounded-full bg-[var(--color-surface-hover)] border border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
+                className="p-2 rounded-full bg-[var(--color-surface-hover)] border border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] cursor-pointer"
               >
                 <RefreshCw className={`w-3.5 h-3.5 ${loadingLogs ? 'animate-spin' : ''}`} />
               </button>

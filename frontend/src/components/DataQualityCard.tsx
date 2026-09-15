@@ -1,27 +1,32 @@
 import React from 'react';
-import { ShieldCheck, AlertCircle, Info, Scale, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { ShieldCheck, Info, Scale } from 'lucide-react';
+import { DataQualityIndex } from '../types/api';
 
-export const DataQualityCard = ({ dqiData }) => {
+export interface DataQualityCardProps {
+  dqiData?: DataQualityIndex | null;
+}
+
+export const DataQualityCard: React.FC<DataQualityCardProps> = ({ dqiData }) => {
   if (!dqiData) return null;
 
   const { sub_scores, effective_weights, overall_index } = dqiData;
   const isRenormalized = effective_weights?.outlier_prevalence === null;
 
-  const getScoreColor = (score) => {
+  const getScoreColor = (score: number | null | undefined): string => {
     if (score === null || score === undefined) return 'text-[var(--color-text-muted)]';
     if (score >= 90) return 'text-emerald-600 dark:text-emerald-400';
     if (score >= 75) return 'text-amber-600 dark:text-amber-400';
     return 'text-rose-600 dark:text-rose-400';
   };
 
-  const getProgressColor = (score) => {
+  const getProgressColor = (score: number | null | undefined): string => {
     if (score === null || score === undefined) return 'bg-[var(--color-border)]';
     if (score >= 90) return 'bg-gradient-to-r from-emerald-500 to-teal-400';
     if (score >= 75) return 'bg-gradient-to-r from-amber-500 to-yellow-400';
     return 'bg-gradient-to-r from-rose-500 to-red-400';
   };
 
-  const getScoreBadge = (score) => {
+  const getScoreBadge = (score: number): { label: string; color: string } => {
     if (score >= 90) return { label: 'EXCELLENT', color: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' };
     if (score >= 75) return { label: 'ACCEPTABLE', color: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20' };
     return { label: 'REQUIRES ACTION', color: 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20' };

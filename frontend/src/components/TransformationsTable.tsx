@@ -2,22 +2,21 @@ import React, { useState, useEffect } from 'react';
 import { transformationApi } from '../api/client';
 import {
   Wand2,
-  SlidersHorizontal,
   Eye,
   CheckCircle2,
   AlertCircle,
   RefreshCw,
   Sparkles,
-  HelpCircle,
-  Zap,
-  Layers,
-  ArrowRight,
   ShieldCheck,
   X,
-  Database
 } from 'lucide-react';
 
-const NUMERIC_MISSING_OPTIONS = [
+interface TransformationOption {
+  value: string;
+  label: string;
+}
+
+const NUMERIC_MISSING_OPTIONS: TransformationOption[] = [
   { value: 'none', label: 'None (Passthrough)' },
   { value: 'mean', label: 'Mean Imputation' },
   { value: 'median', label: 'Median Imputation (Robust)' },
@@ -26,26 +25,26 @@ const NUMERIC_MISSING_OPTIONS = [
   { value: 'iterative', label: 'Iterative (MICE)' },
 ];
 
-const CATEGORICAL_MISSING_OPTIONS = [
+const CATEGORICAL_MISSING_OPTIONS: TransformationOption[] = [
   { value: 'none', label: 'None (Passthrough)' },
   { value: 'mode', label: 'Mode (Most Frequent)' },
   { value: 'missing_category', label: "Missing Category ('missing')" },
 ];
 
-const ENCODING_OPTIONS = [
+const ENCODING_OPTIONS: TransformationOption[] = [
   { value: 'none', label: 'None (Raw String)' },
   { value: 'one_hot', label: 'One-Hot Encoding (OHE)' },
   { value: 'ordinal', label: 'Ordinal Encoding (Integer)' },
 ];
 
-const SCALING_OPTIONS = [
+const SCALING_OPTIONS: TransformationOption[] = [
   { value: 'none', label: 'None (Unscaled)' },
   { value: 'standard', label: 'Standard Scaler (Mean=0, Std=1)' },
   { value: 'minmax', label: 'Min-Max Scaler [0, 1]' },
   { value: 'robust', label: 'Robust Scaler (Median/IQR)' },
 ];
 
-const OUTLIER_OPTIONS = [
+const OUTLIER_OPTIONS: TransformationOption[] = [
   { value: 'none', label: 'None (Keep Outliers)' },
   { value: 'iqr', label: 'IQR Capping (1.5 × IQR)' },
   { value: 'zscore', label: 'Z-Score Capping (±3.0σ)' },
@@ -53,24 +52,57 @@ const OUTLIER_OPTIONS = [
   { value: 'winsorize', label: 'Winsorization (5% – 95%)' },
 ];
 
-export const TransformationsTable = ({ projectId, isTargetColumn, onTransformationChanged }) => {
-  const [configs, setConfigs] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [savingColumn, setSavingColumn] = useState(null);
-  const [previewData, setPreviewData] = useState(null);
-  const [previewLoading, setPreviewLoading] = useState(false);
-  const [previewError, setPreviewError] = useState(null);
-  const [statusMsg, setStatusMsg] = useState('');
-  const [errorMsg, setErrorMsg] = useState('');
+export interface ColumnTransformationConfig {
+  column_name: string;
+  data_type?: string;
+  missing_value_strategy?: string;
+  encoding_strategy?: string;
+  scaling_strategy?: string;
+  outlier_strategy?: string;
+  [key: string]: unknown;
+}
+
+interface PreviewData {
+  column: string;
+  applied_strategies: {
+    missing_value_strategy: string;
+    encoding_strategy: string;
+    scaling_strategy: string;
+    outlier_strategy: string;
+  };
+  before_values: unknown[];
+  after_values: unknown[];
+}
+
+interface TransformationsTableProps {
+  projectId: string;
+  isTargetColumn?: (colName: string) => boolean;
+  onTransformationChanged?: () => void;
+}
+
+export const TransformationsTable: React.FC<TransformationsTableProps> = ({
+  projectId,
+  isTargetColumn,
+  onTransformationChanged,
+}) => {
+  const [configs, setConfigs] = useState<ColumnTransformationConfig[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [savingColumn, setSavingColumn] = useState<string | null>(null);
+  const [previewData, setPreviewData] = useState<PreviewData | null>(null);
+  const [previewLoading, setPreviewLoading] = useState<boolean>(false);
+  const [previewError, setPreviewError] = useState<string | null>(null);
+  const [statusMsg, setStatusMsg] = useState<string>('');
+  const [errorMsg, setErrorMsg] = useState<string>('');
 
   const loadConfigs = async () => {
     try {
       setLoading(true);
       setErrorMsg('');
       const res = await transformationApi.getConfigs(projectId);
-      setConfigs(res.data);
-    } catch (err) {
-      setErrorMsg(err.response?.data?.detail || 'Failed to load transformation configurations.');
+      setConfigs((res.data || []) as unknown as ColumnTransformationConfig[]);
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { detail?: string } } };
+      setErrorMsg(e.response?.data?.detail || 'Failed to load transformation configurations.');
     } finally {
       setLoading(false);
     }
@@ -82,7 +114,7 @@ export const TransformationsTable = ({ projectId, isTargetColumn, onTransformati
     }
   }, [projectId]);
 
-  const handleStrategyChange = async (columnName, field, value) => {
+  const handleStrategyChange = async (columnName: string, field: string, value: string) => {
     // Optimistic UI update
     setConfigs((prev) =>
       prev.map((c) => (c.column_name === columnName ? { ...c, [field]: value } : c))
@@ -103,15 +135,16 @@ export const TransformationsTable = ({ projectId, isTargetColumn, onTransformati
       setStatusMsg(`Updated ${field.replace('_', ' ')} for column "${columnName}"`);
       if (onTransformationChanged) onTransformationChanged();
       setTimeout(() => setStatusMsg(''), 3000);
-    } catch (err) {
-      setErrorMsg(err.response?.data?.detail || `Failed to update ${field} for column ${columnName}`);
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { detail?: string } } };
+      setErrorMsg(e.response?.data?.detail || `Failed to update ${field} for column ${columnName}`);
       loadConfigs(); // Revert on failure
     } finally {
       setSavingColumn(null);
     }
   };
 
-  const handlePreview = async (columnName) => {
+  const handlePreview = async (columnName: string) => {
     setPreviewLoading(true);
     setPreviewError(null);
     setPreviewData(null);
@@ -119,8 +152,9 @@ export const TransformationsTable = ({ projectId, isTargetColumn, onTransformati
     try {
       const res = await transformationApi.preview(projectId, columnName, 50);
       setPreviewData(res.data);
-    } catch (err) {
-      setPreviewError(err.response?.data?.detail || 'Failed to generate transformation preview.');
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { detail?: string } } };
+      setPreviewError(e.response?.data?.detail || 'Failed to generate transformation preview.');
     } finally {
       setPreviewLoading(false);
     }
@@ -159,7 +193,7 @@ export const TransformationsTable = ({ projectId, isTargetColumn, onTransformati
 
           <button
             onClick={loadConfigs}
-            className="self-start sm:self-auto px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800 hover:border-slate-700 text-slate-300 hover:text-white text-xs font-medium transition-all flex items-center space-x-1.5 cursor-pointer"
+            className="self-start sm:self-auto px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800 hover:border-slate-700 text-slate-300 hover:text-white text-xs font-medium transition-all flex items-center space-x-1.5 cursor-pointer shadow-sm"
           >
             <RefreshCw className="w-3.5 h-3.5" />
             <span>Refresh</span>
@@ -401,7 +435,7 @@ export const TransformationsTable = ({ projectId, isTargetColumn, onTransformati
                         <button
                           onClick={() => handlePreview(cfg.column_name)}
                           disabled={previewLoading}
-                          className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-indigo-600/15 hover:bg-indigo-600/25 border border-indigo-500/30 text-indigo-300 text-[11px] font-semibold transition-all cursor-pointer disabled:opacity-50"
+                          className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-indigo-600/15 hover:bg-indigo-600/25 border border-indigo-500/30 text-indigo-300 text-[11px] font-semibold transition-all cursor-pointer disabled:opacity-50 shadow-sm"
                         >
                           <Eye className="w-3.5 h-3.5" />
                           <span>Preview Impact</span>
@@ -543,7 +577,7 @@ export const TransformationsTable = ({ projectId, isTargetColumn, onTransformati
                   setPreviewData(null);
                   setPreviewError(null);
                 }}
-                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold transition-colors cursor-pointer"
+                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold transition-colors cursor-pointer shadow-sm"
               >
                 Close Preview
               </button>
@@ -554,3 +588,5 @@ export const TransformationsTable = ({ projectId, isTargetColumn, onTransformati
     </div>
   );
 };
+
+export default TransformationsTable;

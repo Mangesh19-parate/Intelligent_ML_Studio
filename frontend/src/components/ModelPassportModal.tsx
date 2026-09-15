@@ -10,27 +10,93 @@ import {
   Copy,
   Download,
   Check,
-  Cpu,
   Layers,
   Sparkles,
   Database,
   Sliders,
-  Code2,
   Activity,
-  ArrowRight,
-  ExternalLink,
   Lock,
   X,
-  Clock,
-  Terminal,
 } from 'lucide-react';
 
-export const ModelPassportModal = ({ modelId, onClose }) => {
-  const [passport, setPassport] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [activeTab, setActiveTab] = useState('overview');
-  const [copied, setCopied] = useState(false);
+interface GateCheck {
+  check?: string;
+  condition_name?: string;
+  passed?: boolean;
+}
+
+interface TopFeature {
+  feature?: string;
+  name?: string;
+  mean_abs_shap?: number;
+  importance?: number;
+}
+
+interface ModelPassportData {
+  model_id: string;
+  algorithm_name?: string;
+  status?: string;
+  is_selected_champion?: boolean;
+  fit_diagnosis?: string;
+  generalization_gap?: number | null;
+  model_selection_score?: number | null;
+  artifact_checksum?: string;
+  hyperparameters?: Record<string, unknown>;
+  dataset?: {
+    content_hash?: string;
+    row_count?: number;
+    column_count?: number;
+    version_number?: number;
+  };
+  project?: {
+    target_column?: string;
+  };
+  experiment?: {
+    dataset_content_hash?: string;
+    code_version?: string;
+    environment_capture_method?: string;
+    python_version?: string;
+    sklearn_version?: string;
+    numpy_version?: string;
+    pandas_version?: string;
+  };
+  feature_selection?: {
+    final_selection_method?: string;
+    feature_count?: number;
+    final_selected_features?: string[];
+  };
+  preprocessing?: {
+    config_json?: Record<string, unknown>;
+  };
+  metrics_summary_by_split?: {
+    TRAIN?: Record<string, number>;
+    CV_MEAN?: Record<string, number>;
+    LOCKED_TEST?: Record<string, number>;
+  };
+  explainability?: {
+    has_summary?: boolean;
+    top_features?: TopFeature[];
+  };
+  governance?: {
+    is_deployed?: boolean;
+    gate_is_passing?: boolean;
+    gate_checks?: GateCheck[];
+    endpoint_url?: string;
+    deployed_at?: string;
+  };
+}
+
+interface ModelPassportModalProps {
+  modelId: string | null;
+  onClose: () => void;
+}
+
+export const ModelPassportModal: React.FC<ModelPassportModalProps> = ({ modelId, onClose }) => {
+  const [passport, setPassport] = useState<ModelPassportData | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string>('');
+  const [activeTab, setActiveTab] = useState<string>('overview');
+  const [copied, setCopied] = useState<boolean>(false);
 
   useEffect(() => {
     if (!modelId) return;
@@ -40,10 +106,11 @@ export const ModelPassportModal = ({ modelId, onClose }) => {
       setError('');
       try {
         const resp = await modelApi.getPassport(modelId);
-        setPassport(resp.data);
-      } catch (err) {
+        setPassport(resp.data as unknown as ModelPassportData);
+      } catch (err: unknown) {
         console.error('Failed to fetch model passport', err);
-        setError(err.response?.data?.detail || 'Failed to retrieve Model Technical Passport.');
+        const e = err as { response?: { data?: { detail?: string } } };
+        setError(e.response?.data?.detail || 'Failed to retrieve Model Technical Passport.');
       } finally {
         setLoading(false);
       }
@@ -207,7 +274,7 @@ export const ModelPassportModal = ({ modelId, onClose }) => {
                     <div className="p-4 rounded-2xl bg-[var(--color-surface-card)] border border-[var(--color-border)] space-y-1">
                       <span className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider">Generalization Gap</span>
                       <div className="text-sm font-bold text-[var(--color-text)] font-mono">
-                        {passport.generalization_gap !== null ? (
+                        {passport.generalization_gap !== null && passport.generalization_gap !== undefined ? (
                           <span className={passport.generalization_gap <= 0.05 ? 'text-emerald-400' : 'text-amber-400'}>
                             {passport.generalization_gap > 0 ? `+${passport.generalization_gap}` : passport.generalization_gap}
                           </span>
@@ -217,7 +284,7 @@ export const ModelPassportModal = ({ modelId, onClose }) => {
                     <div className="p-4 rounded-2xl bg-[var(--color-surface-card)] border border-[var(--color-border)] space-y-1">
                       <span className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider">Selection Score</span>
                       <div className="text-sm font-bold text-[var(--color-accent)] font-mono">
-                        {passport.model_selection_score !== null ? `${passport.model_selection_score} / 100` : 'N/A'}
+                        {passport.model_selection_score !== null && passport.model_selection_score !== undefined ? `${passport.model_selection_score} / 100` : 'N/A'}
                       </div>
                     </div>
                   </div>
@@ -505,7 +572,7 @@ export const ModelPassportModal = ({ modelId, onClose }) => {
                       </h3>
                       <div className="p-3.5 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] flex items-center justify-between text-xs font-mono">
                         <span className="text-[var(--color-accent)]">{passport.governance.endpoint_url}</span>
-                        <span className="text-[var(--color-text-muted)]">{new Date(passport.governance.deployed_at).toLocaleString()}</span>
+                        <span className="text-[var(--color-text-muted)]">{passport.governance.deployed_at ? new Date(passport.governance.deployed_at).toLocaleString() : ''}</span>
                       </div>
                     </div>
                   )}
@@ -520,7 +587,7 @@ export const ModelPassportModal = ({ modelId, onClose }) => {
           <span className="font-mono text-[11px]">Strict SELECT + Render Only • Zero Recomputations</span>
           <button
             onClick={onClose}
-            className="px-5 py-2 rounded-full bg-[var(--color-surface-hover)] hover:bg-[var(--color-surface)] text-[var(--color-text)] font-semibold border border-[var(--color-border)] transition cursor-pointer"
+            className="px-5 py-2 rounded-full bg-[var(--color-surface-hover)] hover:bg-[var(--color-surface)] text-[var(--color-text)] font-semibold border border-[var(--color-border)] transition cursor-pointer shadow-sm"
           >
             Close
           </button>

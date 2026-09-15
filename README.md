@@ -9,7 +9,7 @@
 [![React](https://img.shields.io/badge/React-18.2-61dafb.svg)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-3178c6.svg)](https://www.typescriptlang.org/)
 [![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-2.0+-red.svg)](https://www.sqlalchemy.org/)
-[![Tests](https://img.shields.io/badge/Automated%20Tests-467%20Passed-brightgreen.svg)]()
+[![Tests](https://img.shields.io/badge/Automated%20Tests-424%20Passed-brightgreen.svg)]()
 [![Typecheck](https://img.shields.io/badge/TypeScript%20Typecheck-0%20Errors-success.svg)]()
 
 ---
@@ -133,7 +133,7 @@ python scripts/verify.py
 The verification suite validates:
 1. **Python Environment**: Dependencies & module imports verified.
 2. **Database Schema**: Migration integrity and table synchronization.
-3. **Backend Test Suite**: 467 pytest test cases passing green.
+3. **Backend Test Suite**: 424 pytest test cases passing green.
 4. **Frontend Typecheck**: `tsc --noEmit` passing with 0 TypeScript errors.
 5. **Frontend Unit Tests**: Vitest component and stage test suite passing.
 6. **Frontend Build**: Vite production bundle compiled cleanly.

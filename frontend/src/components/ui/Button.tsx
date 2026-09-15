@@ -33,15 +33,15 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 
     const variantStyles = {
       primary:
-        'bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm hover:shadow active:bg-indigo-800 border border-transparent',
+        'bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm hover:shadow-md shadow-indigo-500/25 hover:shadow-indigo-500/35 active:bg-indigo-800 border border-transparent',
       secondary:
-        'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 hover:border-slate-600 shadow-sm',
+        'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 hover:border-slate-600 shadow-sm hover:shadow',
       danger:
-        'bg-rose-600 hover:bg-rose-700 text-white shadow-sm hover:shadow active:bg-rose-800 border border-transparent focus:ring-rose-500',
+        'bg-rose-600 hover:bg-rose-700 text-white shadow-sm hover:shadow-md shadow-rose-500/25 hover:shadow-rose-500/35 active:bg-rose-800 border border-transparent focus:ring-rose-500',
       ghost:
         'bg-transparent hover:bg-slate-800/60 text-slate-300 hover:text-white border border-transparent',
       outline:
-        'bg-transparent hover:bg-slate-800/40 text-slate-200 border border-slate-600 hover:border-slate-500',
+        'bg-transparent hover:bg-slate-800/40 text-slate-200 border border-slate-600 hover:border-slate-500 shadow-sm hover:shadow',
       icon: 'bg-transparent hover:bg-slate-800 text-slate-400 hover:text-slate-200 p-2 rounded-lg',
     };
 

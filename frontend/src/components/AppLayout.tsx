@@ -1,47 +1,44 @@
-import React, { useState, useEffect } from 'react';
-import { Link, NavLink, useNavigate, useLocation } from 'react-router-dom';
+import React, { useState, useEffect, ReactNode } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Breadcrumbs } from './navigation/Breadcrumbs';
 import { CommandPalette } from './navigation/CommandPalette';
 import {
   Layers,
   LayoutDashboard,
-  FolderKanban,
-  Upload,
   Database,
-  BarChart3,
   Sparkles,
-  SlidersHorizontal,
-  Workflow,
   Search,
-  AlertCircle,
   Stethoscope,
-  Lightbulb,
-  BrainCircuit,
   Cpu,
-  FlaskConical,
-  Trophy,
   Boxes,
   ShieldCheck,
-  Zap,
-  Activity,
   ShieldAlert,
   Moon,
   Sun,
   LogOut,
-  Sliders,
-  ChevronDown,
+  LucideIcon,
 } from 'lucide-react';
 
-export const AppLayout = ({ children }) => {
+interface NavItem {
+  name: string;
+  path: string;
+  icon: LucideIcon;
+}
+
+export interface AppLayoutProps {
+  children: ReactNode;
+}
+
+export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const { user, logout, darkMode, toggleDarkMode } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState<boolean>(false);
 
   // Global keyboard shortcut for Command Palette (Ctrl+K / Cmd+K)
   useEffect(() => {
-    const handleKeyDown = (e) => {
+    const handleKeyDown = (e: KeyboardEvent): void => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
         setCommandPaletteOpen((prev) => !prev);
@@ -51,8 +48,8 @@ export const AppLayout = ({ children }) => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async (): Promise<void> => {
+    await logout();
     navigate('/login');
   };
 
@@ -60,11 +57,11 @@ export const AppLayout = ({ children }) => {
     user?.permissions ||
     (user?.role?.permissions ? user.role.permissions.map((p) => (typeof p === 'string' ? p : p.permission_key)) : [])
   );
-  const roleName = user?.role?.role_name === 'ADMIN' || user?.role === 'ADMIN' ? 'ADMIN' : 'USER';
+  const roleName = user?.role?.role_name === 'ADMIN' ? 'ADMIN' : 'USER';
   const isAdmin = roleName === 'ADMIN' || userPerms.has('MANAGE_USERS');
 
   // Top Nav Items
-  const TOP_NAV_ITEMS = [
+  const TOP_NAV_ITEMS: NavItem[] = [
     { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
     { name: 'Data', path: '/data', icon: Database },
     { name: 'Analysis', path: '/data-analysis', icon: Search },
@@ -81,11 +78,11 @@ export const AppLayout = ({ children }) => {
 
   // Preserve project query param across transitions
   const currentProjectId = new URLSearchParams(location.search).get('project_id');
-  const getNavPath = (basePath) => {
+  const getNavPath = (basePath: string): string => {
     return currentProjectId ? `${basePath}?project_id=${currentProjectId}` : basePath;
   };
 
-  const isItemActive = (itemPath) => {
+  const isItemActive = (itemPath: string): boolean => {
     const currentPath = location.pathname;
     if (itemPath === '/dashboard' && (currentPath === '/dashboard' || currentPath === '/')) return true;
     if (itemPath === '/data' && (currentPath.startsWith('/data') || currentPath === '/data')) return true;
@@ -131,7 +128,7 @@ export const AppLayout = ({ children }) => {
             </Link>
 
             {/* Desktop Navigation Links */}
-            <nav className="hidden lg:flex items-center space-x-1 overflow-x-auto py-1">
+            <nav className="hidden lg:flex items-center space-x-1.5 overflow-x-auto py-1">
               {TOP_NAV_ITEMS.map((item) => {
                 const active = isItemActive(item.path);
                 const Icon = item.icon;
@@ -141,8 +138,8 @@ export const AppLayout = ({ children }) => {
                     to={getNavPath(item.path)}
                     className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
                       active
-                        ? 'bg-[var(--color-accent-soft)] text-[var(--color-accent)] font-semibold shadow-xs'
-                        : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-hover)]'
+                        ? 'bg-[var(--color-accent-soft)] text-[var(--color-accent)] font-semibold shadow-md shadow-[var(--color-accent)]/20 border border-[var(--color-accent)]/30 scale-[1.02]'
+                        : 'text-[var(--color-text-muted)] bg-[var(--color-surface)]/80 hover:text-[var(--color-text)] hover:bg-[var(--color-surface-hover)] border border-[var(--color-border)]/50 shadow-xs hover:shadow-sm'
                     }`}
                   >
                     <Icon className="w-3.5 h-3.5 shrink-0" />
@@ -205,7 +202,7 @@ export const AppLayout = ({ children }) => {
         </div>
 
         {/* Mobile Sub-Navigation (Horizontal Scroll on smaller screens) */}
-        <div className="lg:hidden flex items-center space-x-1 overflow-x-auto px-4 py-2 border-t border-[var(--color-border)]/60 bg-[var(--color-surface)]/80">
+        <div className="lg:hidden flex items-center space-x-1.5 overflow-x-auto px-4 py-2 border-t border-[var(--color-border)]/60 bg-[var(--color-surface)]/80">
           {TOP_NAV_ITEMS.map((item) => {
             const active = isItemActive(item.path);
             const Icon = item.icon;
@@ -215,8 +212,8 @@ export const AppLayout = ({ children }) => {
                 to={getNavPath(item.path)}
                 className={`flex items-center space-x-1.5 px-2.5 py-1 rounded-lg text-xs font-medium whitespace-nowrap transition-all ${
                   active
-                    ? 'bg-[var(--color-accent-soft)] text-[var(--color-accent)] font-semibold'
-                    : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'
+                    ? 'bg-[var(--color-accent-soft)] text-[var(--color-accent)] font-semibold shadow-md shadow-[var(--color-accent)]/20 border border-[var(--color-accent)]/30'
+                    : 'text-[var(--color-text-muted)] bg-[var(--color-surface)]/80 hover:text-[var(--color-text)] border border-[var(--color-border)]/50 shadow-xs'
                 }`}
               >
                 <Icon className="w-3.5 h-3.5 shrink-0" />

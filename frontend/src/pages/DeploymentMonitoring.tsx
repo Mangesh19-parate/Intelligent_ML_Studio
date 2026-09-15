@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { deploymentApi, predictApi, projectApi } from '../api/client';
+import { deploymentApi, predictApi } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import {
   Activity,
@@ -8,40 +8,100 @@ import {
   Clock,
   AlertTriangle,
   CheckCircle2,
-  XCircle,
   Pause,
   StopCircle,
   Play,
   RotateCw,
   ArrowLeft,
   ChevronRight,
-  Database,
   BarChart3,
-  Layers,
   Sparkles,
   FileCode,
   ShieldCheck,
   Search,
 } from 'lucide-react';
 
-export const DeploymentMonitoring = () => {
-  const { id: routeDeploymentId } = useParams();
+export interface LatencyStats {
+  avg_ms: number;
+  p50_ms: number;
+  p95_ms: number;
+  count: number;
+  min_ms?: number;
+  max_ms?: number;
+}
+
+export interface LatencySummary {
+  base_predictions?: LatencyStats;
+  explained_predictions?: LatencyStats;
+}
+
+export interface ErrorRateStats {
+  total_requests: number;
+  success_count: number;
+  validation_error_count: number;
+  server_error_count: number;
+  error_rate: number;
+  validation_error_rate: number;
+  server_error_rate: number;
+}
+
+export interface VolumeBucket {
+  timestamp: string;
+  total_requests: number;
+  success_count: number;
+  validation_error_count: number;
+  server_error_count: number;
+}
+
+export interface InferenceLog {
+  id: string;
+  requested_at: string;
+  status: string;
+  latency_ms: number;
+  explanation_latency_ms?: number | null;
+  payload_mode: string;
+  schema_hash: string;
+}
+
+export interface DeploymentMonitoringData {
+  status: string;
+  endpoint_path: string;
+  deployment_id: string;
+  latency_summary?: LatencySummary;
+  error_rate?: ErrorRateStats;
+  volume_over_time?: VolumeBucket[];
+  recent_logs?: InferenceLog[];
+}
+
+export interface FastPredictResult {
+  latency_ms?: number;
+  [key: string]: unknown;
+}
+
+export interface ExplainPredictResult {
+  latency_ms?: number;
+  explanation_latency_ms?: number;
+  [key: string]: unknown;
+}
+
+export const DeploymentMonitoring: React.FC = () => {
+  const { id: routeDeploymentId } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  const [deploymentId, setDeploymentId] = useState(routeDeploymentId || '');
-  const [monitoringData, setMonitoringData] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [successMsg, setSuccessMsg] = useState('');
-  const [lookbackHours, setLookbackHours] = useState(24);
+  const [deploymentId, setDeploymentId] = useState<string>(routeDeploymentId || '');
+  const [monitoringData, setMonitoringData] = useState<DeploymentMonitoringData | null>(null);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string>('');
+  const [successMsg, setSuccessMsg] = useState<string>('');
+  const [lookbackHours, setLookbackHours] = useState<number>(24);
 
   // Try-It inference state
-  const [inputJson, setInputJson] = useState('{\n  \n}');
-  const [predictingFast, setPredictingFast] = useState(false);
-  const [predictingExplain, setPredictingExplain] = useState(false);
-  const [fastResult, setFastResult] = useState(null);
-  const [explainResult, setExplainResult] = useState(null);
+  const [inputJson, setInputJson] = useState<string>('{\n  \n}');
+  const [predictingFast, setPredictingFast] = useState<boolean>(false);
+  const [predictingExplain, setPredictingExplain] = useState<boolean>(false);
+  const [fastResult, setFastResult] = useState<FastPredictResult | null>(null);
+  const [explainResult, setExplainResult] = useState<ExplainPredictResult | null>(null);
 
   const userPerms = new Set(
     user?.permissions ||
@@ -49,14 +109,14 @@ export const DeploymentMonitoring = () => {
   );
   const canDeploy = userPerms.has('DEPLOY') || userPerms.has('MANAGE_USERS');
 
-  const fetchMonitoring = async (depId) => {
+  const fetchMonitoring = async (depId: string) => {
     if (!depId) return;
     setLoading(true);
     setError('');
     try {
       const res = await deploymentApi.getMonitoring(depId, lookbackHours);
       setMonitoringData(res.data);
-    } catch (err) {
+    } catch (err: any) {
       setError(err.response?.data?.detail || 'Failed to load deployment monitoring data');
     } finally {
       setLoading(false);
@@ -70,7 +130,7 @@ export const DeploymentMonitoring = () => {
     }
   }, [routeDeploymentId, lookbackHours]);
 
-  const handleUpdateStatus = async (newStatus) => {
+  const handleUpdateStatus = async (newStatus: string) => {
     if (!deploymentId) return;
     setError('');
     setSuccessMsg('');
@@ -78,7 +138,7 @@ export const DeploymentMonitoring = () => {
       await deploymentApi.updateStatus(deploymentId, newStatus);
       setSuccessMsg(`Deployment status updated to ${newStatus}`);
       fetchMonitoring(deploymentId);
-    } catch (err) {
+    } catch (err: any) {
       setError(err.response?.data?.detail || `Failed to transition deployment to ${newStatus}`);
     }
   };
@@ -93,7 +153,7 @@ export const DeploymentMonitoring = () => {
       const res = await predictApi.predict(deploymentId, payload);
       setFastResult(res.data);
       fetchMonitoring(deploymentId);
-    } catch (err) {
+    } catch (err: any) {
       setError(err.response?.data?.detail || 'Prediction failed');
     } finally {
       setPredictingFast(false);
@@ -110,17 +170,17 @@ export const DeploymentMonitoring = () => {
       const res = await predictApi.predictExplain(deploymentId, payload);
       setExplainResult(res.data);
       fetchMonitoring(deploymentId);
-    } catch (err) {
+    } catch (err: any) {
       setError(err.response?.data?.detail || 'Explain prediction failed');
     } finally {
       setPredictingExplain(false);
     }
   };
 
-  const baseStats = monitoringData?.latency_summary?.base_predictions || { avg_ms: 0, p50_ms: 0, p95_ms: 0, count: 0 };
-  const explainStats = monitoringData?.latency_summary?.explained_predictions || { avg_ms: 0, p50_ms: 0, p95_ms: 0, count: 0 };
-  const errorStats = monitoringData?.error_rate || { total_requests: 0, success_count: 0, validation_error_count: 0, server_error_count: 0, error_rate: 0, validation_error_rate: 0, server_error_rate: 0 };
-  const volumeBuckets = monitoringData?.volume_over_time || [];
+  const baseStats: LatencyStats = monitoringData?.latency_summary?.base_predictions || { avg_ms: 0, p50_ms: 0, p95_ms: 0, count: 0, min_ms: 0, max_ms: 0 };
+  const explainStats: LatencyStats = monitoringData?.latency_summary?.explained_predictions || { avg_ms: 0, p50_ms: 0, p95_ms: 0, count: 0, min_ms: 0, max_ms: 0 };
+  const errorStats: ErrorRateStats = monitoringData?.error_rate || { total_requests: 0, success_count: 0, validation_error_count: 0, server_error_count: 0, error_rate: 0, validation_error_rate: 0, server_error_rate: 0 };
+  const volumeBuckets: VolumeBucket[] = monitoringData?.volume_over_time || [];
 
   return (
     <div className="space-y-6">
@@ -164,7 +224,7 @@ export const DeploymentMonitoring = () => {
             <button
               onClick={() => fetchMonitoring(deploymentId)}
               disabled={loading}
-              className="p-2 rounded-xl bg-[var(--color-surface)] hover:bg-[var(--color-surface-hover)] border border-[var(--color-border)] text-text text-xs font-semibold transition-all cursor-pointer"
+              className="p-2 rounded-xl bg-[var(--color-surface)] hover:bg-[var(--color-surface-hover)] border border-[var(--color-border)] text-text text-xs font-semibold transition-all cursor-pointer shadow-sm"
               title="Refresh Monitoring Data"
             >
               <RotateCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
@@ -175,7 +235,7 @@ export const DeploymentMonitoring = () => {
 
       {/* Deployment ID Selector Bar if not in route */}
       {!routeDeploymentId && (
-        <div className="p-4 rounded-2xl bg-[var(--color-surface)] border border-[var(--color-border)] flex items-center space-x-3">
+        <div className="p-4 rounded-2xl bg-[var(--color-surface)] border border-[var(--color-border)] flex items-center space-x-3 shadow-sm">
           <Search className="w-4 h-4 text-[var(--color-text-muted)]" />
           <input
             type="text"
@@ -186,7 +246,7 @@ export const DeploymentMonitoring = () => {
           />
           <button
             onClick={() => fetchMonitoring(deploymentId)}
-            className="px-4 py-2 rounded-xl bg-[var(--color-accent)] hover:bg-[var(--color-accent-hover)] text-white text-xs font-semibold cursor-pointer"
+            className="px-4 py-2 rounded-xl bg-[var(--color-accent)] hover:bg-[var(--color-accent-hover)] text-white text-xs font-semibold cursor-pointer shadow-sm"
           >
             Load Telemetry
           </button>
@@ -210,7 +270,7 @@ export const DeploymentMonitoring = () => {
       {monitoringData && (
         <div className="space-y-6">
           {/* Status & Lifecycle Banner */}
-          <div className="p-5 rounded-2xl bg-[var(--color-surface)] border border-[var(--color-border)] flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="p-5 rounded-2xl bg-[var(--color-surface)] border border-[var(--color-border)] flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm">
             <div className="flex items-center space-x-3">
               <span
                 className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border ${
@@ -239,7 +299,7 @@ export const DeploymentMonitoring = () => {
                 {monitoringData.status === 'LIVE' && (
                   <button
                     onClick={() => handleUpdateStatus('PAUSED')}
-                    className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 text-xs font-semibold border border-amber-500/20 cursor-pointer"
+                    className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 text-xs font-semibold border border-amber-500/20 cursor-pointer shadow-sm"
                   >
                     <Pause className="w-3.5 h-3.5" />
                     <span>Pause Traffic</span>
@@ -248,7 +308,7 @@ export const DeploymentMonitoring = () => {
                 {monitoringData.status === 'PAUSED' && (
                   <button
                     onClick={() => handleUpdateStatus('LIVE')}
-                    className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 text-xs font-semibold border border-emerald-500/20 cursor-pointer"
+                    className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 text-xs font-semibold border border-emerald-500/20 cursor-pointer shadow-sm"
                   >
                     <Play className="w-3.5 h-3.5" />
                     <span>Resume LIVE</span>
@@ -261,7 +321,7 @@ export const DeploymentMonitoring = () => {
                         handleUpdateStatus('RETIRED');
                       }
                     }}
-                    className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 text-xs font-semibold border border-rose-500/20 cursor-pointer"
+                    className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 text-xs font-semibold border border-rose-500/20 cursor-pointer shadow-sm"
                   >
                     <StopCircle className="w-3.5 h-3.5" />
                     <span>Retire Endpoint</span>
@@ -274,7 +334,7 @@ export const DeploymentMonitoring = () => {
           {/* KPI Summary Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Total Requests */}
-            <div className="p-5 rounded-2xl bg-[var(--color-surface)] border border-[var(--color-border)] space-y-2">
+            <div className="p-5 rounded-2xl bg-[var(--color-surface)] border border-[var(--color-border)] space-y-2 shadow-sm">
               <div className="flex items-center justify-between text-xs text-[var(--color-text-muted)] font-semibold uppercase tracking-wider">
                 <span>Inference Requests</span>
                 <BarChart3 className="w-4 h-4 text-[var(--color-accent)]" />
@@ -292,7 +352,7 @@ export const DeploymentMonitoring = () => {
             </div>
 
             {/* Error Rate Breakdown */}
-            <div className="p-5 rounded-2xl bg-[var(--color-surface)] border border-[var(--color-border)] space-y-2">
+            <div className="p-5 rounded-2xl bg-[var(--color-surface)] border border-[var(--color-border)] space-y-2 shadow-sm">
               <div className="flex items-center justify-between text-xs text-[var(--color-text-muted)] font-semibold uppercase tracking-wider">
                 <span>Error Rate</span>
                 <AlertTriangle className="w-4 h-4 text-amber-500" />
@@ -311,7 +371,7 @@ export const DeploymentMonitoring = () => {
             </div>
 
             {/* Base vs Explain Latency Comparison */}
-            <div className="p-5 rounded-2xl bg-[var(--color-surface)] border border-[var(--color-border)] space-y-2">
+            <div className="p-5 rounded-2xl bg-[var(--color-surface)] border border-[var(--color-border)] space-y-2 shadow-sm">
               <div className="flex items-center justify-between text-xs text-[var(--color-text-muted)] font-semibold uppercase tracking-wider">
                 <span>P95 Latency (Base vs SHAP)</span>
                 <Clock className="w-4 h-4 text-indigo-400" />
@@ -332,7 +392,7 @@ export const DeploymentMonitoring = () => {
           </div>
 
           {/* Latency Comparison Profile Table */}
-          <div className="p-6 rounded-2xl bg-[var(--color-surface)] border border-[var(--color-border)] space-y-4">
+          <div className="p-6 rounded-2xl bg-[var(--color-surface)] border border-[var(--color-border)] space-y-4 shadow-sm">
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-sm font-bold text-text flex items-center space-x-2">
@@ -367,7 +427,7 @@ export const DeploymentMonitoring = () => {
                     <td className="px-5 py-3.5 font-bold text-emerald-500">{baseStats.avg_ms} ms</td>
                     <td className="px-5 py-3.5 text-text">{baseStats.p50_ms} ms</td>
                     <td className="px-5 py-3.5 font-bold text-text">{baseStats.p95_ms} ms</td>
-                    <td className="px-5 py-3.5 text-[var(--color-text-muted)]">{baseStats.min_ms} / {baseStats.max_ms} ms</td>
+                    <td className="px-5 py-3.5 text-[var(--color-text-muted)]">{baseStats.min_ms ?? 0} / {baseStats.max_ms ?? 0} ms</td>
                   </tr>
                   <tr className="hover:bg-[var(--color-surface)]/50 transition-colors">
                     <td className="px-5 py-3.5 font-sans font-bold text-purple-400 flex items-center space-x-1.5">
@@ -378,7 +438,7 @@ export const DeploymentMonitoring = () => {
                     <td className="px-5 py-3.5 font-bold text-purple-400">{explainStats.avg_ms} ms</td>
                     <td className="px-5 py-3.5 text-text">{explainStats.p50_ms} ms</td>
                     <td className="px-5 py-3.5 font-bold text-text">{explainStats.p95_ms} ms</td>
-                    <td className="px-5 py-3.5 text-[var(--color-text-muted)]">{explainStats.min_ms} / {explainStats.max_ms} ms</td>
+                    <td className="px-5 py-3.5 text-[var(--color-text-muted)]">{explainStats.min_ms ?? 0} / {explainStats.max_ms ?? 0} ms</td>
                   </tr>
                 </tbody>
               </table>
@@ -387,7 +447,7 @@ export const DeploymentMonitoring = () => {
 
           {/* Volume Over Time Timeline */}
           {volumeBuckets.length > 0 && (
-            <div className="p-6 rounded-2xl bg-[var(--color-surface)] border border-[var(--color-border)] space-y-4">
+            <div className="p-6 rounded-2xl bg-[var(--color-surface)] border border-[var(--color-border)] space-y-4 shadow-sm">
               <h3 className="text-sm font-bold text-text flex items-center space-x-2">
                 <BarChart3 className="w-4 h-4 text-[var(--color-accent)]" />
                 <span>Hourly Request Volume Over Time</span>
@@ -432,7 +492,7 @@ export const DeploymentMonitoring = () => {
 
           {/* Interactive Try-It Inference Form */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="p-6 rounded-2xl bg-[var(--color-surface)] border border-[var(--color-border)] space-y-4">
+            <div className="p-6 rounded-2xl bg-[var(--color-surface)] border border-[var(--color-border)] space-y-4 shadow-sm">
               <h3 className="text-sm font-bold text-text flex items-center space-x-2">
                 <FileCode className="w-4 h-4 text-[var(--color-accent)]" />
                 <span>Test Inference Payload</span>
@@ -453,7 +513,7 @@ export const DeploymentMonitoring = () => {
                 <button
                   onClick={handleRunPredict}
                   disabled={predictingFast || monitoringData.status !== 'LIVE'}
-                  className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold transition-all flex items-center space-x-2 cursor-pointer disabled:opacity-50"
+                  className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold transition-all flex items-center space-x-2 cursor-pointer disabled:opacity-50 shadow-sm"
                 >
                   <Zap className="w-3.5 h-3.5" />
                   <span>{predictingFast ? 'Predicting...' : 'Fast Predict (Base)'}</span>
@@ -462,7 +522,7 @@ export const DeploymentMonitoring = () => {
                 <button
                   onClick={handleRunPredictExplain}
                   disabled={predictingExplain || monitoringData.status !== 'LIVE'}
-                  className="px-4 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold transition-all flex items-center space-x-2 cursor-pointer disabled:opacity-50"
+                  className="px-4 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold transition-all flex items-center space-x-2 cursor-pointer disabled:opacity-50 shadow-sm"
                 >
                   <Sparkles className="w-3.5 h-3.5" />
                   <span>{predictingExplain ? 'Explaining...' : 'Predict + SHAP Explain'}</span>
@@ -471,7 +531,7 @@ export const DeploymentMonitoring = () => {
             </div>
 
             {/* Inference Result Viewport */}
-            <div className="p-6 rounded-2xl bg-[var(--color-surface)] border border-[var(--color-border)] space-y-4">
+            <div className="p-6 rounded-2xl bg-[var(--color-surface)] border border-[var(--color-border)] space-y-4 shadow-sm">
               <h3 className="text-sm font-bold text-text">Inference Response Output</h3>
               {fastResult && (
                 <div className="p-4 rounded-xl bg-[var(--color-bg)] border border-emerald-500/30 font-mono text-xs space-y-2">
@@ -506,7 +566,7 @@ export const DeploymentMonitoring = () => {
           </div>
 
           {/* Audit Logs Table & Privacy Disclosure */}
-          <div className="p-6 rounded-2xl bg-[var(--color-surface)] border border-[var(--color-border)] space-y-4">
+          <div className="p-6 rounded-2xl bg-[var(--color-surface)] border border-[var(--color-border)] space-y-4 shadow-sm">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
               <h3 className="text-sm font-bold text-text">Recent Inference Audit Logs</h3>
               <div className="flex items-center space-x-2 text-[11px] text-[var(--color-text-muted)] bg-[var(--color-bg)] px-3 py-1.5 rounded-lg border border-[var(--color-border)]">

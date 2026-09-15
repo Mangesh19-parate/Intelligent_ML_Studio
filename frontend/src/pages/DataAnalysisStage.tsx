@@ -6,8 +6,9 @@ import { TaskTypeSelector } from '../components/TaskTypeSelector';
 import { RecommendationsList } from '../components/RecommendationsList';
 import { CorrelationHeatmap } from '../components/CorrelationHeatmap';
 import { ColumnStatsTable } from '../components/ColumnStatsTable';
-import { ComprehensiveProfilingReport } from '../components/ComprehensiveProfilingReport';
-import { InteractiveEDAStudio } from '../components/InteractiveEDAStudio';
+import { ComprehensiveProfilingReport, ComprehensiveEDAReport } from '../components/ComprehensiveProfilingReport';
+import { InteractiveEDAStudio, EDAReport } from '../components/InteractiveEDAStudio';
+import { Project, Dataset, SplitResponse, RecommendationItem, TaskType, TaskTypeConfidence } from '../types/api';
 import {
   BarChart3,
   ShieldCheck,
@@ -17,32 +18,30 @@ import {
   RefreshCw,
   FolderOpen,
   AlertTriangle,
-  Layers,
   Database,
-  Info,
   FileText,
   PieChart,
 } from 'lucide-react';
 
-export const DataAnalysisStage = () => {
+export const DataAnalysisStage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const initialProjectId = searchParams.get('project_id');
 
-  const [projects, setProjects] = useState([]);
-  const [selectedProjectId, setSelectedProjectId] = useState(initialProjectId || '');
-  const [currentProject, setCurrentProject] = useState(null);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [selectedProjectId, setSelectedProjectId] = useState<string>(initialProjectId || '');
+  const [currentProject, setCurrentProject] = useState<Project | null>(null);
 
-  const [selectedDataset, setSelectedDataset] = useState(null);
-  const [splitSummary, setSplitSummary] = useState(null);
-  const [profilingReport, setProfilingReport] = useState(null);
-  const [edaReport, setEdaReport] = useState(null);
-  const [recommendations, setRecommendations] = useState([]);
-  const [activeTab, setActiveTab] = useState('profiling'); // 'profiling' | 'eda'
+  const [selectedDataset, setSelectedDataset] = useState<Dataset | null>(null);
+  const [splitSummary, setSplitSummary] = useState<SplitResponse | null>(null);
+  const [profilingReport, setProfilingReport] = useState<any>(null);
+  const [edaReport, setEdaReport] = useState<(ComprehensiveEDAReport & EDAReport) | null>(null);
+  const [recommendations, setRecommendations] = useState<RecommendationItem[]>([]);
+  const [activeTab, setActiveTab] = useState<'profiling' | 'eda'>('profiling');
 
-  const [loading, setLoading] = useState(true);
-  const [profilingRunning, setProfilingRunning] = useState(false);
-  const [error, setError] = useState('');
-  const [successMsg, setSuccessMsg] = useState('');
+  const [loading, setLoading] = useState<boolean>(true);
+  const [profilingRunning, setProfilingRunning] = useState<boolean>(false);
+  const [error, setError] = useState<string>('');
+  const [successMsg, setSuccessMsg] = useState<string>('');
 
   // Load projects
   const loadProjects = async () => {
@@ -142,13 +141,13 @@ export const DataAnalysisStage = () => {
     loadProjectAnalysis();
   }, [selectedProjectId]);
 
-  const handleSelectProject = (projectId) => {
+  const handleSelectProject = (projectId: string) => {
     setSelectedProjectId(projectId);
     setSearchParams({ project_id: projectId });
   };
 
   const handleTriggerProfile = async () => {
-    if (!selectedDataset) return;
+    if (!selectedDataset || !selectedProjectId) return;
     setProfilingRunning(true);
     setError('');
     setSuccessMsg('');
@@ -170,15 +169,16 @@ export const DataAnalysisStage = () => {
       setRecommendations(recsResp.data || []);
 
       setSuccessMsg('Development data profiling and DQI diagnostics completed successfully.');
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('Failed to run profiling', err);
-      setError(err.response?.data?.detail || 'Failed to execute data profiling.');
+      const e = err as { response?: { data?: { detail?: string } } };
+      setError(e.response?.data?.detail || 'Failed to execute data profiling.');
     } finally {
       setProfilingRunning(false);
     }
   };
 
-  const handleTaskTypeConfirmed = (confirmedType) => {
+  const handleTaskTypeConfirmed = (confirmedType: TaskType) => {
     if (currentProject) {
       setCurrentProject({
         ...currentProject,
@@ -228,7 +228,7 @@ export const DataAnalysisStage = () => {
               >
                 {projects.map((p) => (
                   <option key={p.id} value={p.id} className="bg-[var(--color-surface)] text-[var(--color-text)]">
-                    {p.project_name}
+                    {p.project_name || p.name}
                   </option>
                 ))}
               </select>
@@ -362,7 +362,7 @@ export const DataAnalysisStage = () => {
               <TaskTypeSelector
                 projectId={selectedProjectId}
                 currentTaskType={currentProject?.task_type}
-                taskTypeConfidence={currentProject?.task_type_confidence}
+                taskTypeConfidence={currentProject?.task_type_confidence as TaskTypeConfidence | undefined}
                 taskTypeSuggestion={profilingReport.task_type_suggestion}
                 onTaskTypeConfirmed={handleTaskTypeConfirmed}
               />

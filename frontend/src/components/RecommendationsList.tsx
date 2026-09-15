@@ -1,13 +1,24 @@
-import React, { useState } from 'react';
-import { Lightbulb, AlertCircle, ArrowRight, ShieldAlert, CheckCircle2, XCircle, Check, RotateCcw } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Lightbulb, ArrowRight, ShieldAlert, CheckCircle2, XCircle, Check, RotateCcw } from 'lucide-react';
 import { projectApi } from '../api/client';
+import { TransformationRecommendation } from '../types/api';
 
-export const RecommendationsList = ({ recommendations = [], projectId = null, onStatusChange = null }) => {
-  const [localRecs, setLocalRecs] = useState(recommendations);
-  const [updatingId, setUpdatingId] = useState(null);
+export interface RecommendationsListProps {
+  recommendations?: TransformationRecommendation[];
+  projectId?: string | null;
+  onStatusChange?: ((recId: string, newStatus: string) => void) | null;
+}
+
+export const RecommendationsList: React.FC<RecommendationsListProps> = ({
+  recommendations = [],
+  projectId = null,
+  onStatusChange = null,
+}) => {
+  const [localRecs, setLocalRecs] = useState<TransformationRecommendation[]>(recommendations);
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
 
   // Sync state if prop changes
-  React.useEffect(() => {
+  useEffect(() => {
     setLocalRecs(recommendations);
   }, [recommendations]);
 
@@ -20,13 +31,13 @@ export const RecommendationsList = ({ recommendations = [], projectId = null, on
     );
   }
 
-  const handleStatusUpdate = async (recId, newStatus) => {
+  const handleStatusUpdate = async (recId: string, newStatus: string): Promise<void> => {
     if (!projectId || !recId) return;
     setUpdatingId(recId);
     try {
       await projectApi.updateRecommendationStatus(projectId, recId, newStatus);
       setLocalRecs((prev) =>
-        prev.map((r) => (r.id === recId ? { ...r, status: newStatus } : r))
+        prev.map((r) => (r.id === recId ? { ...r, status: newStatus as TransformationRecommendation['status'] } : r))
       );
       if (onStatusChange) onStatusChange(recId, newStatus);
     } catch (err) {
@@ -36,7 +47,7 @@ export const RecommendationsList = ({ recommendations = [], projectId = null, on
     }
   };
 
-  const getConfidenceBadge = (confidence) => {
+  const getConfidenceBadge = (confidence?: string): React.ReactNode => {
     switch (confidence) {
       case 'HIGH':
         return <span className="px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-mono">HIGH CONFIDENCE</span>;
@@ -47,7 +58,7 @@ export const RecommendationsList = ({ recommendations = [], projectId = null, on
     }
   };
 
-  const getStatusBadge = (status) => {
+  const getStatusBadge = (status?: string): React.ReactNode => {
     switch (status) {
       case 'APPLIED':
         return <span className="px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 font-mono flex items-center gap-1"><Check className="w-3 h-3" /> APPLIED</span>;
@@ -88,7 +99,7 @@ export const RecommendationsList = ({ recommendations = [], projectId = null, on
             {/* Header: Finding & Badges */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2.5 border-b border-[var(--color-border)]">
               <div className="flex items-center gap-2">
-                <span className={`w-2 h-2 rounded-full ${rec.status === 'APPLIED' ? 'bg-blue-500' : rec.status === 'IGNORED' ? 'bg-zinc-400' : 'bg-amber-500'} flex-shrink-0`} />
+                <span className={`w-2 h-2 rounded-full ${rec.status === 'APPLIED' ? 'bg-blue-500' : rec.status === 'IGNORED' ? 'bg-zinc-400' : 'bg-amber-500'} shrink-0`} />
                 <h5 className="text-sm font-bold text-[var(--color-text)]">{rec.finding}</h5>
               </div>
               <div className="flex items-center gap-2">
@@ -117,7 +128,7 @@ export const RecommendationsList = ({ recommendations = [], projectId = null, on
             {/* Risk Note */}
             {rec.risk_note && (
               <div className="p-2.5 bg-rose-500/10 border border-rose-500/20 rounded-xl flex items-start gap-2 text-xs text-rose-600 dark:text-rose-400 mb-3">
-                <ShieldAlert className="w-3.5 h-3.5 text-rose-500 flex-shrink-0 mt-0.5" />
+                <ShieldAlert className="w-3.5 h-3.5 text-rose-500 shrink-0 mt-0.5" />
                 <span>
                   <strong className="font-bold">Risk / Tradeoff:</strong> {rec.risk_note}
                 </span>

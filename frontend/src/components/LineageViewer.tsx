@@ -4,34 +4,67 @@ import {
   ShieldCheck,
   AlertTriangle,
   FileCode,
-  Layers,
   Database,
   CheckCircle2,
-  Clock,
-  Hash,
   Cpu,
   Copy,
   Check,
   GitCommit,
-  Sparkles,
   Lock,
-  Boxes,
-  Sliders,
   Split,
   RefreshCw,
   X,
 } from 'lucide-react';
 
-export const LineageViewer = ({ experimentId, onClose }) => {
-  const [lineage, setLineage] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [copiedKey, setCopiedKey] = useState(null);
+interface ReproduceResult {
+  status: string;
+  metric_name: string;
+  expected: number;
+  observed: number;
+  difference: number;
+  relative_difference: number;
+  tolerance?: {
+    metric_absolute_tolerance?: number;
+    metric_relative_tolerance?: number;
+  };
+  reproduced_experiment_id?: string;
+}
+
+interface LineageData {
+  environment_capture_method?: string;
+  split_seed?: number;
+  cv_seed?: number;
+  cv_strategy?: string;
+  task_type?: string;
+  fold_count?: number;
+  dataset_content_hash?: string;
+  winning_model?: {
+    artifact_checksum?: string;
+    artifact_path?: string;
+  };
+  python_version?: string;
+  sklearn_version?: string;
+  numpy_version?: string;
+  pandas_version?: string;
+  code_version?: string;
+  experiment_config?: Record<string, unknown>;
+}
+
+interface LineageViewerProps {
+  experimentId: string | null;
+  onClose: () => void;
+}
+
+export const LineageViewer: React.FC<LineageViewerProps> = ({ experimentId, onClose }) => {
+  const [lineage, setLineage] = useState<LineageData | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string>('');
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   // Reproducibility verification state
-  const [reproducing, setReproducing] = useState(false);
-  const [reproduceResult, setReproduceResult] = useState(null);
-  const [reproduceError, setReproduceError] = useState('');
+  const [reproducing, setReproducing] = useState<boolean>(false);
+  const [reproduceResult, setReproduceResult] = useState<ReproduceResult | null>(null);
+  const [reproduceError, setReproduceError] = useState<string>('');
 
   useEffect(() => {
     if (!experimentId) return;
@@ -41,8 +74,9 @@ export const LineageViewer = ({ experimentId, onClose }) => {
         setError('');
         const res = await experimentApi.getLineage(experimentId);
         setLineage(res.data);
-      } catch (err) {
-        setError(err.response?.data?.detail || 'Failed to load lineage metadata.');
+      } catch (err: unknown) {
+        const e = err as { response?: { data?: { detail?: string } } };
+        setError(e.response?.data?.detail || 'Failed to load lineage metadata.');
       } finally {
         setLoading(false);
       }
@@ -51,21 +85,23 @@ export const LineageViewer = ({ experimentId, onClose }) => {
   }, [experimentId]);
 
   const handleReproduce = async () => {
+    if (!experimentId) return;
     try {
       setReproducing(true);
       setReproduceError('');
       setReproduceResult(null);
       const res = await experimentApi.reproduce(experimentId);
       setReproduceResult(res.data);
-    } catch (err) {
-      setReproduceError(err.response?.data?.detail || 'Failed to reproduce experiment.');
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { detail?: string } } };
+      setReproduceError(e.response?.data?.detail || 'Failed to reproduce experiment.');
     } finally {
       setReproducing(false);
     }
   };
 
-  const copyToClipboard = (text, key) => {
-    if (!text) return;
+  const copyToClipboard = (text: unknown, key: string) => {
+    if (text === undefined || text === null) return;
     navigator.clipboard.writeText(String(text));
     setCopiedKey(key);
     setTimeout(() => setCopiedKey(null), 2000);
@@ -218,7 +254,7 @@ export const LineageViewer = ({ experimentId, onClose }) => {
                     </div>
 
                     <div className="text-[11px] text-[var(--color-text-muted)] flex items-center justify-between pt-1 border-t border-[var(--color-border)] font-mono">
-                      <span>Contract Tolerances: abs ≤ {reproduceResult.tolerance?.metric_absolute_tolerance} | rel ≤ {(reproduceResult.tolerance?.metric_relative_tolerance * 100)}%</span>
+                      <span>Contract Tolerances: abs ≤ {reproduceResult.tolerance?.metric_absolute_tolerance} | rel ≤ {((reproduceResult.tolerance?.metric_relative_tolerance ?? 0) * 100)}%</span>
                       <span className="text-[10px]">Run ID: {reproduceResult.reproduced_experiment_id?.slice(0, 8)}</span>
                     </div>
                   </div>

@@ -9,10 +9,9 @@ import {
   Mail,
   Phone,
   ShieldAlert,
-  HelpCircle,
 } from 'lucide-react';
 
-export const NotFound = () => {
+export const NotFound: React.FC = () => {
   const navigate = useNavigate();
 
   return (

@@ -1,24 +1,33 @@
 import React, { useState } from 'react';
-import { Target, HelpCircle, CheckCircle2, AlertTriangle, ArrowRight, Check } from 'lucide-react';
+import { Target, AlertTriangle, ArrowRight, Check } from 'lucide-react';
+import { TaskType, TaskTypeConfidence, TaskTypeSuggestion } from '../types/api';
+import axios from 'axios';
 
-export const TaskTypeSelector = ({
-  projectId,
+export interface TaskTypeSelectorProps {
+  projectId: string;
+  currentTaskType?: TaskType | 'UNDETERMINED' | string;
+  taskTypeConfidence?: TaskTypeConfidence;
+  taskTypeSuggestion?: TaskTypeSuggestion | null;
+  onTaskTypeConfirmed?: (taskType: string) => Promise<void> | void;
+}
+
+export const TaskTypeSelector: React.FC<TaskTypeSelectorProps> = ({
   currentTaskType,
   taskTypeConfidence,
   taskTypeSuggestion,
-  onTaskTypeConfirmed
+  onTaskTypeConfirmed,
 }) => {
   const isAmbiguous = taskTypeSuggestion?.is_ambiguous || taskTypeConfidence === 'AMBIGUOUS' || currentTaskType === 'UNDETERMINED';
   const initialChoice = isAmbiguous
     ? ''
-    : (currentTaskType && currentTaskType !== 'UNDETERMINED' ? currentTaskType : (taskTypeSuggestion?.suggested_task_type || ''));
+    : (currentTaskType && (currentTaskType as string) !== 'UNDETERMINED' ? currentTaskType : (taskTypeSuggestion?.suggested_task_type || ''));
 
-  const [selectedType, setSelectedType] = useState(initialChoice);
-  const [saving, setSaving] = useState(false);
-  const [success, setSuccess] = useState(false);
-  const [error, setError] = useState('');
+  const [selectedType, setSelectedType] = useState<string>(initialChoice);
+  const [saving, setSaving] = useState<boolean>(false);
+  const [success, setSuccess] = useState<boolean>(false);
+  const [error, setError] = useState<string>('');
 
-  const handleConfirm = async () => {
+  const handleConfirm = async (): Promise<void> => {
     if (!selectedType) {
       setError('Please select either Classification or Regression before proceeding.');
       return;
@@ -32,14 +41,18 @@ export const TaskTypeSelector = ({
       }
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
-    } catch (err) {
-      setError(err.response?.data?.detail || 'Failed to update task type');
+    } catch (err: unknown) {
+      if (axios.isAxiosError(err)) {
+        setError(err.response?.data?.detail || 'Failed to update task type');
+      } else {
+        setError('Failed to update task type');
+      }
     } finally {
       setSaving(false);
     }
   };
 
-  const getConfidenceBadge = (confidence) => {
+  const getConfidenceBadge = (confidence?: string): React.ReactNode => {
     if (confidence === 'HIGH') {
       return <span className="px-2.5 py-0.5 text-xs font-bold rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">HIGH CONFIDENCE</span>;
     }
@@ -83,7 +96,7 @@ export const TaskTypeSelector = ({
       {isAmbiguous && (
         <div className="my-4 p-4 bg-amber-500/10 border border-amber-500/30 rounded-2xl">
           <div className="flex items-start gap-3">
-            <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+            <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
             <div>
               <h5 className="text-sm font-bold text-amber-800 dark:text-amber-200">
                 Distribution is Ambiguous — Explicit User Choice Required

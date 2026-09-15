@@ -15,38 +15,63 @@ import {
   Pause,
   StopCircle,
   RefreshCw,
-  Sliders,
-  ChevronRight,
-  Database,
-  Lock,
-  Layers,
   X,
 } from 'lucide-react';
 import { modelApi, deploymentApi, predictApi } from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import {
+  TrainedModel,
+  DeploymentGate,
+  Deployment,
+  PredictionResponse,
+  PredictionLog,
+} from '../types/api';
+import axios from 'axios';
 
-export default function DeploymentGateModal({ model, isOpen, onClose, onDeploymentSuccess }) {
+export interface DeploymentGateModalProps {
+  model: TrainedModel | null;
+  isOpen: boolean;
+  onClose: () => void;
+  onDeploymentSuccess?: (deployment: Deployment) => void;
+}
+
+export interface ExplainPredictResponse extends PredictionResponse {
+  explanation_latency_ms?: number;
+  total_latency_ms?: number;
+  explanation?: {
+    base_value?: number;
+    contributions?: Record<string, number>;
+    sum_contributions_plus_base?: number;
+  } | null;
+}
+
+export const DeploymentGateModal: React.FC<DeploymentGateModalProps> = ({
+  model,
+  isOpen,
+  onClose,
+  onDeploymentSuccess,
+}) => {
   const { user } = useAuth();
-  const [gate, setGate] = useState(null);
-  const [loadingGate, setLoadingGate] = useState(false);
-  const [approving, setApproving] = useState(false);
-  const [deploying, setDeploying] = useState(false);
-  const [deployment, setDeployment] = useState(null);
-  const [activeTab, setActiveTab] = useState('gate'); // 'gate' | 'try_it' | 'logs'
-  const [errorMsg, setErrorMsg] = useState(null);
-  const [successMsg, setSuccessMsg] = useState(null);
+  const [gate, setGate] = useState<DeploymentGate | null>(null);
+  const [loadingGate, setLoadingGate] = useState<boolean>(false);
+  const [approving, setApproving] = useState<boolean>(false);
+  const [deploying, setDeploying] = useState<boolean>(false);
+  const [deployment, setDeployment] = useState<Deployment | null>(null);
+  const [activeTab, setActiveTab] = useState<'gate' | 'try_it' | 'logs'>('gate');
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   // Try-It Form State
-  const [inputFeatures, setInputFeatures] = useState({});
-  const [rawJsonInput, setRawJsonInput] = useState('{\n  \n}');
-  const [isJsonMode, setIsJsonMode] = useState(false);
-  const [predictingFast, setPredictingFast] = useState(false);
-  const [predictingExplain, setPredictingExplain] = useState(false);
-  const [predictResult, setPredictResult] = useState(null);
-  const [explainResult, setExplainResult] = useState(null);
-  const [copiedUrl, setCopiedUrl] = useState(false);
-  const [logs, setLogs] = useState([]);
-  const [loadingLogs, setLoadingLogs] = useState(false);
+  const [inputFeatures] = useState<Record<string, any>>({});
+  const [rawJsonInput, setRawJsonInput] = useState<string>('{\n  \n}');
+  const [isJsonMode] = useState<boolean>(true);
+  const [predictingFast, setPredictingFast] = useState<boolean>(false);
+  const [predictingExplain, setPredictingExplain] = useState<boolean>(false);
+  const [predictResult, setPredictResult] = useState<PredictionResponse | null>(null);
+  const [explainResult, setExplainResult] = useState<ExplainPredictResponse | null>(null);
+  const [copiedUrl, setCopiedUrl] = useState<boolean>(false);
+  const [logs, setLogs] = useState<PredictionLog[]>([]);
+  const [loadingLogs, setLoadingLogs] = useState<boolean>(false);
 
   const userPerms = new Set(
     Array.isArray(user?.permissions)
@@ -58,6 +83,23 @@ export default function DeploymentGateModal({ model, isOpen, onClose, onDeployme
   const canDeploy = userPerms.has('DEPLOY') || userPerms.has('MANAGE_USERS');
   const canExport = userPerms.has('EXPORT') || userPerms.has('MANAGE_USERS');
 
+  const loadGateStatus = async (): Promise<void> => {
+    if (!model?.id) return;
+    setLoadingGate(true);
+    try {
+      const res = await modelApi.getDeploymentGate(model.id);
+      setGate(res.data);
+    } catch (err: unknown) {
+      if (axios.isAxiosError(err)) {
+        setErrorMsg(err.response?.data?.detail || 'Failed to evaluate deployment gate.');
+      } else {
+        setErrorMsg('Failed to evaluate deployment gate.');
+      }
+    } finally {
+      setLoadingGate(false);
+    }
+  };
+
   useEffect(() => {
     if (isOpen && model?.id) {
       loadGateStatus();
@@ -68,33 +110,27 @@ export default function DeploymentGateModal({ model, isOpen, onClose, onDeployme
     }
   }, [isOpen, model?.id]);
 
-  const loadGateStatus = async () => {
-    setLoadingGate(true);
-    try {
-      const res = await modelApi.getDeploymentGate(model.id);
-      setGate(res.data);
-    } catch (err) {
-      setErrorMsg(err.response?.data?.detail || 'Failed to evaluate deployment gate.');
-    } finally {
-      setLoadingGate(false);
-    }
-  };
-
-  const handleApprove = async () => {
+  const handleApprove = async (): Promise<void> => {
+    if (!model?.id) return;
     setApproving(true);
     setErrorMsg(null);
     try {
       const res = await modelApi.approveDeploymentGate(model.id);
       setGate(res.data.gate);
       setSuccessMsg('Deployment gate approved successfully.');
-    } catch (err) {
-      setErrorMsg(err.response?.data?.detail || 'Approval failed.');
+    } catch (err: unknown) {
+      if (axios.isAxiosError(err)) {
+        setErrorMsg(err.response?.data?.detail || 'Approval failed.');
+      } else {
+        setErrorMsg('Approval failed.');
+      }
     } finally {
       setApproving(false);
     }
   };
 
-  const handleDeploy = async () => {
+  const handleDeploy = async (): Promise<void> => {
+    if (!model?.id) return;
     setDeploying(true);
     setErrorMsg(null);
     try {
@@ -103,14 +139,19 @@ export default function DeploymentGateModal({ model, isOpen, onClose, onDeployme
       setSuccessMsg('Model successfully deployed into production LIVE status!');
       setActiveTab('try_it');
       if (onDeploymentSuccess) onDeploymentSuccess(res.data);
-    } catch (err) {
-      setErrorMsg(err.response?.data?.detail || 'Deployment failed.');
+    } catch (err: unknown) {
+      if (axios.isAxiosError(err)) {
+        setErrorMsg(err.response?.data?.detail || 'Deployment failed.');
+      } else {
+        setErrorMsg('Deployment failed.');
+      }
     } finally {
       setDeploying(false);
     }
   };
 
-  const handleDownload = async (format = 'joblib') => {
+  const handleDownload = async (format = 'joblib'): Promise<void> => {
+    if (!model?.id) return;
     try {
       const res = await modelApi.download(model.id, format);
       const blob = new Blob([res.data]);
@@ -121,23 +162,31 @@ export default function DeploymentGateModal({ model, isOpen, onClose, onDeployme
       document.body.appendChild(link);
       link.click();
       link.remove();
-    } catch (err) {
-      setErrorMsg(err.response?.data?.detail || 'Download failed.');
+    } catch (err: unknown) {
+      if (axios.isAxiosError(err)) {
+        setErrorMsg(err.response?.data?.detail || 'Download failed.');
+      } else {
+        setErrorMsg('Download failed.');
+      }
     }
   };
 
-  const handleUpdateStatus = async (targetStatus) => {
+  const handleUpdateStatus = async (targetStatus: string): Promise<void> => {
     if (!deployment?.id) return;
     try {
       const res = await deploymentApi.updateStatus(deployment.id, targetStatus);
       setDeployment(res.data);
       setSuccessMsg(`Deployment status updated to ${targetStatus}.`);
-    } catch (err) {
-      setErrorMsg(err.response?.data?.detail || 'Failed to update deployment status.');
+    } catch (err: unknown) {
+      if (axios.isAxiosError(err)) {
+        setErrorMsg(err.response?.data?.detail || 'Failed to update deployment status.');
+      } else {
+        setErrorMsg('Failed to update deployment status.');
+      }
     }
   };
 
-  const handleFastPredict = async () => {
+  const handleFastPredict = async (): Promise<void> => {
     if (!deployment?.id) return;
     setPredictingFast(true);
     setErrorMsg(null);
@@ -146,14 +195,18 @@ export default function DeploymentGateModal({ model, isOpen, onClose, onDeployme
       const payload = isJsonMode ? JSON.parse(rawJsonInput) : inputFeatures;
       const res = await predictApi.predict(deployment.id, payload);
       setPredictResult(res.data);
-    } catch (err) {
-      setErrorMsg(err.response?.data?.detail || 'Prediction failed.');
+    } catch (err: unknown) {
+      if (axios.isAxiosError(err)) {
+        setErrorMsg(err.response?.data?.detail || 'Prediction failed.');
+      } else {
+        setErrorMsg('Prediction failed.');
+      }
     } finally {
       setPredictingFast(false);
     }
   };
 
-  const handleExplainPredict = async () => {
+  const handleExplainPredict = async (): Promise<void> => {
     if (!deployment?.id) return;
     setPredictingExplain(true);
     setErrorMsg(null);
@@ -162,27 +215,35 @@ export default function DeploymentGateModal({ model, isOpen, onClose, onDeployme
       const payload = isJsonMode ? JSON.parse(rawJsonInput) : inputFeatures;
       const res = await predictApi.predictExplain(deployment.id, payload);
       setExplainResult(res.data);
-    } catch (err) {
-      setErrorMsg(err.response?.data?.detail || 'Explainable prediction failed.');
+    } catch (err: unknown) {
+      if (axios.isAxiosError(err)) {
+        setErrorMsg(err.response?.data?.detail || 'Explainable prediction failed.');
+      } else {
+        setErrorMsg('Explainable prediction failed.');
+      }
     } finally {
       setPredictingExplain(false);
     }
   };
 
-  const loadLogs = async () => {
+  const loadLogs = async (): Promise<void> => {
     if (!deployment?.id) return;
     setLoadingLogs(true);
     try {
       const res = await deploymentApi.getLogs(deployment.id, 50);
       setLogs(res.data);
-    } catch (err) {
-      setErrorMsg(err.response?.data?.detail || 'Failed to load logs.');
+    } catch (err: unknown) {
+      if (axios.isAxiosError(err)) {
+        setErrorMsg(err.response?.data?.detail || 'Failed to load logs.');
+      } else {
+        setErrorMsg('Failed to load logs.');
+      }
     } finally {
       setLoadingLogs(false);
     }
   };
 
-  const copyEndpoint = () => {
+  const copyEndpoint = (): void => {
     if (!deployment?.endpoint_path) return;
     navigator.clipboard.writeText(`${window.location.origin}${deployment.endpoint_path}`);
     setCopiedUrl(true);
@@ -191,7 +252,12 @@ export default function DeploymentGateModal({ model, isOpen, onClose, onDeployme
 
   if (!isOpen) return null;
 
-  const renderGateRow = (title, description, statusVal, isTriState = false) => {
+  const renderGateRow = (
+    title: string,
+    description: string,
+    statusVal: boolean | string | undefined,
+    isTriState = false
+  ): React.ReactNode => {
     let icon = <XCircle className="w-5 h-5 text-rose-400" />;
     let badge = <span className="px-2.5 py-1 text-xs font-bold rounded-full bg-rose-500/10 text-rose-400 border border-rose-500/20">FAIL</span>;
 
@@ -229,7 +295,7 @@ export default function DeploymentGateModal({ model, isOpen, onClose, onDeployme
             <div className="text-xs text-[var(--color-text-muted)] mt-0.5">{description}</div>
           </div>
         </div>
-        <div className="ml-4 flex-shrink-0">{badge}</div>
+        <div className="ml-4 shrink-0">{badge}</div>
       </div>
     );
   };
@@ -237,11 +303,10 @@ export default function DeploymentGateModal({ model, isOpen, onClose, onDeployme
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm overflow-y-auto">
       <div className="relative w-full max-w-4xl max-h-[90vh] bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl shadow-2xl flex flex-col overflow-hidden">
-        
         {/* Header */}
         <div className="p-6 border-b border-[var(--color-border)] flex items-center justify-between bg-[var(--color-surface-card)]">
           <div className="flex items-center gap-3.5">
-            <div className="p-2.5 rounded-xl bg-[var(--color-accent-soft)] text-[var(--color-accent)] border border-[var(--color-accent-border)]">
+            <div className="p-2.5 rounded-xl bg-[var(--color-accent-soft)] text-[var(--color-accent)] border border-[var(--color-accent)]/20">
               <ShieldCheck className="w-6 h-6" />
             </div>
             <div>
@@ -326,7 +391,6 @@ export default function DeploymentGateModal({ model, isOpen, onClose, onDeployme
 
         {/* Tab Contents */}
         <div className="p-6 overflow-y-auto flex-1 space-y-6">
-          
           {/* TAB 1: GATE CHECKLIST */}
           {activeTab === 'gate' && (
             <div className="space-y-4">
@@ -437,7 +501,6 @@ export default function DeploymentGateModal({ model, isOpen, onClose, onDeployme
           {/* TAB 2: LIVE INFERENCE ("TRY IT") */}
           {activeTab === 'try_it' && (
             <div className="space-y-6">
-              
               {/* Deployment Info Banner */}
               <div className="p-5 rounded-2xl bg-[var(--color-surface-card)] border border-[var(--color-border)] flex flex-wrap items-center justify-between gap-4">
                 <div>
@@ -536,7 +599,7 @@ export default function DeploymentGateModal({ model, isOpen, onClose, onDeployme
 
               {/* Fast Prediction Output Card */}
               {predictResult && (
-                <div className="p-5 rounded-2xl bg-[var(--color-surface-card)] border border-[var(--color-accent-border)] space-y-3">
+                <div className="p-5 rounded-2xl bg-[var(--color-surface-card)] border border-[var(--color-accent)]/20 space-y-3">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold text-[var(--color-accent)] flex items-center gap-1.5">
                       <Zap className="w-3.5 h-3.5" /> Fast Inference Result
@@ -567,7 +630,7 @@ export default function DeploymentGateModal({ model, isOpen, onClose, onDeployme
                       <span className="text-xs px-2 py-0.5 rounded-full bg-[var(--color-surface)] text-[var(--color-text-muted)] font-mono border border-[var(--color-border)]">
                         Base: {explainResult.latency_ms} ms
                       </span>
-                      <span className="text-xs px-2 py-0.5 rounded-full bg-[var(--color-accent-soft)] text-[var(--color-accent)] font-mono border border-[var(--color-accent-border)]">
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-[var(--color-accent-soft)] text-[var(--color-accent)] font-mono border border-[var(--color-accent)]/20">
                         SHAP: {explainResult.explanation_latency_ms} ms
                       </span>
                       <span className="text-xs px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 font-mono font-bold">
@@ -586,8 +649,8 @@ export default function DeploymentGateModal({ model, isOpen, onClose, onDeployme
                       {Object.entries(explainResult.explanation?.contributions || {}).map(([feat, val]) => (
                         <div key={feat} className="flex items-center justify-between text-xs font-mono p-2 bg-[var(--color-surface)] rounded-xl border border-[var(--color-border)]">
                           <span className="text-[var(--color-text)]">{feat}</span>
-                          <span className={val >= 0 ? 'text-emerald-400 font-bold' : 'text-rose-400 font-bold'}>
-                            {val >= 0 ? `+${val}` : val}
+                          <span className={Number(val) >= 0 ? 'text-emerald-400 font-bold' : 'text-rose-400 font-bold'}>
+                            {Number(val) >= 0 ? `+${val}` : String(val)}
                           </span>
                         </div>
                       ))}
@@ -599,7 +662,6 @@ export default function DeploymentGateModal({ model, isOpen, onClose, onDeployme
                   </div>
                 </div>
               )}
-
             </div>
           )}
 
@@ -666,9 +728,10 @@ export default function DeploymentGateModal({ model, isOpen, onClose, onDeployme
               )}
             </div>
           )}
-
         </div>
       </div>
     </div>
   );
-}
+};
+
+export default DeploymentGateModal;

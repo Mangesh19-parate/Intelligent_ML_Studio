@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { projectApi, experimentApi, modelApi } from '../api/client';
 import ModelPassportModal from '../components/ModelPassportModal';
+import { Project, Experiment, ModelItem, RecommendationItem } from '../types/api';
 import {
   Stethoscope,
   Activity,
@@ -10,45 +11,37 @@ import {
   HelpCircle,
   Trophy,
   ArrowRight,
-  RefreshCw,
   Layers,
   Sparkles,
-  ChevronRight,
-  Split,
-  Database,
-  Sliders,
-  FileCode,
   Flame,
-  ShieldCheck,
   TrendingUp,
   Info,
-  ExternalLink,
   FileText,
   FolderOpen,
 } from 'lucide-react';
 
-export const DiagnosticsStage = () => {
+export const DiagnosticsStage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const initialProjectId = searchParams.get('project_id');
 
-  const [projects, setProjects] = useState([]);
-  const [selectedProjectId, setSelectedProjectId] = useState(initialProjectId || '');
-  const [currentProject, setCurrentProject] = useState(null);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [selectedProjectId, setSelectedProjectId] = useState<string>(initialProjectId || '');
+  const [currentProject, setCurrentProject] = useState<Project | null>(null);
 
-  const [experiments, setExperiments] = useState([]);
-  const [selectedExperimentId, setSelectedExperimentId] = useState('');
-  const [currentExperiment, setCurrentExperiment] = useState(null);
-  const [leaderboard, setLeaderboard] = useState([]);
-  const [recommendations, setRecommendations] = useState([]);
+  const [experiments, setExperiments] = useState<Experiment[]>([]);
+  const [selectedExperimentId, setSelectedExperimentId] = useState<string>('');
+  const [currentExperiment, setCurrentExperiment] = useState<Experiment | null>(null);
+  const [_leaderboard, setLeaderboard] = useState<ModelItem[]>([]);
+  const [recommendations, setRecommendations] = useState<RecommendationItem[]>([]);
 
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string>('');
 
   // Active tab state: 'fit_diagnosis' | 'why_not' | 'recommendations'
-  const [activeTab, setActiveTab] = useState('fit_diagnosis');
+  const [activeTab, setActiveTab] = useState<'fit_diagnosis' | 'why_not' | 'recommendations'>('fit_diagnosis');
 
-  const [passportModalOpen, setPassportModalOpen] = useState(false);
-  const [selectedPassportModelId, setSelectedPassportModelId] = useState(null);
+  const [passportModalOpen, setPassportModalOpen] = useState<boolean>(false);
+  const [selectedPassportModelId, setSelectedPassportModelId] = useState<string | null>(null);
 
   // 1. Load Projects List
   useEffect(() => {
@@ -110,8 +103,10 @@ export const DiagnosticsStage = () => {
           // Get leaderboard for latest experiment
           try {
             const lbRes = await modelApi.getLeaderboard(selectedProjectId, latestExp.id);
-            setLeaderboard(lbRes.data?.leaderboard || lbRes.data || []);
-          } catch (lbErr) {
+            const raw = lbRes.data;
+            const list = Array.isArray(raw) ? raw : (raw?.leaderboard || raw?.models || []);
+            setLeaderboard(list);
+          } catch {
             setLeaderboard([]);
           }
         } else {
@@ -139,19 +134,23 @@ export const DiagnosticsStage = () => {
     }
   }, [selectedExperimentId, experiments]);
 
-  const handleProjectChange = (e) => {
+  const handleProjectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const newId = e.target.value;
     setSelectedProjectId(newId);
     setSearchParams({ project_id: newId });
   };
 
   // Helper to extract primary CV metric from model record
-  const getPrimaryCvMetric = (model, metricName) => {
-    if (!model || !model.metrics) {
-      return model?.quick_cv_score != null ? Number(model.quick_cv_score) : null;
+  const getPrimaryCvMetric = (model: ModelItem | null | undefined, metricName: string | undefined): number | null => {
+    if (!model) return null;
+    const mMetrics = (model as unknown as { metrics?: Array<{ split?: string; metric_name?: string; metric_value?: number }> }).metrics;
+    if (!mMetrics) {
+      return (model as unknown as { quick_cv_score?: number }).quick_cv_score != null
+        ? Number((model as unknown as { quick_cv_score?: number }).quick_cv_score)
+        : model.primary_metric_value != null ? Number(model.primary_metric_value) : null;
     }
     const targetMetric = metricName?.toLowerCase();
-    const cvMean = model.metrics.find(
+    const cvMean = mMetrics.find(
       (m) =>
         m.split === 'CV_MEAN' &&
         (m.metric_name?.toLowerCase() === targetMetric ||
@@ -160,14 +159,18 @@ export const DiagnosticsStage = () => {
     if (cvMean && cvMean.metric_value != null) {
       return Number(cvMean.metric_value);
     }
-    return model.quick_cv_score != null ? Number(model.quick_cv_score) : null;
+    return (model as unknown as { quick_cv_score?: number }).quick_cv_score != null
+      ? Number((model as unknown as { quick_cv_score?: number }).quick_cv_score)
+      : model.primary_metric_value != null ? Number(model.primary_metric_value) : null;
   };
 
   // Helper to extract Train metric for generalization gap
-  const getTrainMetric = (model, metricName) => {
-    if (!model || !model.metrics) return null;
+  const getTrainMetric = (model: ModelItem | null | undefined, metricName: string | undefined): number | null => {
+    if (!model) return null;
+    const mMetrics = (model as unknown as { metrics?: Array<{ split?: string; metric_name?: string; metric_value?: number }> }).metrics;
+    if (!mMetrics) return null;
     const targetMetric = metricName?.toLowerCase();
-    const trainMetric = model.metrics.find(
+    const trainMetric = mMetrics.find(
       (m) =>
         m.split === 'TRAIN' &&
         (m.metric_name?.toLowerCase() === targetMetric ||
@@ -177,7 +180,7 @@ export const DiagnosticsStage = () => {
   };
 
   // Resolve winning model and candidate models for current experiment
-  const trainedModels = currentExperiment?.trained_models || [];
+  const trainedModels: ModelItem[] = (currentExperiment as unknown as { trained_models?: ModelItem[] })?.trained_models || [];
   const winningModel =
     trainedModels.find((m) => m.id === currentExperiment?.selected_model_id) ||
     (trainedModels.length > 0 ? trainedModels[0] : null);
@@ -188,7 +191,7 @@ export const DiagnosticsStage = () => {
   const selectionDirection = currentExperiment?.selection_direction || 'MINIMIZE';
 
   // Compute fit diagnosis badge styling
-  const renderFitBadge = (diagnosis) => {
+  const renderFitBadge = (diagnosis?: string) => {
     switch (diagnosis) {
       case 'GOOD_FIT':
         return (
@@ -228,7 +231,7 @@ export const DiagnosticsStage = () => {
   };
 
   // Generate automated "Why Not" reason for non-winning candidates
-  const generateWhyNotReason = (candidate, winner) => {
+  const generateWhyNotReason = (candidate: ModelItem, winner: ModelItem | null) => {
     if (!winner || !candidate) return 'Not selected by authoritative leaderboard ranking.';
 
     const winnerCv = getPrimaryCvMetric(winner, primaryMetricName);
@@ -304,7 +307,7 @@ export const DiagnosticsStage = () => {
             >
               {projects.map((p) => (
                 <option key={p.id} value={p.id}>
-                  {p.project_name} ({p.task_type || 'Unset'})
+                  {p.project_name || p.name} ({p.task_type || 'Unset'})
                 </option>
               ))}
             </select>
@@ -345,7 +348,7 @@ export const DiagnosticsStage = () => {
       <div className="flex flex-wrap gap-2 p-1.5 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-full w-fit shadow-sm">
         <button
           onClick={() => setActiveTab('fit_diagnosis')}
-          className={`px-4 py-2 rounded-full text-xs font-bold flex items-center space-x-2 transition-all ${
+          className={`px-4 py-2 rounded-full text-xs font-bold flex items-center space-x-2 transition-all cursor-pointer ${
             activeTab === 'fit_diagnosis'
               ? 'bg-[var(--color-accent)] text-white shadow-sm'
               : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-hover)]'
@@ -364,7 +367,7 @@ export const DiagnosticsStage = () => {
 
         <button
           onClick={() => setActiveTab('why_not')}
-          className={`px-4 py-2 rounded-full text-xs font-bold flex items-center space-x-2 transition-all ${
+          className={`px-4 py-2 rounded-full text-xs font-bold flex items-center space-x-2 transition-all cursor-pointer ${
             activeTab === 'why_not'
               ? 'bg-[var(--color-accent)] text-white shadow-sm'
               : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-hover)]'
@@ -383,7 +386,7 @@ export const DiagnosticsStage = () => {
 
         <button
           onClick={() => setActiveTab('recommendations')}
-          className={`px-4 py-2 rounded-full text-xs font-bold flex items-center space-x-2 transition-all ${
+          className={`px-4 py-2 rounded-full text-xs font-bold flex items-center space-x-2 transition-all cursor-pointer ${
             activeTab === 'recommendations'
               ? 'bg-[var(--color-accent)] text-white shadow-sm'
               : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-hover)]'
@@ -433,7 +436,7 @@ export const DiagnosticsStage = () => {
                     const trainScore = getTrainMetric(model, primaryMetricName);
                     
                     // Gap computation
-                    let gapPercent = null;
+                    let gapPercent: number | null = null;
                     if (trainScore != null && cvScore != null) {
                       const diff = Math.abs(cvScore - trainScore);
                       gapPercent = (diff / (Math.abs(trainScore) + 1e-9)) * 100;
@@ -526,7 +529,7 @@ export const DiagnosticsStage = () => {
                               setSelectedPassportModelId(model.id);
                               setPassportModalOpen(true);
                             }}
-                            className="px-3 py-1 rounded-full bg-[var(--color-surface-hover)] hover:bg-[var(--color-surface-card)] border border-[var(--color-border)] text-[var(--color-text)] font-semibold flex items-center space-x-1.5 cursor-pointer transition text-[11px]"
+                            className="px-3 py-1 rounded-full bg-[var(--color-surface-hover)] hover:bg-[var(--color-surface-card)] border border-[var(--color-border)] text-[var(--color-text)] font-semibold flex items-center space-x-1.5 cursor-pointer transition text-[11px] shadow-xs"
                             title="View Technical Model Passport"
                           >
                             <FileText className="w-3 h-3 text-[var(--color-accent)]" />
@@ -579,7 +582,7 @@ export const DiagnosticsStage = () => {
                           setSelectedPassportModelId(winningModel.id);
                           setPassportModalOpen(true);
                         }}
-                        className="px-4 py-2 rounded-full bg-[var(--color-accent-soft)] hover:bg-[var(--color-accent)] hover:text-white text-[var(--color-accent)] border border-[var(--color-accent-border)] text-xs font-bold flex items-center space-x-1.5 transition cursor-pointer"
+                        className="px-4 py-2 rounded-full bg-[var(--color-accent-soft)] hover:bg-[var(--color-accent)] hover:text-white text-[var(--color-accent)] border border-[var(--color-accent-border)] text-xs font-bold flex items-center space-x-1.5 transition cursor-pointer shadow-sm"
                         title="View Technical Governance Model Passport"
                       >
                         <FileText className="w-4 h-4" />
@@ -630,7 +633,7 @@ export const DiagnosticsStage = () => {
                                 setSelectedPassportModelId(candidate.id);
                                 setPassportModalOpen(true);
                               }}
-                              className="px-3 py-1 rounded-full bg-[var(--color-surface-hover)] hover:bg-[var(--color-surface-card)] border border-[var(--color-border)] text-[var(--color-text)] font-semibold flex items-center space-x-1 cursor-pointer transition text-[11px]"
+                              className="px-3 py-1 rounded-full bg-[var(--color-surface-hover)] hover:bg-[var(--color-surface-card)] border border-[var(--color-border)] text-[var(--color-text)] font-semibold flex items-center space-x-1 cursor-pointer transition text-[11px] shadow-xs"
                               title="View Model Passport"
                             >
                               <FileText className="w-3.5 h-3.5 text-[var(--color-accent)]" />
@@ -755,7 +758,6 @@ export const DiagnosticsStage = () => {
       {passportModalOpen && selectedPassportModelId && (
         <ModelPassportModal
           modelId={selectedPassportModelId}
-          isOpen={passportModalOpen}
           onClose={() => {
             setPassportModalOpen(false);
             setSelectedPassportModelId(null);

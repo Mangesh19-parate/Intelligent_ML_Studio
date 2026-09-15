@@ -1,8 +1,23 @@
 import React, { useState } from 'react';
-import { Activity, Info } from 'lucide-react';
+import { Activity } from 'lucide-react';
 
-export const CorrelationHeatmap = ({ correlationData }) => {
-  const [hoveredCell, setHoveredCell] = useState(null);
+export interface CorrelationData {
+  columns: string[];
+  matrix: (number | null)[][];
+}
+
+export interface CorrelationHeatmapProps {
+  correlationData?: CorrelationData | null;
+}
+
+interface HoveredCellState {
+  row: string;
+  col: string;
+  val: number | null | undefined;
+}
+
+export const CorrelationHeatmap: React.FC<CorrelationHeatmapProps> = ({ correlationData }) => {
+  const [hoveredCell, setHoveredCell] = useState<HoveredCellState | null>(null);
 
   if (!correlationData || !correlationData.columns || correlationData.columns.length === 0) {
     return (
@@ -15,9 +30,8 @@ export const CorrelationHeatmap = ({ correlationData }) => {
 
   const { columns, matrix } = correlationData;
 
-  const getColor = (value) => {
+  const getColor = (value: number | null | undefined): string => {
     if (value === null || value === undefined) return 'bg-[var(--color-surface-hover)] text-[var(--color-text-muted)]';
-    // Diverging palette: Darker Accent / Orange / Neutral / Teal
     if (value >= 0.8) return 'bg-emerald-600 text-white font-bold';
     if (value >= 0.5) return 'bg-emerald-500/60 text-emerald-950 dark:text-emerald-100 font-bold';
     if (value >= 0.2) return 'bg-emerald-500/25 text-emerald-900 dark:text-emerald-200';
@@ -106,12 +120,12 @@ export const CorrelationHeatmap = ({ correlationData }) => {
       </div>
 
       {hoveredCell && (
-        <div className="mt-3 p-3 bg-[var(--color-surface-hover)] border border-[var(--color-border)] rounded-xl text-xs font-mono flex items-center justify-between text-[var(--color-text)] animate-fadeIn">
+        <div className="mt-3 p-3 bg-[var(--color-surface-hover)] border border-[var(--color-border)] rounded-xl text-xs font-mono flex items-center justify-between text-[var(--color-text)]">
           <span>
             Correlation (<strong className="text-[var(--color-accent)]">{hoveredCell.row}</strong> vs <strong className="text-emerald-600 dark:text-emerald-400">{hoveredCell.col}</strong>):
           </span>
           <strong className="text-sm font-bold text-[var(--color-text)]">
-            {hoveredCell.val !== null ? hoveredCell.val.toFixed(4) : 'N/A'}
+            {hoveredCell.val !== null && hoveredCell.val !== undefined ? hoveredCell.val.toFixed(4) : 'N/A'}
           </strong>
         </div>
       )}

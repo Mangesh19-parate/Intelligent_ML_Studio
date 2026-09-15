@@ -2,21 +2,75 @@ import React, { useState } from 'react';
 import {
   FileText,
   AlertTriangle,
-  Info,
-  Layers,
-  Database,
   Search,
   ChevronDown,
   ChevronUp,
-  Percent,
-  TrendingUp,
   CheckCircle2,
 } from 'lucide-react';
 
-export const ComprehensiveProfilingReport = ({ edaReport }) => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterType, setFilterType] = useState('ALL');
-  const [expandedVar, setExpandedVar] = useState(null);
+interface DatasetOverview {
+  dqi_score?: number;
+  row_count?: number;
+  column_count?: number;
+  missing_cells?: number;
+  missing_percentage?: number;
+  duplicate_rows?: number;
+  duplicate_percentage?: number;
+  memory_size_kb?: number;
+  variable_types?: {
+    Numeric?: number;
+    Categorical?: number;
+    Datetime?: number;
+    Boolean?: number;
+  };
+}
+
+interface TopCategory {
+  value?: string;
+  count?: number;
+  percentage?: number;
+}
+
+interface VariableProfile {
+  name: string;
+  type: string;
+  is_mixed?: boolean;
+  distinct_count?: number;
+  distinct_percentage?: number;
+  missing_count: number;
+  missing_percentage?: number;
+  mean?: number | string;
+  min?: number | string;
+  q25?: number | string;
+  median?: number | string;
+  q75?: number | string;
+  max?: number | string;
+  std?: number | string;
+  iqr?: number | string;
+  skewness?: number | string;
+  top_categories?: TopCategory[];
+}
+
+interface QualityWarning {
+  type: string;
+  message: string;
+}
+
+export interface ComprehensiveEDAReport {
+  overview?: DatasetOverview;
+  variables?: Record<string, VariableProfile>;
+  warnings?: QualityWarning[];
+  [key: string]: unknown;
+}
+
+interface ComprehensiveProfilingReportProps {
+  edaReport?: ComprehensiveEDAReport | null;
+}
+
+export const ComprehensiveProfilingReport: React.FC<ComprehensiveProfilingReportProps> = ({ edaReport }) => {
+  const [searchTerm, setSearchTerm] = useState<string>('');
+  const [filterType, setFilterType] = useState<string>('ALL');
+  const [expandedVar, setExpandedVar] = useState<string | null>(null);
 
   if (!edaReport || !edaReport.overview) {
     return null;

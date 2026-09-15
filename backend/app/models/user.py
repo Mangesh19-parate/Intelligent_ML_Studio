@@ -14,6 +14,9 @@ class User(Base, TimestampMixin):
     role_id = Column(Uuid(as_uuid=True), ForeignKey("roles.id", ondelete="RESTRICT"), nullable=False)
     is_active = Column(Boolean, default=True, nullable=False)
     password_changed_at = Column(DateTime(timezone=True), nullable=True)
+    is_two_factor_enabled = Column(Boolean, default=False, nullable=False)
+    two_factor_secret = Column(String(128), nullable=True)
+    two_factor_backup_codes = Column(String, nullable=True)
 
     role = relationship("Role", back_populates="users", lazy="joined")
     projects = relationship("Project", back_populates="owner", cascade="all, delete-orphan")

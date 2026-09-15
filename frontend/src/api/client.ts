@@ -16,39 +16,103 @@ import {
   Deployment,
   PredictionResponse,
   AuditLogRecord,
+  LivenessResponse,
+  ReadinessResponse,
+  DetailedHealthResponse,
+  LoginResponse,
+  TwoFactorSetupResponse,
+  TwoFactorConfirmRequest,
+  TwoFactorVerifyLoginRequest,
+  TwoFactorDisableRequest,
+  TwoFactorStatusResponse,
 } from '../types/api';
 
 const API_BASE_URL = (import.meta as any).env?.VITE_API_URL || '/api/v1';
 
+let inMemoryAccessToken: string | null = null;
+
+export const setAccessToken = (token: string | null): void => {
+  inMemoryAccessToken = token;
+};
+
+export const getAccessToken = (): string | null => inMemoryAccessToken;
+
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
+  withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-// Request interceptor: Attach JWT token if present
+// Request interceptor: Attach in-memory JWT token if present
 apiClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    const token = localStorage.getItem('access_token');
-    if (token && config.headers) {
-      config.headers.Authorization = `Bearer ${token}`;
+    if (inMemoryAccessToken && config.headers) {
+      config.headers.Authorization = `Bearer ${inMemoryAccessToken}`;
     }
     return config;
   },
   (error) => Promise.reject(error)
 );
 
-// Response interceptor: handle 401 logout
+// Response interceptor: handle 401 refresh & retry
+let isRefreshing = false;
+let failedQueue: Array<{
+  resolve: (value?: any) => void;
+  reject: (reason?: any) => void;
+}> = [];
+
+const processQueue = (error: any, token: string | null = null) => {
+  failedQueue.forEach((prom) => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token);
+    }
+  });
+  failedQueue = [];
+};
+
 apiClient.interceptors.response.use(
   (response: AxiosResponse) => response,
-  (error) => {
-    if (error.response && error.response.status === 401) {
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('refresh_token');
-      localStorage.removeItem('user');
-      if (window.location.pathname !== '/login') {
-        window.location.href = '/login';
+  async (error) => {
+    const originalRequest = error.config;
+    if (error.response?.status === 401 && !originalRequest._retry && !originalRequest.url?.includes('/auth/login') && !originalRequest.url?.includes('/auth/refresh')) {
+      if (isRefreshing) {
+        return new Promise((resolve, reject) => {
+          failedQueue.push({ resolve, reject });
+        })
+          .then((token) => {
+            originalRequest.headers.Authorization = `Bearer ${token}`;
+            return apiClient(originalRequest);
+          })
+          .catch((err) => Promise.reject(err));
+      }
+
+      originalRequest._retry = true;
+      isRefreshing = true;
+
+      try {
+        const refreshRes = await axios.post(
+          `${API_BASE_URL}/auth/refresh`,
+          {},
+          { withCredentials: true }
+        );
+        const newAccessToken = refreshRes.data.access_token;
+        setAccessToken(newAccessToken);
+        processQueue(null, newAccessToken);
+        originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+        return apiClient(originalRequest);
+      } catch (refreshErr) {
+        processQueue(refreshErr, null);
+        setAccessToken(null);
+        if (window.location.pathname !== '/login') {
+          window.location.href = '/login';
+        }
+        return Promise.reject(refreshErr);
+      } finally {
+        isRefreshing = false;
       }
     }
     return Promise.reject(error);
@@ -56,10 +120,51 @@ apiClient.interceptors.response.use(
 );
 
 export const authApi = {
-  login: (email: string, password: string) => apiClient.post('/auth/login', { email, password }),
+  login: async (email: string, password: string) => {
+    const res = await apiClient.post<LoginResponse>('/auth/login', { email, password });
+    if (res.data?.access_token) {
+      setAccessToken(res.data.access_token);
+    }
+    return res;
+  },
   register: (fullName: string, email: string, password: string) =>
     apiClient.post('/auth/signup', { full_name: fullName, email, password }),
+  refresh: async () => {
+    const res = await apiClient.post('/auth/refresh', {});
+    if (res.data?.access_token) {
+      setAccessToken(res.data.access_token);
+    }
+    return res;
+  },
+  logout: async () => {
+    try {
+      await apiClient.post('/auth/logout');
+    } catch {
+      // ignore logout network errors
+    } finally {
+      setAccessToken(null);
+    }
+  },
   getMe: () => apiClient.get<User>('/auth/me'),
+};
+
+export const twoFactorApi = {
+  verifyLogin: async (twoFactorToken: string, code: string) => {
+    const res = await apiClient.post<{ access_token: string; refresh_token: string; token_type: string; user: User }>(
+      '/auth/2fa/verify-login',
+      { two_factor_token: twoFactorToken, code }
+    );
+    if (res.data?.access_token) {
+      setAccessToken(res.data.access_token);
+    }
+    return res;
+  },
+  setup: () => apiClient.post<TwoFactorSetupResponse>('/auth/2fa/setup'),
+  confirm: (payload: TwoFactorConfirmRequest) =>
+    apiClient.post<{ message: string }>('/auth/2fa/confirm', payload),
+  disable: (payload: TwoFactorDisableRequest) =>
+    apiClient.post<{ message: string }>('/auth/2fa/disable', payload),
+  getStatus: () => apiClient.get<TwoFactorStatusResponse>('/auth/2fa/status'),
 };
 
 export const workspaceApi = {
@@ -157,7 +262,7 @@ export const experimentApi = {
 
 export const modelApi = {
   getLeaderboard: (projectId: string, experimentId: string | null = null) =>
-    apiClient.get<ModelLeaderboardItem[]>(`/projects/${projectId}/leaderboard${experimentId ? `?experiment_id=${experimentId}` : ''}`),
+    apiClient.get<any>(`/projects/${projectId}/leaderboard${experimentId ? `?experiment_id=${experimentId}` : ''}`),
   getMetrics: (modelId: string) => apiClient.get(`/models/${modelId}/metrics`),
   getPassport: (modelId: string) => apiClient.get<ModelPassport>(`/models/${modelId}/passport`),
   getExplainability: (modelId: string, backgroundSampleSize = 200) =>
@@ -207,6 +312,13 @@ export const adminApi = {
     if (search) url += `&search=${encodeURIComponent(search)}`;
     return apiClient.get<AuditLogRecord[]>(url);
   },
+};
+
+export const healthApi = {
+  getBaseline: () => apiClient.get('/health'),
+  getLive: () => apiClient.get<LivenessResponse>('/health/live'),
+  getReady: () => apiClient.get<ReadinessResponse>('/health/ready'),
+  getStatus: () => apiClient.get<DetailedHealthResponse>('/health/status'),
 };
 
 export default apiClient;

@@ -8,6 +8,7 @@ import { RecommendationsList } from '../components/RecommendationsList';
 import { ColumnStatsTable } from '../components/ColumnStatsTable';
 import { TransformationsTable } from '../components/TransformationsTable';
 import { ModelTraining } from '../components/ModelTraining';
+import { Project, Dataset, DatasetColumn, SplitResponse, RecommendationItem, TaskType, TaskTypeConfidence } from '../types/api';
 import {
   Upload,
   Database,
@@ -15,9 +16,7 @@ import {
   FileSpreadsheet,
   CheckCircle2,
   AlertTriangle,
-  Layers,
   Sparkles,
-  Info,
   Clock,
   Lock,
   ShieldCheck,
@@ -29,30 +28,33 @@ import {
   Check,
   BarChart3,
   RefreshCw,
-  Lightbulb,
   Table,
-  Activity,
-  Flame,
   Wand2,
   Cpu
 } from 'lucide-react';
 
-export const ProjectDetail = () => {
-  const { id } = useParams();
-  const [searchParams, setSearchParams] = useSearchParams();
+interface DevPreviewData {
+  preview_rows: Record<string, unknown>[];
+  columns: string[];
+  total_development_rows: number;
+}
+
+export const ProjectDetail: React.FC = () => {
+  const { id } = useParams<{ id: string }>();
+  const [searchParams] = useSearchParams();
   const urlTab = searchParams.get('tab');
-  const [project, setProject] = useState(null);
-  const [datasets, setDatasets] = useState([]);
-  const [selectedDataset, setSelectedDataset] = useState(null);
-  const [columns, setColumns] = useState([]);
-  const [splitSummary, setSplitSummary] = useState(null);
-  const [devPreview, setDevPreview] = useState(null);
+  const [project, setProject] = useState<Project | null>(null);
+  const [datasets, setDatasets] = useState<Dataset[]>([]);
+  const [selectedDataset, setSelectedDataset] = useState<Dataset | null>(null);
+  const [columns, setColumns] = useState<DatasetColumn[]>([]);
+  const [splitSummary, setSplitSummary] = useState<SplitResponse | null>(null);
+  const [devPreview, setDevPreview] = useState<DevPreviewData | null>(null);
   
   // Profiling & Diagnostics State
-  const [profilingReport, setProfilingReport] = useState(null);
-  const [recommendations, setRecommendations] = useState([]);
-  const [profilingRunning, setProfilingRunning] = useState(false);
-  const [activeTab, setActiveTab] = useState(urlTab || 'PROFILING');
+  const [profilingReport, setProfilingReport] = useState<any>(null);
+  const [recommendations, setRecommendations] = useState<RecommendationItem[]>([]);
+  const [profilingRunning, setProfilingRunning] = useState<boolean>(false);
+  const [activeTab, setActiveTab] = useState<string>(urlTab || 'PROFILING');
 
   useEffect(() => {
     if (urlTab) {
@@ -60,48 +62,51 @@ export const ProjectDetail = () => {
     }
   }, [urlTab]);
 
-  const [loading, setLoading] = useState(true);
-  const [uploading, setUploading] = useState(false);
-  const [creatingSplit, setCreatingSplit] = useState(false);
-  const [lockedTestPct, setLockedTestPct] = useState(20);
-  const [splitSeed, setSplitSeed] = useState('');
-  const [dragOver, setDragOver] = useState(false);
-  const [error, setError] = useState('');
-  const [successMsg, setSuccessMsg] = useState('');
-  const fileInputRef = useRef(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [uploading, setUploading] = useState<boolean>(false);
+  const [creatingSplit, setCreatingSplit] = useState<boolean>(false);
+  const [lockedTestPct, setLockedTestPct] = useState<number>(20);
+  const [splitSeed, setSplitSeed] = useState<string>('');
+  const [dragOver, setDragOver] = useState<boolean>(false);
+  const [error, setError] = useState<string>('');
+  const [successMsg, setSuccessMsg] = useState<string>('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const loadSplitAndPreview = async (datasetId) => {
+  const loadSplitAndPreview = async (datasetId: string) => {
     try {
       const splitRes = await datasetSplitApi.getSplit(datasetId);
       setSplitSummary(splitRes.data);
 
       const previewRes = await datasetSplitApi.getDevelopmentPreview(datasetId, 10);
       setDevPreview(previewRes.data);
-    } catch (err) {
-      if (err.response?.status === 404) {
+    } catch (err: unknown) {
+      const e = err as { response?: { status?: number } };
+      if (e.response?.status === 404) {
         setSplitSummary(null);
         setDevPreview(null);
       }
     }
   };
 
-  const loadProfilingAndRecs = async (datasetId) => {
+  const loadProfilingAndRecs = async (datasetId: string) => {
+    if (!id) return;
     try {
       const profRes = await datasetApi.getProfile(datasetId);
       setProfilingReport(profRes.data);
-    } catch (err) {
+    } catch {
       setProfilingReport(null);
     }
 
     try {
       const recsRes = await projectApi.getRecommendations(id);
       setRecommendations(recsRes.data || []);
-    } catch (err) {
+    } catch {
       setRecommendations([]);
     }
   };
 
   const loadData = async () => {
+    if (!id) return;
     try {
       setLoading(true);
       setError('');
@@ -119,8 +124,9 @@ export const ProjectDetail = () => {
         await loadSplitAndPreview(latest.id);
         await loadProfilingAndRecs(latest.id);
       }
-    } catch (err) {
-      setError(err.response?.data?.detail || 'Failed to load project details');
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { detail?: string } } };
+      setError(e.response?.data?.detail || 'Failed to load project details');
     } finally {
       setLoading(false);
     }
@@ -130,7 +136,7 @@ export const ProjectDetail = () => {
     loadData();
   }, [id]);
 
-  const handleSelectDataset = async (dataset) => {
+  const handleSelectDataset = async (dataset: Dataset) => {
     setSelectedDataset(dataset);
     setError('');
     setSuccessMsg('');
@@ -144,25 +150,26 @@ export const ProjectDetail = () => {
     }
   };
 
-  const handleFileUpload = async (file) => {
-    if (!file) return;
+  const handleFileUpload = async (file: File | undefined) => {
+    if (!file || !id) return;
     setUploading(true);
     setError('');
     setSuccessMsg('');
     try {
-      const res = await datasetApi.upload(id, file);
+      await datasetApi.upload(id, file);
       setSuccessMsg('Dataset uploaded and structural metadata inferred successfully.');
       await loadData();
-    } catch (err) {
-      setError(err.response?.data?.detail || 'Upload and structural parse failed');
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { detail?: string } } };
+      setError(e.response?.data?.detail || 'Upload and structural parse failed');
     } finally {
       setUploading(false);
     }
   };
 
-  const handleCreateSplit = async (e) => {
+  const handleCreateSplit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedDataset) return;
+    if (!selectedDataset || !id) return;
     setCreatingSplit(true);
     setError('');
     setSuccessMsg('');
@@ -181,8 +188,9 @@ export const ProjectDetail = () => {
       // Refresh project
       const projRes = await projectApi.get(id);
       setProject(projRes.data);
-    } catch (err) {
-      setError(err.response?.data?.detail || 'Failed to create outer split');
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { detail?: string } } };
+      setError(e.response?.data?.detail || 'Failed to create outer split');
     } finally {
       setCreatingSplit(false);
     }
@@ -194,7 +202,7 @@ export const ProjectDetail = () => {
   };
 
   const handleTriggerProfile = async () => {
-    if (!selectedDataset) return;
+    if (!selectedDataset || !id) return;
     setProfilingRunning(true);
     setError('');
     setSuccessMsg('');
@@ -209,14 +217,16 @@ export const ProjectDetail = () => {
 
       const recsRes = await projectApi.getRecommendations(id);
       setRecommendations(recsRes.data || []);
-    } catch (err) {
-      setError(err.response?.data?.detail || 'Profiling execution failed');
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { detail?: string } } };
+      setError(e.response?.data?.detail || 'Profiling execution failed');
     } finally {
       setProfilingRunning(false);
     }
   };
 
-  const handleTaskTypeConfirmed = async (taskType) => {
+  const handleTaskTypeConfirmed = async (taskType: TaskType) => {
+    if (!id) return;
     const projRes = await projectApi.updateTaskType(id, taskType);
     setProject(projRes.data);
     setSuccessMsg(`Task type confirmed as ${taskType}.`);
@@ -229,6 +239,8 @@ export const ProjectDetail = () => {
       </div>
     );
   }
+
+  if (!id) return null;
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
@@ -248,7 +260,7 @@ export const ProjectDetail = () => {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <div className="flex items-center space-x-3">
-              <h1 className="text-2xl font-extrabold text-white">{project?.project_name}</h1>
+              <h1 className="text-2xl font-extrabold text-white">{project?.project_name || project?.name}</h1>
               <span className="px-3 py-1 rounded-full text-xs font-semibold bg-indigo-500/10 border border-indigo-500/20 text-indigo-400">
                 {project?.task_type}
               </span>
@@ -513,7 +525,7 @@ export const ProjectDetail = () => {
                   <TaskTypeSelector
                     projectId={id}
                     currentTaskType={project?.task_type}
-                    taskTypeConfidence={project?.task_type_confidence}
+                    taskTypeConfidence={project?.task_type_confidence as TaskTypeConfidence | undefined}
                     taskTypeSuggestion={profilingReport.task_type_suggestion}
                     onTaskTypeConfirmed={handleTaskTypeConfirmed}
                   />
@@ -867,3 +879,5 @@ export const ProjectDetail = () => {
     </div>
   );
 };
+
+export default ProjectDetail;

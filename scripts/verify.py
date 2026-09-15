@@ -2,10 +2,12 @@
 """
 Intelligent ML Studio - Unified Verification Suite
 Runs end-to-end verification across Backend Tests, Frontend Typechecks, Frontend Tests, and Production Builds.
+Streams real-time output for complete transparency.
 """
 
 import sys
 import os
+import re
 import subprocess
 import time
 from pathlib import Path
@@ -22,51 +24,68 @@ FRONTEND_DIR = ROOT_DIR / "frontend"
 BACKEND_DIR = ROOT_DIR / "backend"
 
 def run_step(step_name: str, cmd: list[str], cwd: Path) -> tuple[bool, str, float]:
-    print(f"\n[{step_name}] Running: {' '.join(cmd)}")
+    print(f"\n[{step_name}] Running: {' '.join(cmd)}", flush=True)
     start_time = time.time()
     
-    # On Windows, resolve npm / npx to .cmd if needed
-    executable = cmd[0]
-    if sys.platform == "win32" and executable in ["npm", "npx"]:
-        cmd[0] = f"{executable}.cmd"
-        
+    is_win = (sys.platform == "win32")
+    is_npm = cmd[0] in ["npm", "npx"]
+    
     try:
         env = os.environ.copy()
         env["PYTHONIOENCODING"] = "utf-8"
         
-        proc = subprocess.run(
-            cmd,
+        if is_win and is_npm:
+            exec_args = " ".join(cmd)
+            use_shell = True
+        else:
+            exec_args = cmd
+            use_shell = False
+        
+        proc = subprocess.Popen(
+            exec_args,
             cwd=str(cwd),
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             text=True,
             encoding="utf-8",
             errors="replace",
-            env=env
+            env=env,
+            shell=use_shell
         )
+        
+        output_lines = []
+        for line in iter(proc.stdout.readline, ""):
+            output_lines.append(line)
+            # Print condensed progress if line contains dots or passed
+            if ("passed" in line.lower() or "error" in line.lower() or "failed" in line.lower() or "building" in line.lower() or "built" in line.lower() or "%" in line):
+                print(f"  > {line.strip()}", flush=True)
+                
+        proc.stdout.close()
+        proc.wait()
+        
         duration = time.time() - start_time
         success = (proc.returncode == 0)
-        output = proc.stdout.strip()
+        full_output = "".join(output_lines).strip()
         
         if success:
-            print(f"[{step_name}] PASSED ({duration:.2f}s)")
+            print(f"[{step_name}] PASSED ({duration:.2f}s)", flush=True)
         else:
-            print(f"[{step_name}] FAILED (exit code {proc.returncode}, {duration:.2f}s)")
-            print("-" * 40 + " OUTPUT " + "-" * 40)
-            clean_out = output.encode('ascii', errors='replace').decode('ascii')
-            print(clean_out[:3000] + ("\n... [truncated]" if len(clean_out) > 3000 else ""))
-            print("-" * 88)
+            print(f"[{step_name}] FAILED (exit code {proc.returncode}, {duration:.2f}s)", flush=True)
+            print("-" * 40 + " OUTPUT " + "-" * 40, flush=True)
+            clean_out = full_output.encode('ascii', errors='replace').decode('ascii')
+            print(clean_out[:3000] + ("\n... [truncated]" if len(clean_out) > 3000 else ""), flush=True)
+            print("-" * 88, flush=True)
             
-        return success, output, duration
+        return success, full_output, duration
     except Exception as e:
         duration = time.time() - start_time
-        print(f"[{step_name}] ERROR: {e}")
+        print(f"[{step_name}] ERROR: {e}", flush=True)
         return False, str(e), duration
 
 def main():
-    print("=" * 80)
-    print(" INTELLIGENT ML STUDIO - END-TO-END VERIFICATION SUITE")
-    print("=" * 80)
+    print("=" * 80, flush=True)
+    print(" INTELLIGENT ML STUDIO - END-TO-END VERIFICATION SUITE", flush=True)
+    print("=" * 80, flush=True)
     
     results = []
     
@@ -84,7 +103,9 @@ def main():
         [sys.executable, "-m", "pytest", "backend/tests", "-q"],
         ROOT_DIR
     )
-    results.append(("Backend Test Suite (467 Tests)", s2_success, s2_dur))
+    match = re.search(r"(\d+)\s+passed", s2_out)
+    count_label = f" ({match.group(1)} Passed)" if match else ""
+    results.append((f"Backend Test Suite{count_label}", s2_success, s2_dur))
     
     # Stage 3: Frontend TypeScript Typecheck
     s3_success, s3_out, s3_dur = run_step(
@@ -111,30 +132,30 @@ def main():
     results.append(("Frontend Production Build (Vite)", s5_success, s5_dur))
     
     # Summary Scorecard
-    print("\n" + "=" * 80)
-    print(" VERIFICATION SCORECARD")
-    print("=" * 80)
-    print(f"{'Verification Stage':<45} | {'Duration':<10} | {'Status':<10}")
-    print("-" * 80)
+    print("\n" + "=" * 80, flush=True)
+    print(" VERIFICATION SCORECARD", flush=True)
+    print("=" * 80, flush=True)
+    print(f"{'Verification Stage':<45} | {'Duration':<10} | {'Status':<10}", flush=True)
+    print("-" * 80, flush=True)
     
     all_passed = True
     total_time = 0.0
     for name, success, dur in results:
         status_str = "PASSED" if success else "FAILED"
-        print(f"{name:<45} | {dur:>8.2f}s | {status_str:<10}")
+        print(f"{name:<45} | {dur:>8.2f}s | {status_str:<10}", flush=True)
         if not success:
             all_passed = False
         total_time += dur
         
-    print("-" * 80)
-    print(f"{'Total Elapsed Time':<45} | {total_time:>8.2f}s |")
-    print("=" * 80)
+    print("-" * 80, flush=True)
+    print(f"{'Total Elapsed Time':<45} | {total_time:>8.2f}s |", flush=True)
+    print("=" * 80, flush=True)
     
     if all_passed:
-        print("\n>>> ALL VERIFICATION CHECKS PASSED: SYSTEM IS 100% CLIENT-READY <<<\n")
+        print("\n>>> ALL VERIFICATION CHECKS PASSED: SYSTEM IS 100% CLIENT-READY <<<\n", flush=True)
         sys.exit(0)
     else:
-        print("\n>>> VERIFICATION FAILED: PLEASE RESOLVE THE ABOVE ERRORS <<<\n")
+        print("\n>>> VERIFICATION FAILED: PLEASE RESOLVE THE ABOVE ERRORS <<<\n", flush=True)
         sys.exit(1)
 
 if __name__ == "__main__":

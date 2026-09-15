@@ -1,44 +1,84 @@
 import React, { useState, useEffect } from 'react';
-import Plotly from 'plotly.js-dist-min';
-import createPlotlyComponent from 'react-plotly.js/factory';
+import Plot from 'react-plotly.js';
 import { modelApi } from '../api/client';
 import {
   BrainCircuit,
   Activity,
-  Layers,
   Sparkles,
-  Info,
-  CheckCircle2,
   AlertTriangle,
   Clock,
   ShieldCheck,
   Zap,
-  HelpCircle,
   Database,
-  ArrowRight,
   Calculator,
   RefreshCw,
   X,
 } from 'lucide-react';
 
-const Plot = createPlotlyComponent(Plotly);
+interface ExplainabilitySummary {
+  shap_values?: Record<string, number>;
+  explainer_type?: string;
+  background_sample_size?: number;
+  is_cached?: boolean;
+  generated_at?: string;
+}
 
-export const ExplainabilityViewer = ({
+interface LocalExplainabilityResult {
+  base_value: number;
+  prediction?: number;
+  sum_contributions_plus_base: number;
+  contributions: Record<string, number>;
+}
+
+interface ExplainabilityViewerProps {
+  modelId: string;
+  algorithmName?: string;
+  isWinner?: boolean;
+  hasArtifact?: boolean;
+  onClose: () => void;
+}
+
+export const ExplainabilityViewer: React.FC<ExplainabilityViewerProps> = ({
   modelId,
   algorithmName,
   isWinner,
   hasArtifact,
   onClose,
 }) => {
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [summaryData, setSummaryData] = useState(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const [summaryData, setSummaryData] = useState<ExplainabilitySummary | null>(null);
 
   // Local explanation state
-  const [localInput, setLocalInput] = useState('');
-  const [localLoading, setLocalLoading] = useState(false);
-  const [localError, setLocalError] = useState(null);
-  const [localResult, setLocalResult] = useState(null);
+  const [localInput, setLocalInput] = useState<string>('');
+  const [localLoading, setLocalLoading] = useState<boolean>(false);
+  const [localError, setLocalError] = useState<string | null>(null);
+  const [localResult, setLocalResult] = useState<LocalExplainabilityResult | null>(null);
+
+  const loadGlobalSummary = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const res = await modelApi.getExplainability(modelId);
+      setSummaryData(res.data);
+
+      // Pre-fill local explanation test input template with feature names
+      if (res.data && res.data.shap_values) {
+        const template: Record<string, number> = {};
+        Object.keys(res.data.shap_values).forEach((k) => {
+          template[k] = 1.0;
+        });
+        setLocalInput(JSON.stringify(template, null, 2));
+      }
+    } catch (err: unknown) {
+      console.error('Failed to load explainability summary:', err);
+      const e = err as { response?: { data?: { detail?: string } } };
+      const msg = e.response?.data?.detail || 'Failed to load explainability summary for this model.';
+      setError(msg);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (!hasArtifact && !isWinner) {
@@ -51,42 +91,16 @@ export const ExplainabilityViewer = ({
     loadGlobalSummary();
   }, [modelId]);
 
-  const loadGlobalSummary = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const res = await modelApi.getExplainability(modelId);
-      setSummaryData(res.data);
-
-      // Pre-fill local explanation test input template with feature names
-      if (res.data && res.data.shap_values) {
-        const template = {};
-        Object.keys(res.data.shap_values).forEach((k) => {
-          template[k] = 1.0;
-        });
-        setLocalInput(JSON.stringify(template, null, 2));
-      }
-    } catch (err) {
-      console.error('Failed to load explainability summary:', err);
-      const msg =
-        err.response?.data?.detail ||
-        'Failed to load explainability summary for this model.';
-      setError(msg);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleRunLocalExplanation = async () => {
     try {
       setLocalLoading(true);
       setLocalError(null);
       setLocalResult(null);
 
-      let parsedInput;
+      let parsedInput: Record<string, unknown>;
       try {
         parsedInput = JSON.parse(localInput);
-      } catch (jsonErr) {
+      } catch {
         setLocalError('Invalid JSON format for input instance.');
         setLocalLoading(false);
         return;
@@ -94,11 +108,10 @@ export const ExplainabilityViewer = ({
 
       const res = await modelApi.getLocalExplainability(modelId, parsedInput);
       setLocalResult(res.data);
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('Failed to run local explanation:', err);
-      setLocalError(
-        err.response?.data?.detail || 'Failed to compute instance explanation.'
-      );
+      const e = err as { response?: { data?: { detail?: string } } };
+      setLocalError(e.response?.data?.detail || 'Failed to compute instance explanation.');
     } finally {
       setLocalLoading(false);
     }
@@ -206,7 +219,7 @@ export const ExplainabilityViewer = ({
                   <span>Generated At</span>
                 </div>
                 <div className="text-xs font-mono text-[var(--color-text-muted)] truncate mt-1">
-                  {new Date(summaryData.generated_at).toLocaleString()}
+                  {summaryData.generated_at ? new Date(summaryData.generated_at).toLocaleString() : ''}
                 </div>
               </div>
             </div>
@@ -250,7 +263,7 @@ export const ExplainabilityViewer = ({
                       y: features,
                       marker: {
                         color: shapVals.map(
-                          (v, i) =>
+                          (_v, i) =>
                             `rgba(255, 94, 0, ${0.45 + 0.55 * (i / (shapVals.length || 1))})`
                         ),
                         line: {

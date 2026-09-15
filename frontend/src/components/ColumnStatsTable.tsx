@@ -1,9 +1,41 @@
 import React, { useState } from 'react';
 import { Table, Search, ChevronDown, ChevronUp, BarChart2 } from 'lucide-react';
 
-export const ColumnStatsTable = ({ columnStats = {} }) => {
-  const [search, setSearch] = useState('');
-  const [selectedCol, setSelectedCol] = useState(null);
+export interface FrequencyItem {
+  value: string;
+  count?: number;
+  percentage: number;
+}
+
+export interface ColumnStat {
+  type: string;
+  missing_pct: number;
+  missing_count: number;
+  unique_count: number;
+  is_mixed_type?: boolean;
+  mean?: number | null;
+  std?: number | null;
+  mode?: string | null;
+  granularity?: string | null;
+  skew?: number | null;
+  outlier_pct?: number;
+  outlier_count?: number;
+  min?: number | null;
+  max?: number | null;
+  q25?: number | null;
+  q75?: number | null;
+  median?: number | null;
+  iqr?: number | null;
+  frequency_table?: FrequencyItem[];
+}
+
+export interface ColumnStatsTableProps {
+  columnStats?: Record<string, ColumnStat>;
+}
+
+export const ColumnStatsTable: React.FC<ColumnStatsTableProps> = ({ columnStats = {} }) => {
+  const [search, setSearch] = useState<string>('');
+  const [selectedCol, setSelectedCol] = useState<string | null>(null);
 
   const columnsList = Object.entries(columnStats).map(([name, stats]) => ({
     name,
@@ -92,22 +124,22 @@ export const ColumnStatsTable = ({ columnStats = {} }) => {
                     <td className="py-3 px-3 font-mono text-[var(--color-text)]">{col.unique_count}</td>
                     <td className="py-3 px-3 font-mono text-[var(--color-text)] font-medium">
                       {col.type === 'numeric'
-                        ? col.mean !== null ? col.mean.toFixed(2) : '-'
+                        ? col.mean !== null && col.mean !== undefined ? col.mean.toFixed(2) : '-'
                         : col.mode || '-'}
                     </td>
                     <td className="py-3 px-3 font-mono text-[var(--color-text-muted)]">
                       {col.type === 'numeric'
-                        ? col.std !== null ? col.std.toFixed(2) : '-'
+                        ? col.std !== null && col.std !== undefined ? col.std.toFixed(2) : '-'
                         : col.granularity || '-'}
                     </td>
                     <td className="py-3 px-3 font-mono text-[var(--color-text-muted)]">
                       {col.type === 'numeric'
-                        ? col.skew !== null ? `skew: ${col.skew.toFixed(2)}` : '-'
+                        ? col.skew !== null && col.skew !== undefined ? `skew: ${col.skew.toFixed(2)}` : '-'
                         : '-'}
                     </td>
                     <td className="py-3 px-3 font-mono">
                       {col.type === 'numeric' ? (
-                        <span className={col.outlier_pct > 0 ? 'text-rose-600 dark:text-rose-400 font-bold' : 'text-[var(--color-text-muted)]'}>
+                        <span className={(col.outlier_pct ?? 0) > 0 ? 'text-rose-600 dark:text-rose-400 font-bold' : 'text-[var(--color-text-muted)]'}>
                           {col.outlier_pct}% ({col.outlier_count})
                         </span>
                       ) : (

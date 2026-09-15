@@ -1,38 +1,83 @@
 import React, { useState, useEffect } from 'react';
 import {
-  ShieldCheck,
-  ShieldAlert,
   AlertTriangle,
   CheckCircle2,
-  XCircle,
   Activity,
   Cpu,
-  Layers,
   FileCheck,
   Lock,
-  ExternalLink,
   X,
   RefreshCw,
   Sparkles,
   ArrowRight,
-  Check
+  Check,
+  ShieldCheck,
 } from 'lucide-react';
 import { experimentApi } from '../api/client';
+import axios from 'axios';
 
-export const ExperimentHealthModal = ({ experimentId, onClose }) => {
-  const [healthData, setHealthData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+export interface HealthSignals {
+  fit_diagnosis: string;
+  generalization_gap: number | string | null;
+  evidence_strength: string;
+  selected_features_count: number;
+  artifact_checksum_status: string;
+  artifact_checksum?: string | null;
+  locked_test_status: string;
+  locked_test_score?: number | string | null;
+  gate_status: string;
+  gate_conditions_passed: number;
+  gate_conditions_total: number;
+}
 
-  const fetchHealth = async () => {
+export interface RiskItem {
+  finding: string;
+  severity: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW' | string;
+  description: string;
+  remediation: string;
+}
+
+export interface StructuralGuarantee {
+  id: string;
+  title: string;
+  description: string;
+  invariant_rule: string;
+}
+
+export interface ExperimentHealthData {
+  risks_flagged_count: number;
+  risks_summary: string;
+  overall_health: 'GOOD' | 'WARNING' | 'CRITICAL' | string;
+  champion_algorithm?: string | null;
+  signals: HealthSignals;
+  risks?: RiskItem[];
+  structural_guarantees: StructuralGuarantee[];
+  generated_at: string;
+}
+
+export interface ExperimentHealthModalProps {
+  experimentId: string | null;
+  onClose: () => void;
+}
+
+export const ExperimentHealthModal: React.FC<ExperimentHealthModalProps> = ({ experimentId, onClose }) => {
+  const [healthData, setHealthData] = useState<ExperimentHealthData | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string>('');
+
+  const fetchHealth = async (): Promise<void> => {
     if (!experimentId) return;
     setLoading(true);
     setError('');
     try {
       const res = await experimentApi.getHealth(experimentId);
       setHealthData(res.data);
-    } catch (err) {
-      setError(err.response?.data?.detail || 'Failed to load Experiment Health Report');
+    } catch (err: unknown) {
+      if (axios.isAxiosError(err)) {
+        setError(err.response?.data?.detail || 'Failed to load Experiment Health Report');
+      } else {
+        setError('Failed to load Experiment Health Report');
+      }
     } finally {
       setLoading(false);
     }
@@ -55,7 +100,7 @@ export const ExperimentHealthModal = ({ experimentId, onClose }) => {
             </div>
             <div>
               <div className="flex items-center space-x-2">
-                <h3 className="text-base font-extrabold text-text">Experiment Health & Integrity Report</h3>
+                <h3 className="text-base font-extrabold text-[var(--color-text)]">Experiment Health & Integrity Report</h3>
                 <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[var(--color-bg)] border border-[var(--color-border)] text-[var(--color-text-muted)] font-bold">
                   SRS v9 §13
                 </span>
@@ -69,14 +114,14 @@ export const ExperimentHealthModal = ({ experimentId, onClose }) => {
           <div className="flex items-center space-x-2">
             <button
               onClick={fetchHealth}
-              className="p-2 rounded-lg border border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-text hover:bg-[var(--color-surface-hover)] transition-colors cursor-pointer"
+              className="p-2 rounded-lg border border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-hover)] transition-colors cursor-pointer"
               title="Refresh Health Data"
             >
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             </button>
             <button
               onClick={onClose}
-              className="p-2 rounded-lg text-[var(--color-text-muted)] hover:text-text hover:bg-[var(--color-surface-hover)] cursor-pointer"
+              className="p-2 rounded-lg text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-hover)] cursor-pointer"
             >
               <X className="w-4 h-4" />
             </button>
@@ -137,12 +182,12 @@ export const ExperimentHealthModal = ({ experimentId, onClose }) => {
               {/* Dynamic Signals Grid */}
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-text uppercase tracking-wider">
+                  <span className="text-xs font-bold text-[var(--color-text)] uppercase tracking-wider">
                     Per-Experiment Dynamic Signals
                   </span>
                   {healthData.champion_algorithm && (
                     <span className="text-[11px] text-[var(--color-text-muted)] font-mono">
-                      Champion: <strong className="text-text">{healthData.champion_algorithm}</strong>
+                      Champion: <strong className="text-[var(--color-text)]">{healthData.champion_algorithm}</strong>
                     </span>
                   )}
                 </div>
@@ -154,7 +199,7 @@ export const ExperimentHealthModal = ({ experimentId, onClose }) => {
                       <span>Fit Diagnosis (§2.10)</span>
                       <Cpu className="w-3 h-3 text-indigo-400" />
                     </div>
-                    <div className="text-xs font-extrabold text-text flex items-center space-x-1.5">
+                    <div className="text-xs font-extrabold text-[var(--color-text)] flex items-center space-x-1.5">
                       <span
                         className={`w-2 h-2 rounded-full ${
                           healthData.signals.fit_diagnosis === 'GOOD_FIT'
@@ -165,7 +210,7 @@ export const ExperimentHealthModal = ({ experimentId, onClose }) => {
                       <span>{healthData.signals.fit_diagnosis}</span>
                     </div>
                     <div className="text-[11px] text-[var(--color-text-muted)]">
-                      Gap: {healthData.signals.generalization_gap !== null ? healthData.signals.generalization_gap : 'N/A'}
+                      Gap: {healthData.signals.generalization_gap !== null && healthData.signals.generalization_gap !== undefined ? healthData.signals.generalization_gap : 'N/A'}
                     </div>
                   </div>
 
@@ -175,7 +220,7 @@ export const ExperimentHealthModal = ({ experimentId, onClose }) => {
                       <span>Feature Evidence (§2.7)</span>
                       <Sparkles className="w-3 h-3 text-amber-400" />
                     </div>
-                    <div className="text-xs font-extrabold text-text flex items-center space-x-1.5">
+                    <div className="text-xs font-extrabold text-[var(--color-text)] flex items-center space-x-1.5">
                       <span
                         className={`w-2 h-2 rounded-full ${
                           healthData.signals.evidence_strength === 'STRONG'
@@ -198,7 +243,7 @@ export const ExperimentHealthModal = ({ experimentId, onClose }) => {
                       <span>Disk Binary Checksum (§2.14)</span>
                       <FileCheck className="w-3 h-3 text-teal-400" />
                     </div>
-                    <div className="text-xs font-extrabold text-text flex items-center space-x-1.5">
+                    <div className="text-xs font-extrabold text-[var(--color-text)] flex items-center space-x-1.5">
                       <span
                         className={`w-2 h-2 rounded-full ${
                           healthData.signals.artifact_checksum_status === 'VERIFIED'
@@ -219,7 +264,7 @@ export const ExperimentHealthModal = ({ experimentId, onClose }) => {
                       <span>Locked Test Split (§2.12)</span>
                       <Lock className="w-3 h-3 text-rose-400" />
                     </div>
-                    <div className="text-xs font-extrabold text-text flex items-center space-x-1.5">
+                    <div className="text-xs font-extrabold text-[var(--color-text)] flex items-center space-x-1.5">
                       <span
                         className={`w-2 h-2 rounded-full ${
                           healthData.signals.locked_test_status === 'CONSUMED' || healthData.signals.locked_test_status === 'EVALUATED'
@@ -230,7 +275,7 @@ export const ExperimentHealthModal = ({ experimentId, onClose }) => {
                       <span>{healthData.signals.locked_test_status}</span>
                     </div>
                     <div className="text-[11px] text-[var(--color-text-muted)]">
-                      Score: {healthData.signals.locked_test_score !== null ? healthData.signals.locked_test_score : 'Unconsumed'}
+                      Score: {healthData.signals.locked_test_score !== null && healthData.signals.locked_test_score !== undefined ? healthData.signals.locked_test_score : 'Unconsumed'}
                     </div>
                   </div>
 
@@ -241,7 +286,7 @@ export const ExperimentHealthModal = ({ experimentId, onClose }) => {
                       <ShieldCheck className="w-3 h-3 text-indigo-400" />
                     </div>
                     <div className="flex items-center justify-between">
-                      <div className="text-xs font-extrabold text-text">
+                      <div className="text-xs font-extrabold text-[var(--color-text)]">
                         Gate Status: <span className={healthData.signals.gate_status === 'PASSED' ? 'text-emerald-400' : 'text-amber-400'}>{healthData.signals.gate_status}</span>
                       </div>
                       <span className="text-[11px] font-bold text-[var(--color-text-muted)]">
@@ -261,7 +306,7 @@ export const ExperimentHealthModal = ({ experimentId, onClose }) => {
               {/* Flagged Risks Section */}
               {healthData.risks && healthData.risks.length > 0 && (
                 <div className="space-y-3">
-                  <span className="text-xs font-bold text-text uppercase tracking-wider">
+                  <span className="text-xs font-bold text-[var(--color-text)] uppercase tracking-wider">
                     Identified Risk Items & Actionable Remediation
                   </span>
 
@@ -272,7 +317,7 @@ export const ExperimentHealthModal = ({ experimentId, onClose }) => {
                         className="p-4 rounded-xl bg-[var(--color-bg)] border border-[var(--color-border)] space-y-2"
                       >
                         <div className="flex items-center justify-between">
-                          <span className="text-xs font-extrabold text-text">{risk.finding}</span>
+                          <span className="text-xs font-extrabold text-[var(--color-text)]">{risk.finding}</span>
                           <span
                             className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border ${
                               risk.severity === 'CRITICAL'
@@ -303,7 +348,7 @@ export const ExperimentHealthModal = ({ experimentId, onClose }) => {
               {/* Structural Guarantees Section */}
               <div className="space-y-3 pt-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-text uppercase tracking-wider">
+                  <span className="text-xs font-bold text-[var(--color-text)] uppercase tracking-wider">
                     Static Structural Guarantees (Architectural Proofs)
                   </span>
                   <span className="text-[11px] text-emerald-400 font-bold flex items-center space-x-1">
@@ -320,7 +365,7 @@ export const ExperimentHealthModal = ({ experimentId, onClose }) => {
                     >
                       <div className="flex items-center space-x-2">
                         <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                        <span className="text-xs font-bold text-text">{item.title}</span>
+                        <span className="text-xs font-bold text-[var(--color-text)]">{item.title}</span>
                       </div>
                       <p className="text-[11px] text-[var(--color-text-muted)] leading-relaxed pl-5.5">
                         {item.description}
@@ -343,7 +388,7 @@ export const ExperimentHealthModal = ({ experimentId, onClose }) => {
           </span>
           <button
             onClick={onClose}
-            className="px-4 py-2 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] text-text hover:bg-[var(--color-surface-hover)] font-bold text-xs cursor-pointer transition-colors"
+            className="px-4 py-2 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-text)] hover:bg-[var(--color-surface-hover)] font-bold text-xs cursor-pointer transition-colors"
           >
             Close Report
           </button>

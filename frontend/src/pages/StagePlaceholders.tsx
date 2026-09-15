@@ -5,7 +5,6 @@ import {
   BarChart3,
   SlidersHorizontal,
   Workflow,
-  Stethoscope,
   Cpu,
   Rocket,
   ArrowRight,
@@ -14,7 +13,7 @@ import {
   Lock,
 } from 'lucide-react';
 
-export const DataStage = () => {
+export const DataStage: React.FC = () => {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between pb-5 border-b border-[var(--color-border)]">
@@ -24,7 +23,7 @@ export const DataStage = () => {
             <span>&bull;</span>
             <span>Structural Ingestion</span>
           </div>
-          <h1 className="text-2xl font-black tracking-tight text-text">Data Ingestion & Schema</h1>
+          <h1 className="text-2xl font-black tracking-tight text-[var(--color-text)]">Data Ingestion & Schema</h1>
           <p className="text-sm text-[var(--color-text-muted)] mt-1">
             Upload raw tabular files (CSV, XLSX, JSON) with strict structural schema validation and pre-split isolation.
           </p>
@@ -43,7 +42,7 @@ export const DataStage = () => {
           <div className="w-10 h-10 rounded-xl bg-indigo-500/10 text-indigo-500 flex items-center justify-center">
             <Database className="w-5 h-5" />
           </div>
-          <h3 className="text-base font-bold text-text">Raw Dataset Upload</h3>
+          <h3 className="text-base font-bold text-[var(--color-text)]">Raw Dataset Upload</h3>
           <p className="text-xs text-[var(--color-text-muted)] leading-relaxed">
             Multi-format stream upload with SHA-256 content hashing for reproducible deduplication.
           </p>
@@ -53,7 +52,7 @@ export const DataStage = () => {
           <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center">
             <CheckCircle2 className="w-5 h-5" />
           </div>
-          <h3 className="text-base font-bold text-text">Structural Validation</h3>
+          <h3 className="text-base font-bold text-[var(--color-text)]">Structural Validation</h3>
           <p className="text-xs text-[var(--color-text-muted)] leading-relaxed">
             Pre-split inference of column dtypes (numeric, categorical, datetime) and null percentages.
           </p>
@@ -63,7 +62,7 @@ export const DataStage = () => {
           <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center">
             <Lock className="w-5 h-5" />
           </div>
-          <h3 className="text-base font-bold text-text">Outer Split Lock</h3>
+          <h3 className="text-base font-bold text-[var(--color-text)]">Outer Split Lock</h3>
           <p className="text-xs text-[var(--color-text-muted)] leading-relaxed">
             Deterministic partitioning into Development and isolated Locked Test sets.
           </p>
@@ -73,7 +72,7 @@ export const DataStage = () => {
   );
 };
 
-export const AnalysisStage = () => {
+export const AnalysisStage: React.FC = () => {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between pb-5 border-b border-[var(--color-border)]">
@@ -83,7 +82,7 @@ export const AnalysisStage = () => {
             <span>&bull;</span>
             <span>Development Profiling</span>
           </div>
-          <h1 className="text-2xl font-black tracking-tight text-text">Data Analysis & DQI</h1>
+          <h1 className="text-2xl font-black tracking-tight text-[var(--color-text)]">Data Analysis & DQI</h1>
           <p className="text-sm text-[var(--color-text-muted)] mt-1">
             Explore distributions, correlations, and compute the multi-factor Data Quality Index (DQI).
           </p>
@@ -102,7 +101,7 @@ export const AnalysisStage = () => {
           <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-500 flex items-center justify-center">
             <BarChart3 className="w-5 h-5" />
           </div>
-          <h3 className="text-base font-bold text-text">Development Partition Profiling</h3>
+          <h3 className="text-base font-bold text-[var(--color-text)]">Development Partition Profiling</h3>
           <p className="text-xs text-[var(--color-text-muted)] leading-relaxed">
             Distribution histograms, missingness heatmaps, and Pearson/Spearman correlation matrices.
           </p>
@@ -112,7 +111,7 @@ export const AnalysisStage = () => {
           <div className="w-10 h-10 rounded-xl bg-purple-500/10 text-purple-500 flex items-center justify-center">
             <ShieldCheck className="w-5 h-5" />
           </div>
-          <h3 className="text-base font-bold text-text">Data Quality Index (DQI)</h3>
+          <h3 className="text-base font-bold text-[var(--color-text)]">Data Quality Index (DQI)</h3>
           <p className="text-xs text-[var(--color-text-muted)] leading-relaxed">
             Composite 0-100 score across missingness, duplicate rate, outlier prevalence, and type consistency.
           </p>
@@ -122,7 +121,7 @@ export const AnalysisStage = () => {
           <div className="w-10 h-10 rounded-xl bg-teal-500/10 text-teal-500 flex items-center justify-center">
             <Workflow className="w-5 h-5" />
           </div>
-          <h3 className="text-base font-bold text-text">Task-Type Confidence</h3>
+          <h3 className="text-base font-bold text-[var(--color-text)]">Task-Type Confidence</h3>
           <p className="text-xs text-[var(--color-text-muted)] leading-relaxed">
             Automated detection for Classification vs. Regression with confidence level boundaries.
           </p>
@@ -132,7 +131,7 @@ export const AnalysisStage = () => {
   );
 };
 
-export const TransformationStage = () => {
+export const TransformationStage: React.FC = () => {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between pb-5 border-b border-[var(--color-border)]">
@@ -142,7 +141,7 @@ export const TransformationStage = () => {
             <span>&bull;</span>
             <span>Leakage-Safe Preprocessing</span>
           </div>
-          <h1 className="text-2xl font-black tracking-tight text-text">Feature Transformation</h1>
+          <h1 className="text-2xl font-black tracking-tight text-[var(--color-text)]">Feature Transformation</h1>
           <p className="text-sm text-[var(--color-text-muted)] mt-1">
             Configure imputation, categorical encoding, scaling, and outlier handling fit strictly per CV fold.
           </p>
@@ -157,7 +156,7 @@ export const TransformationStage = () => {
       </div>
 
       <div className="p-6 rounded-2xl bg-[var(--color-surface)] border border-[var(--color-border)] space-y-4">
-        <h3 className="text-base font-bold text-text flex items-center space-x-2">
+        <h3 className="text-base font-bold text-[var(--color-text)] flex items-center space-x-2">
           <SlidersHorizontal className="w-5 h-5 text-[var(--color-accent)]" />
           <span>Transformation Strategy Pipeline</span>
         </h3>
@@ -169,7 +168,7 @@ export const TransformationStage = () => {
   );
 };
 
-export const FeatureEngineeringStage = () => {
+export const FeatureEngineeringStage: React.FC = () => {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between pb-5 border-b border-[var(--color-border)]">
@@ -179,7 +178,7 @@ export const FeatureEngineeringStage = () => {
             <span>&bull;</span>
             <span>Rank-Aggregation Ensemble</span>
           </div>
-          <h1 className="text-2xl font-black tracking-tight text-text">Feature Engineering</h1>
+          <h1 className="text-2xl font-black tracking-tight text-[var(--color-text)]">Feature Engineering</h1>
           <p className="text-sm text-[var(--color-text-muted)] mt-1">
             Multi-method rank aggregation combining Correlation, Lasso, Random Forest, and Permutation importance.
           </p>
@@ -194,7 +193,7 @@ export const FeatureEngineeringStage = () => {
       </div>
 
       <div className="p-6 rounded-2xl bg-[var(--color-surface)] border border-[var(--color-border)] space-y-4">
-        <h3 className="text-base font-bold text-text flex items-center space-x-2">
+        <h3 className="text-base font-bold text-[var(--color-text)] flex items-center space-x-2">
           <Workflow className="w-5 h-5 text-indigo-400" />
           <span>Ensemble Feature Selection</span>
         </h3>
@@ -206,7 +205,7 @@ export const FeatureEngineeringStage = () => {
   );
 };
 
-export const MLStage = () => {
+export const MLStage: React.FC = () => {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between pb-5 border-b border-[var(--color-border)]">
@@ -216,7 +215,7 @@ export const MLStage = () => {
             <span>&bull;</span>
             <span>6-Algorithm Model Training</span>
           </div>
-          <h1 className="text-2xl font-black tracking-tight text-text">Machine Learning Training</h1>
+          <h1 className="text-2xl font-black tracking-tight text-[var(--color-text)]">Machine Learning Training</h1>
           <p className="text-sm text-[var(--color-text-muted)] mt-1">
             5-fold cross-validation across the canonical algorithm catalog with primary-metric leaderboard ranking.
           </p>
@@ -231,7 +230,7 @@ export const MLStage = () => {
       </div>
 
       <div className="p-6 rounded-2xl bg-[var(--color-surface)] border border-[var(--color-border)] space-y-4">
-        <h3 className="text-base font-bold text-text flex items-center space-x-2">
+        <h3 className="text-base font-bold text-[var(--color-text)] flex items-center space-x-2">
           <Cpu className="w-5 h-5 text-amber-400" />
           <span>Algorithm Catalog & Leaderboard</span>
         </h3>
@@ -244,7 +243,7 @@ export const MLStage = () => {
   );
 };
 
-export const ProductionStage = () => {
+export const ProductionStage: React.FC = () => {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between pb-5 border-b border-[var(--color-border)]">
@@ -254,21 +253,21 @@ export const ProductionStage = () => {
             <span>&bull;</span>
             <span>Deployment Gates & Serving</span>
           </div>
-          <h1 className="text-2xl font-black tracking-tight text-text">Production Deployment</h1>
+          <h1 className="text-2xl font-black tracking-tight text-[var(--color-text)]">Production Deployment</h1>
           <p className="text-sm text-[var(--color-text-muted)] mt-1">
             Enforce multi-condition deployment gates, serve real-time predictions, and monitor traffic logs.
           </p>
         </div>
         <Link
           to="/dashboard"
-          className="px-4 py-2 rounded-xl bg-[var(--color-surface-hover)] border border-[var(--color-border)] text-text text-xs font-bold flex items-center space-x-2 shadow-sm transition"
+          className="px-4 py-2 rounded-xl bg-[var(--color-surface-hover)] border border-[var(--color-border)] text-[var(--color-text)] text-xs font-bold flex items-center space-x-2 shadow-sm transition"
         >
           <span>Return to Workspace</span>
         </Link>
       </div>
 
       <div className="p-6 rounded-2xl bg-[var(--color-surface)] border border-[var(--color-border)] space-y-4">
-        <h3 className="text-base font-bold text-text flex items-center space-x-2">
+        <h3 className="text-base font-bold text-[var(--color-text)] flex items-center space-x-2">
           <Rocket className="w-5 h-5 text-emerald-400" />
           <span>Deployment Gate & Serving Pipeline</span>
         </h3>

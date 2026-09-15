@@ -1,63 +1,56 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { projectApi, datasetApi } from '../api/client';
+import { Project, DatasetColumn } from '../types/api';
 import {
   SlidersHorizontal,
   Wand2,
-  Sparkles,
   ArrowRight,
   ArrowLeft,
   ShieldCheck,
   CheckCircle2,
   AlertTriangle,
-  RefreshCw,
   FolderOpen,
-  Layers,
   Database,
   Sliders,
   Calendar,
   Zap,
-  Filter,
-  Activity,
   Check,
-  Plus,
-  Trash2,
-  Lock,
 } from 'lucide-react';
 
-export const TransformationStage = () => {
+export const TransformationStage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const initialProjectId = searchParams.get('project_id');
 
-  const [projects, setProjects] = useState([]);
-  const [selectedProjectId, setSelectedProjectId] = useState(initialProjectId || '');
-  const [currentProject, setCurrentProject] = useState(null);
-  const [columns, setColumns] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
-  const [successMsg, setSuccessMsg] = useState('');
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [selectedProjectId, setSelectedProjectId] = useState<string>(initialProjectId || '');
+  const [currentProject, setCurrentProject] = useState<Project | null>(null);
+  const [columns, setColumns] = useState<DatasetColumn[]>([]);
+  const [_loading, setLoading] = useState<boolean>(true);
+  const [saving, setSaving] = useState<boolean>(false);
+  const [_error, setError] = useState<string>('');
+  const [successMsg, setSuccessMsg] = useState<string>('');
 
   // Active Tab: 'missing' | 'categorical' | 'outliers' | 'datetime' | 'scaling' | 'recipe'
-  const [activeTab, setActiveTab] = useState('missing');
+  const [activeTab, setActiveTab] = useState<'missing' | 'categorical' | 'outliers' | 'datetime' | 'scaling' | 'recipe'>('missing');
 
   // Transformation Strategy Configurations
-  const [numImputer, setNumImputer] = useState('median'); // mean | median | arbitrary | end_tail | knn | iterative
-  const [arbitraryVal, setArbitraryVal] = useState('0');
-  const [catImputer, setCatImputer] = useState('mode'); // mode | missing_category
-  const [knnNeighbors, setKnnNeighbors] = useState(5);
+  const [numImputer, setNumImputer] = useState<string>('median'); // mean | median | arbitrary | end_tail | knn | iterative
+  const [arbitraryVal, setArbitraryVal] = useState<string>('0');
+  const [catImputer, setCatImputer] = useState<string>('mode'); // mode | missing_category
+  const [knnNeighbors, setKnnNeighbors] = useState<number>(5);
 
-  const [nominalEncoding, setNominalEncoding] = useState('one_hot'); // one_hot | drop_first
-  const [ordinalEncoding, setOrdinalEncoding] = useState('ordinal'); // ordinal | label
+  const [nominalEncoding, setNominalEncoding] = useState<string>('one_hot'); // one_hot | drop_first
+  const [ordinalEncoding, setOrdinalEncoding] = useState<string>('ordinal'); // ordinal | label
 
-  const [outlierMethod, setOutlierMethod] = useState('iqr'); // iqr | z_score | percentile | winsorization
-  const [outlierAction, setOutlierAction] = useState('capping'); // capping | trimming | missing
-  const [zScoreThreshold, setZScoreThreshold] = useState(3.0);
+  const [outlierMethod, setOutlierMethod] = useState<string>('iqr'); // iqr | z_score | percentile | winsorization
+  const [outlierAction, setOutlierAction] = useState<string>('capping'); // capping | trimming | missing
+  const [zScoreThreshold] = useState<number>(3.0);
 
-  const [dateExtractParts, setDateExtractParts] = useState(['year', 'month', 'day', 'dayofweek', 'is_weekend']);
-  const [cyclicalEncoding, setCyclicalEncoding] = useState(true);
+  const [dateExtractParts, setDateExtractParts] = useState<string[]>(['year', 'month', 'day', 'dayofweek', 'is_weekend']);
+  const [cyclicalEncoding, setCyclicalEncoding] = useState<boolean>(true);
 
-  const [scalingMethod, setScalingMethod] = useState('standard'); // standard | minmax | robust
+  const [scalingMethod, setScalingMethod] = useState<string>('standard'); // standard | minmax | robust
 
   // 1. Load Projects
   useEffect(() => {
@@ -117,7 +110,7 @@ export const TransformationStage = () => {
     }, 600);
   };
 
-  const toggleDatePart = (part) => {
+  const toggleDatePart = (part: string) => {
     if (dateExtractParts.includes(part)) {
       setDateExtractParts(dateExtractParts.filter((p) => p !== part));
     } else {
@@ -208,12 +201,12 @@ export const TransformationStage = () => {
       {/* Segmented Navigation Tabs */}
       <div className="flex flex-wrap gap-2 p-1.5 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-full w-fit shadow-sm">
         {[
-          { id: 'missing', label: '1. Missing Values', icon: Wand2 },
-          { id: 'categorical', label: '2. Categorical Encoding', icon: Sliders },
-          { id: 'outliers', label: '3. Outlier Treatment', icon: AlertTriangle },
-          { id: 'datetime', label: '4. Date/Time & Mixed', icon: Calendar },
-          { id: 'scaling', label: '5. Feature Scaling', icon: SlidersHorizontal },
-          { id: 'recipe', label: '6. Compiled Recipe', icon: Zap },
+          { id: 'missing' as const, label: '1. Missing Values', icon: Wand2 },
+          { id: 'categorical' as const, label: '2. Categorical Encoding', icon: Sliders },
+          { id: 'outliers' as const, label: '3. Outlier Treatment', icon: AlertTriangle },
+          { id: 'datetime' as const, label: '4. Date/Time & Mixed', icon: Calendar },
+          { id: 'scaling' as const, label: '5. Feature Scaling', icon: SlidersHorizontal },
+          { id: 'recipe' as const, label: '6. Compiled Recipe', icon: Zap },
         ].map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;

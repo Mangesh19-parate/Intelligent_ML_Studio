@@ -68,10 +68,12 @@ code, pre, .font-mono {
   font-weight: 600;
   border-radius: 9999px;
   padding: 0.5rem 1.5rem;
+  box-shadow: 0 4px 12px rgba(20, 20, 19, 0.15), 0 1px 3px rgba(20, 20, 19, 0.08);
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .mc-btn-primary:hover {
   background-color: #262627;
+  box-shadow: 0 6px 20px rgba(20, 20, 19, 0.25), 0 2px 6px rgba(20, 20, 19, 0.12);
   transform: translateY(-1px);
 }
 
@@ -81,10 +83,12 @@ code, pre, .font-mono {
   font-weight: 600;
   border-radius: 9999px;
   padding: 0.5rem 1.5rem;
+  box-shadow: 0 4px 14px rgba(207, 69, 0, 0.30), 0 1px 3px rgba(207, 69, 0, 0.15);
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .mc-btn-accent:hover {
   background-color: var(--color-accent-hover);
+  box-shadow: 0 6px 20px rgba(207, 69, 0, 0.45), 0 2px 6px rgba(207, 69, 0, 0.20);
   transform: translateY(-1px);
 }
 
@@ -95,10 +99,12 @@ code, pre, .font-mono {
   font-weight: 600;
   border-radius: 9999px;
   padding: 0.5rem 1.25rem;
+  box-shadow: 0 2px 6px rgba(20, 20, 19, 0.06), 0 1px 2px rgba(20, 20, 19, 0.04);
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .mc-btn-secondary:hover {
   background-color: var(--color-surface-hover);
+  box-shadow: 0 4px 12px rgba(20, 20, 19, 0.10), 0 1px 3px rgba(20, 20, 19, 0.06);
 }
 
 /* Eyebrow Label with Signal Dot */

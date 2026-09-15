@@ -1,35 +1,40 @@
 import React, { useState, useMemo } from 'react';
 import Plot from 'react-plotly.js';
-import {
-  BarChart2,
-  PieChart as PieIcon,
-  ScatterChart,
-  LineChart,
-  Layers,
-  Sparkles,
-  Sliders,
-  Filter,
-  Grid,
-  Info,
-} from 'lucide-react';
+import { Sparkles } from 'lucide-react';
 
-export const InteractiveEDAStudio = ({ edaReport }) => {
-  const [analysisType, setAnalysisType] = useState('UNIVARIATE'); // 'UNIVARIATE' | 'BIVARIATE' | 'MULTIVARIATE'
+interface ColumnMeta {
+  name: string;
+  type: string;
+  is_numeric: boolean;
+}
+
+export interface EDAReport {
+  sample_records?: Record<string, unknown>[];
+  columns_metadata?: ColumnMeta[];
+  [key: string]: unknown;
+}
+
+interface InteractiveEDAStudioProps {
+  edaReport?: EDAReport | null;
+}
+
+export const InteractiveEDAStudio: React.FC<InteractiveEDAStudioProps> = ({ edaReport }) => {
+  const [analysisType, setAnalysisType] = useState<'UNIVARIATE' | 'BIVARIATE' | 'MULTIVARIATE'>('UNIVARIATE');
 
   // Univariate controls
-  const [uniColumn, setUniColumn] = useState('');
-  const [uniChartType, setUniChartType] = useState('HISTO'); // 'HISTO' | 'KDE' | 'BOX' | 'COUNT' | 'PIE'
-  const [numBins, setNumBins] = useState(25);
+  const [uniColumn, setUniColumn] = useState<string>('');
+  const [uniChartType, setUniChartType] = useState<'HISTO' | 'KDE' | 'BOX' | 'COUNT' | 'PIE'>('HISTO');
+  const [numBins, setNumBins] = useState<number>(25);
 
   // Bivariate controls
-  const [bivX, setBivX] = useState('');
-  const [bivY, setBivY] = useState('');
-  const [bivChartType, setBivChartType] = useState('SCATTER'); // 'SCATTER' | 'LINE' | 'BAR' | 'BOX' | 'HEATMAP'
-  const [colorHue, setColorHue] = useState('');
+  const [bivX, setBivX] = useState<string>('');
+  const [bivY, setBivY] = useState<string>('');
+  const [bivChartType, setBivChartType] = useState<'SCATTER' | 'LINE' | 'BAR' | 'BOX' | 'HEATMAP'>('SCATTER');
+  const [colorHue, setColorHue] = useState<string>('');
 
   // Multivariate controls
-  const [multiColumns, setMultiColumns] = useState([]);
-  const [multiHue, setMultiHue] = useState('');
+  const [multiColumns, setMultiColumns] = useState<string[]>([]);
+  const [multiHue, setMultiHue] = useState<string>('');
 
   const sampleData = useMemo(() => edaReport?.sample_records || [], [edaReport]);
   const columnsMeta = useMemo(() => edaReport?.columns_metadata || [], [edaReport]);
@@ -77,8 +82,8 @@ export const InteractiveEDAStudio = ({ edaReport }) => {
 
     const rawValues = sampleData.map((d) => d[uniColumn]).filter((v) => v !== null && v !== undefined);
 
-    let plotData = [];
-    let layout = {
+    let plotData: any[] = [];
+    const layout: Record<string, unknown> = {
       title: `${uniColumn} — ${uniChartType} Analysis`,
       paper_bgcolor: 'transparent',
       plot_bgcolor: 'transparent',
@@ -130,7 +135,7 @@ export const InteractiveEDAStudio = ({ edaReport }) => {
       }
     } else {
       // Categorical values
-      const counts = {};
+      const counts: Record<string, number> = {};
       rawValues.forEach((v) => {
         const key = String(v);
         counts[key] = (counts[key] || 0) + 1;
@@ -181,8 +186,8 @@ export const InteractiveEDAStudio = ({ edaReport }) => {
     const isXNum = numericCols.includes(bivX);
     const isYNum = numericCols.includes(bivY);
 
-    let plotData = [];
-    let layout = {
+    let plotData: any[] = [];
+    const layout: Record<string, unknown> = {
       title: `${bivY} vs ${bivX}`,
       paper_bgcolor: 'transparent',
       plot_bgcolor: 'transparent',
@@ -212,7 +217,7 @@ export const InteractiveEDAStudio = ({ edaReport }) => {
         // SCATTER
         if (colorHue && colorHue !== 'NONE') {
           // Group by hue
-          const groups = {};
+          const groups: Record<string, { x: unknown[]; y: unknown[] }> = {};
           sampleData.forEach((d) => {
             const h = String(d[colorHue] ?? 'Unknown');
             if (!groups[h]) groups[h] = { x: [], y: [] };
@@ -245,7 +250,7 @@ export const InteractiveEDAStudio = ({ edaReport }) => {
       const numCol = isXNum ? bivX : bivY;
       const catCol = isXNum ? bivY : bivX;
 
-      const groups = {};
+      const groups: Record<string, number[]> = {};
       sampleData.forEach((d) => {
         const cVal = String(d[catCol] ?? 'Missing');
         const nVal = Number(d[numCol]);
@@ -281,9 +286,9 @@ export const InteractiveEDAStudio = ({ edaReport }) => {
       }
     } else {
       // Categorical - Categorical (Contingency Crosstab Heatmap)
-      const matrix = {};
-      const xCats = new Set();
-      const yCats = new Set();
+      const matrix: Record<string, number> = {};
+      const xCats = new Set<string>();
+      const yCats = new Set<string>();
 
       sampleData.forEach((d) => {
         const xVal = String(d[bivX] ?? 'N/A');
@@ -332,7 +337,7 @@ export const InteractiveEDAStudio = ({ edaReport }) => {
       values: sampleData.map((d) => Number(d[col]) || 0),
     }));
 
-    let markerConfig = { size: 3, color: '#3b82f6', opacity: 0.6 };
+    let markerConfig: Record<string, unknown> = { size: 3, color: '#3b82f6', opacity: 0.6 };
     if (multiHue && multiHue !== 'NONE') {
       const hueValues = sampleData.map((d) => {
         const val = String(d[multiHue]);
@@ -534,7 +539,7 @@ export const InteractiveEDAStudio = ({ edaReport }) => {
               <label className="font-semibold text-[var(--color-text-muted)]">Plot Type:</label>
               <select
                 value={bivChartType}
-                onChange={(e) => setBivChartType(e.target.value)}
+                onChange={(e) => setBivChartType(e.target.value as 'BOX' | 'SCATTER' | 'LINE' | 'BAR' | 'HEATMAP')}
                 className="px-3 py-1.5 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg font-bold text-[var(--color-text)] focus:outline-none cursor-pointer"
               >
                 <option value="SCATTER">Scatter Plot</option>

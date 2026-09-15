@@ -39,6 +39,24 @@ Every resource endpoint (`/projects`, `/datasets`, `/experiments`, `/transformat
   - Sets `Strict-Transport-Security: max-age=31536000; includeSubDomains; preload` (HSTS).
   - Injects `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `X-XSS-Protection: 1; mode=block`, and `Referrer-Policy: strict-origin-when-cross-origin`.
 
+### 6. Two-Factor Authentication (2FA) & Multi-Factor Authentication (MFA)
+- **Standard Protocol**: RFC 6238 Time-Based One-Time Password (TOTP) algorithm operating on 30-second time steps with $\pm 1$ step drift tolerance.
+- **Pure Standard-Library Cryptography**: Built with Python `hmac`, `hashlib`, `struct`, and `secrets` to eliminate third-party supply-chain dependency risks.
+- **Zero-Trust Login Flow**:
+  - Primary credential verification (`POST /auth/login`) checks email and bcrypt password.
+  - If 2FA is enabled, login halts and issues a signed, time-limited (5-minute) challenge token with `purpose: "2fa_challenge"`. No access or refresh tokens are issued at this stage.
+  - Client submits the 6-digit TOTP code or emergency backup key to `POST /auth/2fa/verify-login`.
+  - Upon successful verification, the backend issues standard in-memory JWT access tokens and sets the `HttpOnly`, `SameSite=Lax`, `Secure` refresh cookie.
+- **Emergency Recovery Keys**:
+  - Generates 8 single-use cryptographically secure alphanumeric backup keys during 2FA enrollment.
+  - Stored exclusively as one-way SHA-256 hashes in the database (`two_factor_backup_codes`).
+  - Key is permanently invalidated and removed from database once successfully consumed.
+- **Enrollment & Lifecycle**:
+  - `POST /auth/2fa/setup`: Generates Base32 secret and standard `otpauth://totp/...` URI compatible with Google Authenticator, Microsoft Authenticator, 1Password, and Apple Keychain.
+  - `POST /auth/2fa/confirm`: Requires immediate live code verification before activating 2FA on the user record.
+  - `POST /auth/2fa/disable`: Requires live password verification to prevent unauthorized downgrade attacks.
+
+
 ---
 
 ## Tier 1 — Scalability Architecture
@@ -66,13 +84,18 @@ Every resource endpoint (`/projects`, `/datasets`, `/experiments`, `/transformat
 
 ### 1. Test-Gated CI/CD Pipeline
 - GitHub Actions workflow (`.github/workflows/ci.yml`) executes on every push and pull request to `main`:
-  - **Backend Gate**: Runs `pip-audit` CVE checks and full 467-test `pytest` suite testing leakage invariants.
+  - **Backend Gate**: Runs `pip-audit` CVE checks and full 424-test `pytest` suite testing leakage invariants.
   - **Frontend Gate**: Runs TypeScript check (`tsc --noEmit`) and Vite production bundle build.
   - **Deploy Gate**: Deploys only trigger after all quality gates pass.
 
-### 2. Structured Logging & Observability
+### 2. Structured Logging & Multi-Service Health Observability
 - `StructuredLoggingMiddleware` emits structured JSON request logs including `request_id`, duration in ms, and status codes.
-- **Monitoring Hooks**: Health endpoints (`/health`) and authenticated Prometheus metrics (`/metrics`). APM providers like Sentry or OpenTelemetry can be connected via standard ASGI middleware hooks.
+- **Container Orchestration & Health Endpoints**:
+  - `GET /health/live` (`/api/v1/health/live`): Process liveness probe for Kubernetes / ECS container restart decisions (returns `200 OK` if process loop is responsive).
+  - `GET /health/ready` (`/api/v1/health/ready`): Deep readiness probe validating database connectivity (`SELECT 1`), artifact volume writeability, and `DurableTask` engine. Returns `200 OK` when ready for user traffic or `503 Service Unavailable` if critical dependencies fail.
+  - `GET /health/status` (`/api/v1/health/status`): Multi-service subsystem telemetry report detailing database latency, pool stats, disk free/used capacity, active workers, and scikit-learn/SHAP runtime readiness.
+  - `GET /health` (`/api/v1/health`): Backward-compatible baseline health probe.
+  - Authenticated Prometheus metrics hook: `/metrics`.
 
 ### 3. Backups, Restore & Migration Rollbacks
 - **Automated Database Backups**:

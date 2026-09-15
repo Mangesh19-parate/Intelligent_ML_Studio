@@ -113,8 +113,18 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
         },
     )
 
-@app.get("/health", tags=["Health"])
-@app.get("/api/v1/health", tags=["Health"])
+from fastapi import Response, Depends, status
+from sqlalchemy.orm import Session
+from app.core.database import get_db
+from app.services.health_service import HealthService
+from app.schemas.health import (
+    LivenessResponse,
+    ReadinessResponse,
+    DetailedHealthResponse,
+)
+
+@app.get("/health", tags=["Health"], summary="Backward-compatible baseline health probe")
+@app.get("/api/v1/health", tags=["Health"], summary="Backward-compatible baseline health probe")
 def health_check():
     return {
         "status": "healthy",
@@ -123,3 +133,27 @@ def health_check():
         "code_version": get_code_version(),
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
+
+@app.get("/health/live", response_model=LivenessResponse, tags=["Health"], summary="Kubernetes / container liveness probe")
+@app.get("/api/v1/health/live", response_model=LivenessResponse, tags=["Health"], summary="Kubernetes / container liveness probe")
+def liveness_check():
+    service = HealthService()
+    return service.check_liveness()
+
+@app.get("/health/ready", response_model=ReadinessResponse, tags=["Health"], summary="Kubernetes / load-balancer deep readiness probe")
+@app.get("/api/v1/health/ready", response_model=ReadinessResponse, tags=["Health"], summary="Kubernetes / load-balancer deep readiness probe")
+def readiness_check(response: Response, db: Session = Depends(get_db)):
+    service = HealthService(db)
+    is_ready, data = service.check_readiness(db)
+    if not is_ready:
+        response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+    return data
+
+@app.get("/health/status", response_model=DetailedHealthResponse, tags=["Health"], summary="Multi-service subsystem observability and telemetry report")
+@app.get("/api/v1/health/status", response_model=DetailedHealthResponse, tags=["Health"], summary="Multi-service subsystem observability and telemetry report")
+def detailed_health_status(response: Response, db: Session = Depends(get_db)):
+    service = HealthService(db)
+    http_code, data = service.get_detailed_status(db, code_version=get_code_version())
+    response.status_code = http_code
+    return data
+

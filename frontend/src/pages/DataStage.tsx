@@ -74,13 +74,13 @@ export const DataStage: React.FC = () => {
 
       const dsRes = await datasetApi.listVersions(projId);
       const dsList = dsRes.data || [];
-      setDatasets(dsList);
+      setDatasets(dsList as unknown as DatasetItem[]);
 
       if (dsList.length > 0) {
         const latest = dsList[0];
-        setSelectedDataset(latest);
+        setSelectedDataset(latest as unknown as DatasetItem);
         const colRes = await datasetApi.getColumns(latest.id);
-        setColumns(colRes.data || []);
+        setColumns((colRes.data || []) as unknown as ColumnSchemaItem[]);
         await loadSplitAndPreview(latest.id);
       } else {
         setSelectedDataset(null);
@@ -269,7 +269,7 @@ export const DataStage: React.FC = () => {
           selectedDataset={selectedDataset}
           onSelectDataset={(ds) => {
             setSelectedDataset(ds);
-            datasetApi.getColumns(ds.id).then((res) => setColumns(res.data || []));
+            datasetApi.getColumns(ds.id).then((res) => setColumns((res.data || []) as unknown as ColumnSchemaItem[]));
             loadSplitAndPreview(ds.id);
           }}
         />

@@ -8,7 +8,7 @@ services:
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-ml_studio_prod}
       POSTGRES_USER: ${POSTGRES_USER:-ml_admin}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Error: POSTGRES_PASSWORD must be explicitly set for production}
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?Error: POSTGRES_PASSWORD must be explicitly set for production}"
     # Security: Database is internal-only, NOT exposed to host interface
     expose:
       - "5432"
@@ -36,7 +36,7 @@ services:
       ENV: production
       AUTO_CREATE_TABLES: "false"
       DATABASE_URL: postgresql://${POSTGRES_USER:-ml_admin}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-ml_studio_prod}
-      JWT_SECRET: ${JWT_SECRET:?Error: Secure JWT_SECRET must be explicitly configured in production}
+      JWT_SECRET: "${JWT_SECRET:?Error: Secure JWT_SECRET must be explicitly configured in production}"
       JWT_ALGORITHM: HS256
       ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-60}
       STORAGE_LOCAL_DIR: /data
@@ -45,6 +45,12 @@ services:
       - "8000:8000"
     volumes:
       - datasets_prod_data:/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health/ready')"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
     security_opt:
       - no-new-privileges:true
 
@@ -59,11 +65,11 @@ services:
       postgres:
         condition: service_healthy
       backend:
-        condition: service_started
+        condition: service_healthy
     environment:
       ENV: production
       DATABASE_URL: postgresql://${POSTGRES_USER:-ml_admin}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-ml_studio_prod}
-      JWT_SECRET: ${JWT_SECRET:?Error: Secure JWT_SECRET must be explicitly configured in production}
+      JWT_SECRET: "${JWT_SECRET:?Error: Secure JWT_SECRET must be explicitly configured in production}"
       STORAGE_LOCAL_DIR: /data
     volumes:
       - datasets_prod_data:/data

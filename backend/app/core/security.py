@@ -14,7 +14,11 @@ def get_password_hash(password: str) -> str:
 
 import uuid
 
-def create_access_token(subject: str | Any, expires_delta: timedelta | None = None) -> str:
+def create_access_token(
+    subject: str | Any,
+    expires_delta: timedelta | None = None,
+    extra_claims: dict[str, Any] | None = None,
+) -> str:
     now = datetime.now(timezone.utc)
     if expires_delta:
         expire = now + expires_delta
@@ -28,6 +32,8 @@ def create_access_token(subject: str | Any, expires_delta: timedelta | None = No
         "type": "access",
         "jti": str(uuid.uuid4()),
     }
+    if extra_claims:
+        to_encode.update(extra_claims)
     return jwt.encode(to_encode, settings.JWT_SECRET, algorithm=settings.JWT_ALGORITHM)
 
 def create_refresh_token(subject: str | Any, expires_delta: timedelta | None = None) -> str:

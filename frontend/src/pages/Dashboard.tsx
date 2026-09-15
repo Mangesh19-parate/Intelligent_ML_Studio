@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { projectApi, workspaceApi, datasetApi, experimentApi, modelApi } from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import { Project, WorkspaceSummary, Leaderboard, RecommendationItem } from '../types/api';
 import {
   Plus,
   FolderGit2,
@@ -15,24 +16,14 @@ import {
   Split,
   Wand2,
   CheckCircle2,
-  Clock,
   Sparkles,
   AlertCircle,
-  Tag,
-  ChevronRight,
-  TrendingUp,
   LayoutDashboard,
   FolderKanban,
   Search,
-  Filter,
-  Zap,
-  Lock,
   ArrowRight,
-  RefreshCw,
   Trophy,
-  BrainCircuit,
   Sliders,
-  AlertTriangle,
 } from 'lucide-react';
 
 const PIPELINE_STAGES = [
@@ -46,16 +37,38 @@ const PIPELINE_STAGES = [
   { key: 'DEPLOYED', label: '8. Production', path: '/production', icon: ShieldCheck },
 ];
 
-export const Dashboard = () => {
+interface DatasetInfo {
+  id: string;
+  file_name?: string;
+  row_count?: number;
+  column_count?: number;
+  version_number?: number;
+  created_at: string;
+}
+
+interface ProfileInfo {
+  total_missing_count?: number;
+}
+
+interface ActiveProjectDetailsState {
+  dataset: DatasetInfo | null;
+  profile: ProfileInfo | null;
+  experiments: Array<{ id: string; [key: string]: unknown }>;
+  leaderboard: Leaderboard | null;
+  recommendations: RecommendationItem[];
+  deployment: unknown | null;
+}
+
+export const Dashboard: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const initialTab = searchParams.get('tab') || 'overview'; // 'overview' | 'projects'
-  const [activeTab, setActiveTab] = useState(initialTab);
+  const [activeTab, setActiveTab] = useState<string>(initialTab);
 
-  const [projects, setProjects] = useState([]);
-  const [summary, setSummary] = useState(null);
-  const [selectedProjectId, setSelectedProjectId] = useState('');
-  const [activeProject, setActiveProject] = useState(null);
-  const [activeProjectDetails, setActiveProjectDetails] = useState({
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [_summary, setSummary] = useState<WorkspaceSummary | null>(null);
+  const [selectedProjectId, setSelectedProjectId] = useState<string>('');
+  const [activeProject, setActiveProject] = useState<Project | null>(null);
+  const [activeProjectDetails, setActiveProjectDetails] = useState<ActiveProjectDetailsState>({
     dataset: null,
     profile: null,
     experiments: [],
@@ -64,20 +77,20 @@ export const Dashboard = () => {
     deployment: null,
   });
 
-  const [loading, setLoading] = useState(true);
-  const [detailsLoading, setDetailsLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [loading, setLoading] = useState<boolean>(true);
+  const [_detailsLoading, setDetailsLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string>('');
 
   // Search & Filter state for "My Projects"
-  const [searchQuery, setSearchQuery] = useState('');
-  const [taskFilter, setTaskFilter] = useState('ALL'); // 'ALL' | 'REGRESSION' | 'CLASSIFICATION'
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [taskFilter, setTaskFilter] = useState<string>('ALL'); // 'ALL' | 'REGRESSION' | 'CLASSIFICATION'
 
   // Modal State
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [projectName, setProjectName] = useState('');
-  const [targetColumn, setTargetColumn] = useState('');
-  const [taskType, setTaskType] = useState('');
-  const [creating, setCreating] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
+  const [projectName, setProjectName] = useState<string>('');
+  const [targetColumn, setTargetColumn] = useState<string>('');
+  const [_taskType, setTaskType] = useState<string>('');
+  const [creating, setCreating] = useState<boolean>(false);
 
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -105,8 +118,9 @@ export const Dashboard = () => {
       if (targetId) {
         setSelectedProjectId(targetId);
       }
-    } catch (err) {
-      setError(err.response?.data?.detail || 'Failed to load workspace analytics');
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { detail?: string } } };
+      setError(e.response?.data?.detail || 'Failed to load workspace analytics');
     } finally {
       setLoading(false);
     }
@@ -140,12 +154,12 @@ export const Dashboard = () => {
         ]);
 
         const currentProjData = projGetRes.status === 'fulfilled' ? projGetRes.value.data : proj;
-        setActiveProject(currentProjData);
+        if (currentProjData) setActiveProject(currentProjData);
 
         const recs = recsRes.status === 'fulfilled' ? recsRes.value.data || [] : [];
         const exps = expRes.status === 'fulfilled' ? expRes.value.data || [] : [];
 
-        let lbData = null;
+        let lbData: Leaderboard | null = null;
         if (exps.length > 0) {
           try {
             const lbRes = await modelApi.getLeaderboard(selectedProjectId, exps[0].id);
@@ -153,15 +167,15 @@ export const Dashboard = () => {
           } catch {}
         }
 
-        let dsData = null;
-        let profData = null;
+        let dsData: DatasetInfo | null = null;
+        let profData: ProfileInfo | null = null;
         try {
           const dsListRes = await datasetApi.listVersions(selectedProjectId);
           if (dsListRes.data && dsListRes.data.length > 0) {
-            dsData = dsListRes.data[0];
+            dsData = dsListRes.data[0] as unknown as DatasetInfo;
             try {
-              const pRes = await datasetApi.getProfile(dsData.id);
-              profData = pRes.data;
+              const pRes = await datasetApi.getProfile(dsData!.id);
+              profData = pRes.data as unknown as ProfileInfo;
             } catch {}
           }
         } catch {}
@@ -172,7 +186,7 @@ export const Dashboard = () => {
           experiments: exps,
           leaderboard: lbData,
           recommendations: recs,
-          deployment: currentProjData?.active_deployment || null,
+          deployment: (currentProjData as unknown as { active_deployment?: unknown })?.active_deployment || null,
         });
       } catch (err) {
         console.error('Error loading deep project data', err);
@@ -184,7 +198,7 @@ export const Dashboard = () => {
     loadProjectDeepData();
   }, [selectedProjectId, projects]);
 
-  const handleTabSwitch = (tab) => {
+  const handleTabSwitch = (tab: string) => {
     setActiveTab(tab);
     setSearchParams((prev) => {
       const p = new URLSearchParams(prev);
@@ -193,7 +207,7 @@ export const Dashboard = () => {
     });
   };
 
-  const handleProjectSelect = (e) => {
+  const handleProjectSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const pId = e.target.value;
     setSelectedProjectId(pId);
     setSearchParams((prev) => {
@@ -203,20 +217,21 @@ export const Dashboard = () => {
     });
   };
 
-  const handleCreateProject = async (e) => {
+  const handleCreateProject = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!projectName.trim()) return;
     setCreating(true);
     try {
-      const res = await projectApi.create(projectName.trim(), targetColumn.trim() || null);
+      const res = await projectApi.create(projectName.trim(), targetColumn.trim() || undefined);
       setIsModalOpen(false);
       setProjectName('');
       setTargetColumn('');
       setTaskType('');
       await loadDashboardData();
       navigate(`/dashboard?tab=overview&project_id=${res.data.id}`);
-    } catch (err) {
-      alert(err.response?.data?.detail || 'Failed to create project');
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { detail?: string } } };
+      alert(e.response?.data?.detail || 'Failed to create project');
     } finally {
       setCreating(false);
     }
@@ -224,7 +239,8 @@ export const Dashboard = () => {
 
   // Filter projects for "My Projects" tab
   const filteredProjects = projects.filter((p) => {
-    const matchName = (p.project_name || p.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    const pName = p.project_name || p.name || '';
+    const matchName = pName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (p.target_column || '').toLowerCase().includes(searchQuery.toLowerCase());
     const matchTask = taskFilter === 'ALL' || (p.task_type || '').toUpperCase() === taskFilter;
     return matchName && matchTask;
@@ -333,7 +349,7 @@ export const Dashboard = () => {
             <div className="flex items-center space-x-2">
               <Link
                 to={selectedProjectId ? `/data?project_id=${selectedProjectId}` : '/data'}
-                className="px-4 py-2 rounded-full bg-[var(--color-surface-hover)] hover:bg-[var(--color-surface-card)] border border-[var(--color-border)] text-[var(--color-text)] text-xs font-bold flex items-center space-x-1.5 transition-all"
+                className="px-4 py-2 rounded-full bg-[var(--color-surface-hover)] hover:bg-[var(--color-surface-card)] border border-[var(--color-border)] text-[var(--color-text)] text-xs font-bold flex items-center space-x-1.5 transition-all shadow-sm"
               >
                 <span>Launch Stage Pipeline</span>
                 <ArrowRight className="w-3.5 h-3.5 text-[var(--color-accent)]" />
@@ -363,9 +379,9 @@ export const Dashboard = () => {
                   <Link
                     key={st.key}
                     to={selectedProjectId ? `${st.path}?project_id=${selectedProjectId}` : st.path}
-                    className={`p-3.5 rounded-2xl border transition-all flex flex-col items-center justify-between text-center space-y-2 group cursor-pointer ${
+                    className={`p-3.5 rounded-2xl border transition-all flex flex-col items-center justify-between text-center space-y-2 group cursor-pointer shadow-xs hover:shadow-md ${
                       isCurrent
-                        ? 'bg-[var(--color-accent-soft)] border-[var(--color-accent)] ring-1 ring-[var(--color-accent)]'
+                        ? 'bg-[var(--color-accent-soft)] border-[var(--color-accent)] ring-1 ring-[var(--color-accent)] shadow-md shadow-[var(--color-accent)]/15 scale-[1.02]'
                         : 'bg-[var(--color-surface-card)] border-[var(--color-border)] hover:border-[var(--color-border-subtle)] hover:bg-[var(--color-surface-hover)]'
                     }`}
                   >
@@ -439,7 +455,7 @@ export const Dashboard = () => {
                   <p className="text-xs">No dataset uploaded to this project yet.</p>
                   <Link
                     to={selectedProjectId ? `/data?project_id=${selectedProjectId}` : '/data'}
-                    className="inline-block px-4 py-1.5 rounded-full bg-[var(--color-accent)] text-white text-xs font-bold mt-2"
+                    className="inline-block px-4 py-1.5 rounded-full bg-[var(--color-accent)] text-white text-xs font-bold mt-2 shadow-sm"
                   >
                     Upload Dataset
                   </Link>
@@ -497,7 +513,7 @@ export const Dashboard = () => {
 
                       <div className="text-right font-mono">
                         <span className="text-[10px] text-[var(--color-text-muted)] uppercase font-semibold">
-                          {activeProjectDetails.leaderboard.selection_metric?.toUpperCase()}
+                          {activeProjectDetails.leaderboard?.selection_metric?.toUpperCase()}
                         </span>
                         <div className="text-sm font-extrabold text-[var(--color-accent)]">
                           {m.primary_metric_value !== null ? Number(m.primary_metric_value).toFixed(4) : 'N/A'}
@@ -512,7 +528,7 @@ export const Dashboard = () => {
                   <p className="text-xs">No trained models in this project yet.</p>
                   <Link
                     to={selectedProjectId ? `/machine-learning?project_id=${selectedProjectId}` : '/machine-learning'}
-                    className="inline-block px-4 py-1.5 rounded-full bg-[var(--color-accent)] text-white text-xs font-bold mt-2"
+                    className="inline-block px-4 py-1.5 rounded-full bg-[var(--color-accent)] text-white text-xs font-bold mt-2 shadow-sm"
                   >
                     Launch Model Training
                   </Link>
@@ -666,7 +682,7 @@ export const Dashboard = () => {
 
                     <Link
                       to={`/machine-learning?project_id=${proj.id}`}
-                      className="px-3.5 py-1.5 rounded-full bg-[var(--color-surface-card)] hover:bg-[var(--color-surface)] border border-[var(--color-border)] text-xs font-semibold text-[var(--color-text)]"
+                      className="px-3.5 py-1.5 rounded-full bg-[var(--color-surface-card)] hover:bg-[var(--color-surface)] border border-[var(--color-border)] text-xs font-semibold text-[var(--color-text)] shadow-xs"
                     >
                       ML Studio
                     </Link>
@@ -689,7 +705,7 @@ export const Dashboard = () => {
               </div>
               <button
                 onClick={() => setIsModalOpen(false)}
-                className="p-1.5 rounded-full text-[var(--color-text-muted)] hover:text-[var(--color-text)] bg-[var(--color-surface-hover)]"
+                className="p-1.5 rounded-full text-[var(--color-text-muted)] hover:text-[var(--color-text)] bg-[var(--color-surface-hover)] cursor-pointer"
               >
                 ✕
               </button>
@@ -726,7 +742,7 @@ export const Dashboard = () => {
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 rounded-full text-xs font-semibold text-[var(--color-text-muted)] hover:bg-[var(--color-surface-hover)]"
+                  className="px-4 py-2 rounded-full text-xs font-semibold text-[var(--color-text-muted)] hover:bg-[var(--color-surface-hover)] cursor-pointer"
                 >
                   Cancel
                 </button>

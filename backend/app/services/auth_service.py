@@ -1,4 +1,6 @@
 import json
+import time
+import hmac
 import hashlib
 from uuid import UUID
 from datetime import timedelta
@@ -12,6 +14,7 @@ from app.core.security import (
     decode_token,
 )
 from app.core.totp import TOTPService
+from app.services.email_service import EmailService
 from app.models.user import User
 from app.models.revoked_token import RevokedToken
 from app.repositories.user_repository import UserRepository
@@ -26,6 +29,7 @@ from app.schemas.auth import (
     TwoFactorSetupResponse,
     TwoFactorConfirmRequest,
     TwoFactorVerifyLoginRequest,
+    TwoFactorResendRequest,
     TwoFactorDisableRequest,
     TwoFactorStatusResponse,
 )
@@ -89,6 +93,12 @@ class AuthService:
                 detail="Default USER role configuration is missing. Please initialize RBAC seed."
             )
 
+        if not EmailService.is_valid_email(payload.email):
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Invalid email address format. Please enter a valid email address."
+            )
+
         new_user = User(
             full_name=payload.full_name.strip(),
             email=payload.email.lower().strip(),
@@ -101,7 +111,13 @@ class AuthService:
         return self._build_user_response(created_user)
 
     def authenticate_user(self, payload: LoginRequest) -> LoginResponse:
-        user = self.user_repo.get_by_email(payload.email)
+        if not EmailService.is_valid_email(payload.email):
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Invalid email address format. Please enter a valid email address."
+            )
+
+        user = self.user_repo.get_by_email(payload.email.strip().lower())
         if not user or not verify_password(payload.password, user.password_hash):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
@@ -115,21 +131,57 @@ class AuthService:
                 detail="This user account is inactive."
             )
 
-        # 2FA Enforcement Gate
-        if user.is_two_factor_enabled and user.two_factor_secret:
-            # Issue a short-lived (5 minute) 2FA challenge token
+        # 2FA Enforcement Gate (Email OTP flow)
+        if user.is_two_factor_enabled:
+            # Generate 6-digit Email OTP
+            otp_code = EmailService.generate_otp(digits=6)
+            expires_at = time.time() + 600  # 10 minute validity
+            otp_hash = hashlib.sha256(otp_code.strip().encode("utf-8")).hexdigest()
+
+            # Preserve any existing permanent TOTP secret
+            totp_secret = None
+            if user.two_factor_secret:
+                if not user.two_factor_secret.startswith("{"):
+                    totp_secret = user.two_factor_secret
+                else:
+                    try:
+                        parsed = json.loads(user.two_factor_secret)
+                        totp_secret = parsed.get("totp_secret")
+                    except Exception:
+                        totp_secret = None
+
+            user.two_factor_secret = json.dumps({
+                "type": "email_otp",
+                "otp_hash": otp_hash,
+                "expires_at": expires_at,
+                "totp_secret": totp_secret,
+            })
+            self.db.commit()
+
+            # Dispatch OTP to the user's verified email address
+            EmailService.send_otp_email(
+                to_email=user.email,
+                otp_code=otp_code,
+                user_name=user.full_name,
+                expire_minutes=10,
+            )
+
+            # Issue a short-lived (10 minute) 2FA challenge token
             two_factor_token = create_access_token(
                 subject=str(user.id),
-                expires_delta=timedelta(minutes=5),
-                extra_claims={"purpose": "2fa_challenge"}
+                expires_delta=timedelta(minutes=10),
+                extra_claims={"purpose": "2fa_challenge", "email": user.email}
             )
+            masked_email = EmailService.mask_email(user.email)
             return LoginResponse(
                 requires_2fa=True,
                 two_factor_token=two_factor_token,
+                email_masked=masked_email,
+                message=f"A 6-digit verification code has been sent to {masked_email}.",
                 token_type="bearer",
             )
 
-        # Standard direct login
+        # Standard direct login if 2FA was explicitly disabled
         access_token = create_access_token(subject=str(user.id))
         refresh_token = create_refresh_token(subject=str(user.id))
         user_response = self._build_user_response(user)
@@ -142,6 +194,60 @@ class AuthService:
             user=user_response,
         )
 
+    def resend_two_factor_otp(self, payload: TwoFactorResendRequest) -> dict:
+        token_payload = decode_token(payload.two_factor_token)
+        if not token_payload or token_payload.get("purpose") != "2fa_challenge":
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid or expired two-factor authentication session. Please log in again."
+            )
+
+        user_id = token_payload.get("sub")
+        if not user_id:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token subject.")
+
+        user = self.user_repo.get_by_id(user_id)
+        if not user or not user.is_active:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User account is inactive or not found.")
+
+        # Generate fresh 6-digit Email OTP
+        otp_code = EmailService.generate_otp(digits=6)
+        expires_at = time.time() + 600
+        otp_hash = hashlib.sha256(otp_code.strip().encode("utf-8")).hexdigest()
+
+        totp_secret = None
+        if user.two_factor_secret:
+            if not user.two_factor_secret.startswith("{"):
+                totp_secret = user.two_factor_secret
+            else:
+                try:
+                    parsed = json.loads(user.two_factor_secret)
+                    totp_secret = parsed.get("totp_secret")
+                except Exception:
+                    totp_secret = None
+
+        user.two_factor_secret = json.dumps({
+            "type": "email_otp",
+            "otp_hash": otp_hash,
+            "expires_at": expires_at,
+            "totp_secret": totp_secret,
+        })
+        self.db.commit()
+
+        # Dispatch fresh email
+        EmailService.send_otp_email(
+            to_email=user.email,
+            otp_code=otp_code,
+            user_name=user.full_name,
+            expire_minutes=10,
+        )
+
+        masked_email = EmailService.mask_email(user.email)
+        return {
+            "message": f"A new 6-digit verification code has been sent to {masked_email}.",
+            "email_masked": masked_email,
+        }
+
     def setup_two_factor(self, user_id: UUID | str) -> TwoFactorSetupResponse:
         user = self.user_repo.get_by_id(str(user_id))
         if not user:
@@ -150,6 +256,10 @@ class AuthService:
         secret = TOTPService.generate_secret()
         plain_backup_codes, _ = TOTPService.generate_backup_codes(count=8)
         otpauth_url = TOTPService.generate_otpauth_uri(secret=secret, account_name=user.email)
+
+        # Send test notification to user's email
+        test_otp = EmailService.generate_otp(digits=6)
+        EmailService.send_otp_email(user.email, test_otp, user.full_name, expire_minutes=10)
 
         return TwoFactorSetupResponse(
             secret=secret,
@@ -162,15 +272,14 @@ class AuthService:
         if not user:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found.")
 
-        # Verify test code against the unconfirmed secret
+        # Verify code
         is_valid = TOTPService.verify_totp(payload.secret, payload.code)
         if not is_valid:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid verification code. Please check your authenticator app and try again."
+                detail="Invalid verification code. Please check your verification code and try again."
             )
 
-        # Hash backup codes for secure storage
         hashed_codes = [
             hashlib.sha256(code.replace("-", "").strip().upper().encode("utf-8")).hexdigest()
             for code in payload.backup_codes
@@ -197,29 +306,68 @@ class AuthService:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token subject.")
 
         user = self.user_repo.get_by_id(user_id)
-        if not user or not user.is_active or not user.is_two_factor_enabled or not user.two_factor_secret:
+        if not user or not user.is_active or not user.is_two_factor_enabled:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Two-factor authentication is not configured for this account."
+                detail="Two-factor authentication is not active for this account."
             )
 
-        # 1. First attempt TOTP verification
-        is_totp_valid = TOTPService.verify_totp(user.two_factor_secret, payload.code)
+        clean_code = payload.code.strip()
+        verified = False
+        totp_secret_to_restore = None
 
-        # 2. If TOTP fails, attempt backup recovery code
-        if not is_totp_valid:
-            existing_hashes = json.loads(user.two_factor_backup_codes or "[]")
-            is_backup_valid, remaining_hashes = TOTPService.verify_and_consume_backup_code(payload.code, existing_hashes)
-            if is_backup_valid:
-                user.two_factor_backup_codes = json.dumps(remaining_hashes)
-                self.db.commit()
+        # 1. Attempt Email OTP & TOTP Verification from user.two_factor_secret
+        if user.two_factor_secret:
+            secret_data = None
+            if user.two_factor_secret.startswith("{"):
+                try:
+                    secret_data = json.loads(user.two_factor_secret)
+                except Exception:
+                    secret_data = None
+
+            if isinstance(secret_data, dict):
+                totp_secret_to_restore = secret_data.get("totp_secret")
+
+                # 1a. Check Email OTP match
+                if secret_data.get("otp_hash"):
+                    incoming_hash = hashlib.sha256(clean_code.encode("utf-8")).hexdigest()
+                    if hmac.compare_digest(incoming_hash, secret_data.get("otp_hash", "")):
+                        if time.time() > secret_data.get("expires_at", 0):
+                            raise HTTPException(
+                                status_code=status.HTTP_401_UNAUTHORIZED,
+                                detail="Verification code has expired. Please click 'Resend Code' to receive a new code."
+                            )
+                        verified = True
+
+                # 1b. Check TOTP match if available
+                if not verified and totp_secret_to_restore:
+                    if TOTPService.verify_totp(totp_secret_to_restore, clean_code):
+                        verified = True
             else:
-                raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="Invalid two-factor code or recovery key."
-                )
+                # Raw secret string
+                if TOTPService.verify_totp(user.two_factor_secret, clean_code):
+                    verified = True
+                    totp_secret_to_restore = user.two_factor_secret
 
-        # 2FA passed — issue session tokens
+        # 2. Fallback to Emergency Backup Recovery Codes
+        if not verified and user.two_factor_backup_codes:
+            existing_hashes = json.loads(user.two_factor_backup_codes or "[]")
+            is_backup_valid, remaining_hashes = TOTPService.verify_and_consume_backup_code(clean_code, existing_hashes)
+            if is_backup_valid:
+                verified = True
+                user.two_factor_backup_codes = json.dumps(remaining_hashes)
+
+        if not verified:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid verification code. Please enter the 6-digit OTP sent to your email."
+            )
+
+        # Successfully verified: restore permanent secret or clear single-use state
+        user.two_factor_secret = totp_secret_to_restore
+        self.db.commit()
+
+        # Issue session tokens
         access_token = create_access_token(subject=str(user.id))
         refresh_token = create_refresh_token(subject=str(user.id))
         user_response = self._build_user_response(user)
@@ -242,16 +390,26 @@ class AuthService:
                 detail="Incorrect password. Password verification required to disable 2FA."
             )
 
+        # Validate code if secret is present
         if user.two_factor_secret:
-            is_totp_valid = TOTPService.verify_totp(user.two_factor_secret, payload.code)
-            if not is_totp_valid:
-                existing_hashes = json.loads(user.two_factor_backup_codes or "[]")
-                is_backup_valid, remaining_hashes = TOTPService.verify_and_consume_backup_code(payload.code, existing_hashes)
-                if not is_backup_valid:
-                    raise HTTPException(
-                        status_code=status.HTTP_401_UNAUTHORIZED,
-                        detail="Invalid two-factor code. Accurate 2FA code is required to disable protection."
-                    )
+            secret_str = user.two_factor_secret
+            if secret_str.startswith("{"):
+                try:
+                    parsed = json.loads(secret_str)
+                    secret_str = parsed.get("totp_secret") or ""
+                except Exception:
+                    secret_str = ""
+
+            if secret_str:
+                is_totp_valid = TOTPService.verify_totp(secret_str, payload.code)
+                if not is_totp_valid and user.two_factor_backup_codes:
+                    existing_hashes = json.loads(user.two_factor_backup_codes or "[]")
+                    is_backup_valid, _ = TOTPService.verify_and_consume_backup_code(payload.code, existing_hashes)
+                    if not is_backup_valid:
+                        raise HTTPException(
+                            status_code=status.HTTP_401_UNAUTHORIZED,
+                            detail="Invalid two-factor code. Accurate 2FA code is required to disable protection."
+                        )
 
         user.is_two_factor_enabled = False
         user.two_factor_secret = None
@@ -268,6 +426,7 @@ class AuthService:
         hashed_codes = json.loads(user.two_factor_backup_codes or "[]")
         return TwoFactorStatusResponse(
             is_two_factor_enabled=bool(user.is_two_factor_enabled),
+            delivery_method="EMAIL",
             remaining_backup_codes=len(hashed_codes),
         )
 

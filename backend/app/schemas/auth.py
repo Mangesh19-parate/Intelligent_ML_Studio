@@ -1,6 +1,11 @@
 from uuid import UUID
 from datetime import datetime
-from pydantic import BaseModel, Field, ConfigDict
+import re
+from pydantic import BaseModel, Field, ConfigDict, field_validator
+
+EMAIL_REGEX = re.compile(
+    r"^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$"
+)
 
 class PermissionResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -31,9 +36,25 @@ class SignupRequest(BaseModel):
     email: str = Field(..., min_length=3, max_length=150)
     password: str = Field(..., min_length=6)
 
+    @field_validator("email")
+    @classmethod
+    def validate_email(cls, v: str) -> str:
+        clean = v.strip().lower()
+        if not EMAIL_REGEX.match(clean):
+            raise ValueError("Invalid email address format. Please enter a valid email address.")
+        return clean
+
 class LoginRequest(BaseModel):
     email: str
     password: str
+
+    @field_validator("email")
+    @classmethod
+    def validate_email(cls, v: str) -> str:
+        clean = v.strip().lower()
+        if not EMAIL_REGEX.match(clean):
+            raise ValueError("Invalid email address format. Please enter a valid email address.")
+        return clean
 
 class TokenResponse(BaseModel):
     access_token: str
@@ -44,6 +65,8 @@ class TokenResponse(BaseModel):
 class LoginResponse(BaseModel):
     requires_2fa: bool = False
     two_factor_token: str | None = None
+    email_masked: str | None = None
+    message: str | None = None
     access_token: str | None = None
     refresh_token: str | None = None
     token_type: str = "bearer"
@@ -66,10 +89,15 @@ class TwoFactorVerifyLoginRequest(BaseModel):
     two_factor_token: str
     code: str
 
+class TwoFactorResendRequest(BaseModel):
+    two_factor_token: str
+
 class TwoFactorDisableRequest(BaseModel):
     password: str
     code: str
 
 class TwoFactorStatusResponse(BaseModel):
     is_two_factor_enabled: bool
+    delivery_method: str = "EMAIL"
     remaining_backup_codes: int = 0
+

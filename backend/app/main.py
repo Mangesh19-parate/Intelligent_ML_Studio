@@ -86,21 +86,24 @@ async def http_exception_handler(request: Request, exc: HTTPException):
         headers=getattr(exc, "headers", None),
     )
 
+from fastapi.encoders import jsonable_encoder
+
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
     request_id = request.headers.get("x-request-id") or str(uuid.uuid4())
+    safe_errors = jsonable_encoder(exc.errors())
     formatted_details = [
         {
             "loc": [str(x) for x in err.get("loc", [])],
-            "message": err.get("msg", "Validation error"),
-            "code": err.get("type", "VALUE_ERROR"),
+            "message": str(err.get("msg", "Validation error")),
+            "code": str(err.get("type", "VALUE_ERROR")),
         }
-        for err in exc.errors()
+        for err in safe_errors
     ]
     return JSONResponse(
         status_code=422,
         content={
-            "detail": exc.errors(),
+            "detail": safe_errors,
             "error": {
                 "status_code": 422,
                 "code": "REQUEST_VALIDATION_ERROR",

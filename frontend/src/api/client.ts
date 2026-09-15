@@ -159,6 +159,10 @@ export const twoFactorApi = {
     }
     return res;
   },
+  resendOtp: (twoFactorToken: string) =>
+    apiClient.post<{ message: string; email_masked?: string }>('/auth/2fa/resend', {
+      two_factor_token: twoFactorToken,
+    }),
   setup: () => apiClient.post<TwoFactorSetupResponse>('/auth/2fa/setup'),
   confirm: (payload: TwoFactorConfirmRequest) =>
     apiClient.post<{ message: string }>('/auth/2fa/confirm', payload),

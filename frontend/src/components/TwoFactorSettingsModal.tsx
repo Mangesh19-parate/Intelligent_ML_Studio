@@ -6,38 +6,14 @@ import { OtpInput } from './auth/OtpInput';
 import {
   ShieldCheck,
   ShieldAlert,
-  Smartphone,
-  Copy,
-  Check,
-  Download,
-  KeyRound,
   X,
-  AlertTriangle,
   Lock,
   ArrowRight,
-  RefreshCw,
+  CheckCircle2,
+  AlertTriangle,
+  KeyRound,
 } from 'lucide-react';
 import axios from 'axios';
-
-// Zero-dependency pure SVG QR Matrix generator for standard otpauth URIs
-const QRCodeSVG: React.FC<{ value: string; size?: number }> = ({ value, size = 180 }) => {
-  // Generate a high-contrast QR visual representation using an image data URI or SVG pattern
-  const encodedValue = encodeURIComponent(value);
-  const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodedValue}&margin=1`;
-
-  return (
-    <div className="p-3 bg-white rounded-2xl border border-[var(--color-border)] shadow-sm inline-block">
-      <img
-        src={qrApiUrl}
-        alt="2FA QR Code"
-        width={size}
-        height={size}
-        className="rounded-lg object-contain"
-        loading="eager"
-      />
-    </div>
-  );
-};
 
 export interface TwoFactorSettingsModalProps {
   isOpen: boolean;
@@ -64,10 +40,6 @@ export const TwoFactorSettingsModal: React.FC<TwoFactorSettingsModalProps> = ({
   // Disable Form
   const [disablePassword, setDisablePassword] = useState<string>('');
   const [disableCode, setDisableCode] = useState<string>('');
-
-  // Copy states
-  const [copiedSecret, setCopiedSecret] = useState<boolean>(false);
-  const [copiedCodes, setCopiedCodes] = useState<boolean>(false);
 
   const fetchStatus = async () => {
     try {
@@ -166,34 +138,6 @@ export const TwoFactorSettingsModal: React.FC<TwoFactorSettingsModalProps> = ({
     }
   };
 
-  const copySecret = () => {
-    if (!setupData) return;
-    navigator.clipboard.writeText(setupData.secret);
-    setCopiedSecret(true);
-    setTimeout(() => setCopiedSecret(false), 2000);
-  };
-
-  const copyBackupCodes = () => {
-    if (!setupData) return;
-    navigator.clipboard.writeText(setupData.backup_codes.join('\n'));
-    setCopiedCodes(true);
-    setTimeout(() => setCopiedCodes(false), 2000);
-  };
-
-  const downloadBackupCodes = () => {
-    if (!setupData) return;
-    const content = `ML STUDIO EMERGENCY RECOVERY CODES\nAccount: ${user?.email}\nGenerated: ${new Date().toISOString()}\n\nEach code can only be used once:\n\n${setupData.backup_codes.map((c, i) => `${i + 1}. ${c}`).join('\n')}\n`;
-    const blob = new Blob([content], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `ml-studio-backup-codes-${user?.email || 'user'}.txt`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  };
-
   if (!isOpen) return null;
 
   return (
@@ -233,7 +177,7 @@ export const TwoFactorSettingsModal: React.FC<TwoFactorSettingsModalProps> = ({
 
           {successMsg && (
             <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs flex items-center space-x-2.5">
-              <Check className="w-4 h-4 shrink-0" />
+              <CheckCircle2 className="w-4 h-4 shrink-0" />
               <span>{successMsg}</span>
             </div>
           )}
@@ -252,27 +196,41 @@ export const TwoFactorSettingsModal: React.FC<TwoFactorSettingsModalProps> = ({
                           : 'bg-amber-500/10 text-amber-500 border border-amber-500/20'
                       }`}
                     >
-                      {status?.is_two_factor_enabled ? 'ENABLED & ACTIVE' : 'DISABLED'}
+                      {status?.is_two_factor_enabled ? 'EMAIL 2FA ACTIVE' : 'DISABLED'}
                     </span>
                   </div>
-                  <p className="text-xs text-[var(--color-text-muted)]">
+                  <p className="text-xs text-[var(--color-text-muted)] mt-1">
                     {status?.is_two_factor_enabled
-                      ? `Your account requires a 6-digit TOTP code on every login. (${status.remaining_backup_codes} recovery codes remaining)`
-                      : 'Add an extra layer of security to prevent unauthorized access to your account.'}
+                      ? `Your account requires a secure 6-digit OTP sent to ${user?.email || 'your email'} on every sign in.`
+                      : 'Add an extra layer of security to require email verification on sign in.'}
                   </p>
                 </div>
+              </div>
+
+              <div className="p-4 rounded-xl bg-[var(--color-bg)]/60 border border-[var(--color-border)] text-xs space-y-2 text-[var(--color-text-muted)]">
+                <div className="font-semibold text-[var(--color-text)] flex items-center space-x-2">
+                  <ShieldCheck className="w-4 h-4 text-emerald-500" />
+                  <span>How Email Two-Factor Authentication Works</span>
+                </div>
+                <p>
+                  Whenever you sign in (or log out and log back in), a temporary 6-digit verification code is immediately dispatched to <strong>{user?.email}</strong>.
+                </p>
+                <p className="text-[11px]">
+                  ✓ No authenticator app or QR code scan is required.<br />
+                  ✓ Protects against credential theft and unauthorized access attempts.
+                </p>
               </div>
 
               {status?.is_two_factor_enabled ? (
                 <div className="pt-2 flex justify-between items-center">
                   <span className="text-xs text-[var(--color-text-muted)]">
-                    Compatible with Google Authenticator, 1Password, Authy, Apple Keychain
+                    Protected via registered email delivery
                   </span>
                   <button
                     onClick={() => setStep('disable')}
                     className="px-4 py-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 border border-rose-500/20 text-xs font-bold transition-all cursor-pointer"
                   >
-                    Disable 2FA Protection
+                    Disable Email 2FA
                   </button>
                 </div>
               ) : (
@@ -282,8 +240,8 @@ export const TwoFactorSettingsModal: React.FC<TwoFactorSettingsModalProps> = ({
                     disabled={loading}
                     className="px-5 py-2.5 rounded-xl bg-[var(--color-accent)] hover:bg-[var(--color-accent-hover)] text-white text-xs font-bold shadow-md shadow-[var(--color-accent)]/20 flex items-center space-x-2 transition-all cursor-pointer"
                   >
-                    <Smartphone className="w-4 h-4" />
-                    <span>Setup Two-Factor Authentication</span>
+                    <ShieldCheck className="w-4 h-4" />
+                    <span>Activate Email 2FA</span>
                     <ArrowRight className="w-4 h-4" />
                   </button>
                 </div>
@@ -291,93 +249,31 @@ export const TwoFactorSettingsModal: React.FC<TwoFactorSettingsModalProps> = ({
             </div>
           )}
 
-          {/* STEP 2: SETUP & PAIRING */}
+          {/* STEP 2: SETUP & CONFIRMATION */}
           {step === 'setup' && setupData && (
             <div className="space-y-6">
-              {/* Step 1: Scan QR Code */}
               <div className="space-y-3">
                 <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--color-accent)]">
-                  Step 1: Scan QR Code with Authenticator App
+                  Verify Email Delivery
                 </h4>
-                <div className="flex flex-col sm:flex-row items-center gap-6 p-4 rounded-2xl bg-[var(--color-bg)] border border-[var(--color-border)]">
-                  <QRCodeSVG value={setupData.otpauth_url} size={160} />
-                  <div className="space-y-2 flex-1 text-xs">
-                    <p className="text-[var(--color-text)] font-medium leading-relaxed">
-                      Open your authenticator app (Google Authenticator, Microsoft Authenticator, 1Password, Authy) and scan the QR code.
-                    </p>
-                    <div className="pt-2">
-                      <span className="text-[var(--color-text-muted)] block mb-1">
-                        Cannot scan? Copy the secret key manually:
-                      </span>
-                      <div className="flex items-center space-x-2">
-                        <code className="p-2 rounded-lg bg-[var(--color-surface)] border border-[var(--color-border)] font-mono text-[11px] text-[var(--color-accent)] font-bold flex-1 select-all">
-                          {setupData.secret}
-                        </code>
-                        <button
-                          onClick={copySecret}
-                          className="p-2 rounded-lg bg-[var(--color-surface)] hover:bg-[var(--color-surface-hover)] border border-[var(--color-border)] text-[var(--color-text)] transition-colors cursor-pointer"
-                          title="Copy Secret"
-                        >
-                          {copiedSecret ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
+                <div className="p-4 rounded-2xl bg-[var(--color-bg)] border border-[var(--color-border)] text-xs space-y-2">
+                  <p className="text-[var(--color-text)] font-medium">
+                    A verification code has been dispatched to <strong>{user?.email}</strong>.
+                  </p>
+                  <p className="text-[var(--color-text-muted)]">
+                    Please enter the 6-digit code received in your email to activate two-factor protection.
+                  </p>
                 </div>
               </div>
 
-              {/* Step 2: Emergency Recovery Codes */}
-              <div className="space-y-3">
+              {/* Confirmation Form */}
+              <form onSubmit={handleConfirmSetup} className="space-y-4 pt-2 border-t border-[var(--color-border)]">
                 <div className="flex items-center justify-between">
                   <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--color-accent)]">
-                    Step 2: Save Emergency Recovery Keys
-                  </h4>
-                  <div className="flex items-center space-x-2">
-                    <button
-                      onClick={copyBackupCodes}
-                      className="px-2.5 py-1 rounded-lg bg-[var(--color-bg)] hover:bg-[var(--color-surface-hover)] border border-[var(--color-border)] text-xs font-semibold text-[var(--color-text)] flex items-center space-x-1 cursor-pointer"
-                    >
-                      {copiedCodes ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
-                      <span>{copiedCodes ? 'Copied' : 'Copy'}</span>
-                    </button>
-                    <button
-                      onClick={downloadBackupCodes}
-                      className="px-2.5 py-1 rounded-lg bg-[var(--color-bg)] hover:bg-[var(--color-surface-hover)] border border-[var(--color-border)] text-xs font-semibold text-[var(--color-text)] flex items-center space-x-1 cursor-pointer"
-                    >
-                      <Download className="w-3 h-3 text-[var(--color-accent)]" />
-                      <span>Download .txt</span>
-                    </button>
-                  </div>
-                </div>
-
-                <div className="p-4 rounded-2xl bg-[var(--color-bg)] border border-[var(--color-border)] space-y-2">
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 font-mono text-xs">
-                    {setupData.backup_codes.map((code, idx) => (
-                      <div
-                        key={idx}
-                        className="p-1.5 rounded-lg bg-[var(--color-surface)] border border-[var(--color-border)] text-center text-[var(--color-text)] font-bold tracking-wider"
-                      >
-                        {code}
-                      </div>
-                    ))}
-                  </div>
-                  <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 text-[11px] flex items-start space-x-2 mt-2">
-                    <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-                    <span>
-                      Save these single-use codes safely. If you lose your phone or authenticator device, these are the ONLY way to regain access.
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Step 3: Test Verification Code */}
-              <form onSubmit={handleConfirmSetup} className="space-y-4 pt-4 border-t border-[var(--color-border)]">
-                <div className="flex items-center justify-between">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--color-accent)]">
-                    Step 3: Enter 6-Digit Authenticator Code
+                    Enter 6-Digit Email Code
                   </h4>
                   <span className="text-[11px] text-[var(--color-text-muted)] font-medium">
-                    Auto-advancing 6-box input
+                    Auto-advancing input
                   </span>
                 </div>
 
@@ -395,7 +291,7 @@ export const TwoFactorSettingsModal: React.FC<TwoFactorSettingsModalProps> = ({
                     disabled={submitting || confirmCode.trim().length !== 6}
                     className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-[var(--color-accent)] hover:bg-[var(--color-accent-hover)] text-white text-xs font-bold shadow-md shadow-[var(--color-accent)]/20 flex items-center justify-center space-x-2 transition-all disabled:opacity-50 cursor-pointer"
                   >
-                    <span>{submitting ? 'Activating 2FA...' : 'Verify & Activate 2FA'}</span>
+                    <span>{submitting ? 'Activating Email 2FA...' : 'Verify & Activate Email 2FA'}</span>
                     <ArrowRight className="w-4 h-4" />
                   </button>
                 </div>

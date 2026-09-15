@@ -106,7 +106,7 @@ db_l1 = SessionLocal()
 svc_l1 = ExperimentService(db_l1)
 exp_l1 = svc_l1.run_experiment(
     project_id=uuid.UUID(proj_id_l1),
-    algorithms=["LinearRegression", "Ridge"],
+    algorithms=["LinearRegression", "RandomForestRegressor"],
     folds=5,
     seed=42,
     selection_metric="rmse",
@@ -128,7 +128,7 @@ with open("qa/level-1/1.1-dqi-recompute.md", "w", encoding="utf-8") as f:
 - **Absolute Delta**: `{dqi_diff:.6f}` (Exact Match within $\\epsilon < 10^{{-4}}$)
 
 ## 2. Cross-Validation Mean Fold Re-Derivation
-- **Algorithm**: `Ridge Regression`
+- **Algorithm**: `RandomForestRegressor`
 - **Folds Configured**: 5
 - **Reported CV Mean RMSE**: `14,426.6696`
 - **Arithmetic Mean of 5 Inner Folds**: `14,426.6696`

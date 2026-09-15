@@ -14,6 +14,7 @@ from app.schemas.auth import (
     TwoFactorSetupResponse,
     TwoFactorConfirmRequest,
     TwoFactorVerifyLoginRequest,
+    TwoFactorResendRequest,
     TwoFactorDisableRequest,
     TwoFactorStatusResponse,
 )
@@ -102,6 +103,19 @@ def verify_2fa_login(
         path="/"
     )
     return token_resp
+
+@router.post(
+    "/2fa/resend",
+    status_code=status.HTTP_200_OK,
+    summary="Resend 6-digit verification code to the user's registered email address",
+    dependencies=[Depends(rate_limit_auth(max_requests=10, window_seconds=60))]
+)
+def resend_2fa_otp(
+    payload: TwoFactorResendRequest,
+    db: Session = Depends(get_db)
+):
+    service = AuthService(db)
+    return service.resend_two_factor_otp(payload)
 
 @router.post(
     "/2fa/setup",

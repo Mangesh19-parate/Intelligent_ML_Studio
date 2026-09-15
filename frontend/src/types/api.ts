@@ -420,6 +420,8 @@ export interface DetailedHealthResponse {
 export interface LoginResponse {
   requires_2fa: boolean;
   two_factor_token?: string | null;
+  email_masked?: string | null;
+  message?: string | null;
   access_token?: string | null;
   refresh_token?: string | null;
   token_type?: string;
@@ -443,6 +445,10 @@ export interface TwoFactorVerifyLoginRequest {
   code: string;
 }
 
+export interface TwoFactorResendRequest {
+  two_factor_token: string;
+}
+
 export interface TwoFactorDisableRequest {
   password: string;
   code: string;
@@ -450,6 +456,7 @@ export interface TwoFactorDisableRequest {
 
 export interface TwoFactorStatusResponse {
   is_two_factor_enabled: boolean;
+  delivery_method?: string;
   remaining_backup_codes: number;
 }
 

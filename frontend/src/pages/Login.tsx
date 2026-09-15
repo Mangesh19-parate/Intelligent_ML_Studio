@@ -1,6 +1,7 @@
-import React, { useState, FormEvent } from 'react';
+import React, { useState, FormEvent, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { twoFactorApi } from '../api/client';
 import { OtpInput } from '../components/auth/OtpInput';
 import {
   Layers,
@@ -10,9 +11,9 @@ import {
   ShieldAlert,
   ArrowRight,
   ShieldCheck,
-  KeyRound,
   ArrowLeft,
-  Smartphone,
+  RefreshCw,
+  CheckCircle2,
 } from 'lucide-react';
 import axios from 'axios';
 
@@ -22,31 +23,55 @@ export const Login: React.FC = () => {
   const [email, setEmail] = useState<string>('dev@mlstudio.io');
   const [password, setPassword] = useState<string>('password123');
   const [error, setError] = useState<string>('');
+  const [infoMessage, setInfoMessage] = useState<string>('');
   const [submitting, setSubmitting] = useState<boolean>(false);
 
   // 2FA Challenge State
   const [is2FAPrompt, setIs2FAPrompt] = useState<boolean>(false);
   const [twoFactorToken, setTwoFactorToken] = useState<string>('');
   const [twoFactorCode, setTwoFactorCode] = useState<string>('');
-  const [isBackupCodeMode, setIsBackupCodeMode] = useState<boolean>(false);
+  const [maskedEmail, setMaskedEmail] = useState<string>('');
+  const [resendCooldown, setResendCooldown] = useState<number>(0);
+  const [resending, setResending] = useState<boolean>(false);
 
   const { login, register, verify2FA } = useAuth();
   const navigate = useNavigate();
 
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout>;
+    if (resendCooldown > 0) {
+      timer = setTimeout(() => setResendCooldown((prev) => prev - 1), 1000);
+    }
+    return () => clearTimeout(timer);
+  }, [resendCooldown]);
+
   const handleInitialSubmit = async (e: FormEvent<HTMLFormElement>): Promise<void> => {
     e.preventDefault();
     setError('');
+    setInfoMessage('');
     setSubmitting(true);
     try {
       if (isRegister) {
         await register(fullName, email, password);
-        navigate('/dashboard');
+        // Direct login or 2FA flow on initial sign in
+        const res = await login(email, password);
+        if (res.requires_2fa && res.two_factor_token) {
+          setTwoFactorToken(res.two_factor_token);
+          setMaskedEmail(res.email_masked || email);
+          setIs2FAPrompt(true);
+          setTwoFactorCode('');
+          setResendCooldown(30);
+        } else {
+          navigate('/dashboard');
+        }
       } else {
         const res = await login(email, password);
         if (res.requires_2fa && res.two_factor_token) {
           setTwoFactorToken(res.two_factor_token);
+          setMaskedEmail(res.email_masked || email);
           setIs2FAPrompt(true);
           setTwoFactorCode('');
+          setResendCooldown(30);
         } else {
           navigate('/dashboard');
         }
@@ -67,6 +92,7 @@ export const Login: React.FC = () => {
   const handle2FASubmit = async (e: FormEvent<HTMLFormElement>): Promise<void> => {
     e.preventDefault();
     setError('');
+    setInfoMessage('');
     setSubmitting(true);
     try {
       await verify2FA(twoFactorToken, twoFactorCode);
@@ -74,7 +100,7 @@ export const Login: React.FC = () => {
     } catch (err: unknown) {
       if (axios.isAxiosError(err)) {
         setError(
-          err.response?.data?.detail || 'Invalid two-factor authentication code. Please try again.'
+          err.response?.data?.detail || 'Invalid verification code. Please enter the 6-digit code sent to your email.'
         );
       } else {
         setError('Verification failed. Please try again.');
@@ -84,12 +110,33 @@ export const Login: React.FC = () => {
     }
   };
 
+  const handleResendOtp = async () => {
+    if (resendCooldown > 0 || resending || !twoFactorToken) return;
+    setResending(true);
+    setError('');
+    setInfoMessage('');
+    try {
+      const res = await twoFactorApi.resendOtp(twoFactorToken);
+      setInfoMessage(res.data?.message || 'A fresh 6-digit code was sent to your email.');
+      setResendCooldown(30);
+    } catch (err: unknown) {
+      if (axios.isAxiosError(err)) {
+        setError(err.response?.data?.detail || 'Failed to resend verification code.');
+      } else {
+        setError('Failed to resend code. Please try again.');
+      }
+    } finally {
+      setResending(false);
+    }
+  };
+
   const resetToLogin = () => {
     setIs2FAPrompt(false);
     setTwoFactorToken('');
     setTwoFactorCode('');
     setError('');
-    setIsBackupCodeMode(false);
+    setInfoMessage('');
+    setMaskedEmail('');
   };
 
   return (
@@ -101,13 +148,11 @@ export const Login: React.FC = () => {
             {is2FAPrompt ? <ShieldCheck className="w-6 h-6" /> : <Layers className="w-6 h-6" />}
           </div>
           <h1 className="text-2xl font-black tracking-tight text-[var(--color-text)]">
-            {is2FAPrompt ? 'Two-Factor Verification' : 'ML Studio'}
+            {is2FAPrompt ? 'Two-Factor Email Verification' : 'ML Studio'}
           </h1>
           <p className="text-xs text-[var(--color-text-muted)] mt-1">
             {is2FAPrompt
-              ? isBackupCodeMode
-                ? 'Enter your 8-character single-use emergency backup key'
-                : 'Enter the 6-digit code from your authenticator app'
+              ? `Enter the 6-digit verification code sent to ${maskedEmail || 'your email'}. No QR code needed.`
               : 'Leakage-Controlled No-Code Tabular ML Platform'}
           </p>
         </div>
@@ -119,62 +164,55 @@ export const Login: React.FC = () => {
           </div>
         )}
 
+        {infoMessage && (
+          <div className="mb-6 p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs flex items-center space-x-2.5">
+            <CheckCircle2 className="w-4 h-4 shrink-0" />
+            <span>{infoMessage}</span>
+          </div>
+        )}
+
         {/* 2FA Challenge Form */}
         {is2FAPrompt ? (
           <form onSubmit={handle2FASubmit} className="space-y-5">
             <div>
               <label className="block text-xs font-semibold text-[var(--color-text-muted)] mb-2 text-center">
-                {isBackupCodeMode ? 'Enter 8-Character Emergency Recovery Key' : 'Enter 6-Digit Authenticator Code'}
+                Enter 6-Digit Email OTP
               </label>
 
-              {isBackupCodeMode ? (
-                <div className="relative">
-                  <KeyRound className="absolute left-3.5 top-3 w-4 h-4 text-[var(--color-text-muted)]" />
-                  <input
-                    type="text"
-                    required
-                    autoFocus
-                    maxLength={10}
-                    value={twoFactorCode}
-                    onChange={(e) => setTwoFactorCode(e.target.value)}
-                    placeholder="XXXX-XXXX"
-                    className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[var(--color-bg)] border border-[var(--color-border)] text-[var(--color-text)] text-sm font-mono tracking-widest focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] transition-all text-center"
-                  />
-                </div>
-              ) : (
-                <div className="py-2">
-                  <OtpInput
-                    value={twoFactorCode}
-                    onChange={setTwoFactorCode}
-                    disabled={submitting}
-                  />
-                </div>
-              )}
+              <div className="py-2">
+                <OtpInput
+                  value={twoFactorCode}
+                  onChange={setTwoFactorCode}
+                  disabled={submitting}
+                />
+              </div>
             </div>
 
             <button
               type="submit"
-              disabled={submitting || (isBackupCodeMode ? !twoFactorCode.trim() : twoFactorCode.length !== 6)}
+              disabled={submitting || twoFactorCode.length !== 6}
               className="w-full py-3 px-4 rounded-xl bg-[var(--color-accent)] hover:bg-[var(--color-accent-hover)] text-white font-semibold text-sm shadow-md shadow-[var(--color-accent)]/20 flex items-center justify-center space-x-2 transition-all disabled:opacity-50 cursor-pointer"
             >
               <span>{submitting ? 'Verifying Code...' : 'Verify & Enter Dashboard'}</span>
               <ArrowRight className="w-4 h-4" />
             </button>
 
-            {/* Toggle Backup Mode & Back to Login */}
-            <div className="flex flex-col items-center space-y-2.5 pt-2 text-xs">
+            {/* Resend OTP & Back to Login */}
+            <div className="flex flex-col items-center space-y-3 pt-2 text-xs">
               <button
                 type="button"
-                onClick={() => {
-                  setIsBackupCodeMode(!isBackupCodeMode);
-                  setTwoFactorCode('');
-                  setError('');
-                }}
-                className="text-[var(--color-accent)] hover:underline font-semibold cursor-pointer"
+                onClick={handleResendOtp}
+                disabled={resendCooldown > 0 || resending}
+                className="text-[var(--color-accent)] hover:underline font-semibold flex items-center space-x-1.5 cursor-pointer disabled:opacity-50 disabled:no-underline"
               >
-                {isBackupCodeMode
-                  ? 'Use 6-digit Authenticator app code instead'
-                  : 'Lost access? Use emergency backup recovery key'}
+                <RefreshCw className={`w-3.5 h-3.5 ${resending ? 'animate-spin' : ''}`} />
+                <span>
+                  {resendCooldown > 0
+                    ? `Resend code in ${resendCooldown}s`
+                    : resending
+                    ? 'Sending fresh OTP...'
+                    : 'Resend Verification Code to Email'}
+                </span>
               </button>
 
               <button

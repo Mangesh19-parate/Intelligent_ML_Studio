@@ -662,6 +662,9 @@ class PermutationImportanceSelector(BaseSelector):
     """
     PERMUTATION_IMPORTANCE_SELECTOR:
     Computes Permutation Feature Importance using a fast baseline estimator (SRS §2.7).
+    - Model is fitted on training split (X, y).
+    - Permutation scoring is evaluated strictly on validation split (X_val, y_val) when provided,
+      preventing training overfit leakage from distorting feature importance scores.
     - Regression: Ridge(alpha=1.0, random_state=seed) + permutation_importance(n_repeats=5, random_state=seed, n_jobs=1)
     - Classification: LogisticRegression(max_iter=500, random_state=seed, tol=1e-3) + permutation_importance
     - Full APPLIED / SKIPPED / FAILED status tracking.
@@ -674,6 +677,8 @@ class PermutationImportanceSelector(BaseSelector):
         y: np.ndarray,
         task_type: str,
         seed: int = 42,
+        X_val: np.ndarray | None = None,
+        y_val: np.ndarray | None = None,
     ) -> np.ndarray:
         n_samples, p = X.shape
         if p == 0:
@@ -689,10 +694,14 @@ class PermutationImportanceSelector(BaseSelector):
             )
 
         estimator.fit(X, y)
+
+        eval_X = X_val if X_val is not None and len(X_val) > 0 else X
+        eval_y = y_val if y_val is not None and len(y_val) > 0 else y
+
         res = permutation_importance(
             estimator,
-            X,
-            y,
+            eval_X,
+            eval_y,
             n_repeats=5,
             random_state=seed,
             n_jobs=1,
@@ -707,6 +716,8 @@ class PermutationImportanceSelector(BaseSelector):
         task_type: str = "REGRESSION",
         feature_names: list[str] | None = None,
         seed: int = 42,
+        X_val: np.ndarray | pd.DataFrame | None = None,
+        y_val: np.ndarray | pd.Series | None = None,
     ) -> SelectorOutput:
         if isinstance(X, pd.DataFrame):
             resolved_names = list(X.columns)
@@ -716,6 +727,13 @@ class PermutationImportanceSelector(BaseSelector):
             resolved_names = feature_names or [f"feature_{i}" for i in range(X_arr.shape[1] if X_arr.ndim > 1 else len(X_arr))]
 
         y_arr = y.to_numpy() if isinstance(y, pd.Series) else np.asarray(y)
+
+        X_val_arr = None
+        if X_val is not None:
+            X_val_arr = X_val.to_numpy(dtype=np.float64, copy=False) if isinstance(X_val, pd.DataFrame) else np.asarray(X_val, dtype=np.float64)
+        y_val_arr = None
+        if y_val is not None:
+            y_val_arr = y_val.to_numpy() if isinstance(y_val, pd.Series) else np.asarray(y_val)
 
         p = X_arr.shape[1] if X_arr.ndim > 1 else (len(X_arr) if len(resolved_names) == 1 else 0)
         if X_arr.ndim == 1 and p == 1:
@@ -744,7 +762,14 @@ class PermutationImportanceSelector(BaseSelector):
             )
 
         try:
-            raw_scores = self.compute_raw_scores(X_arr, y_arr, task_type.upper(), seed=seed)
+            raw_scores = self.compute_raw_scores(
+                X_arr,
+                y_arr,
+                task_type.upper(),
+                seed=seed,
+                X_val=X_val_arr,
+                y_val=y_val_arr,
+            )
             ranks, rank_scores = calculate_srs_rank_scores(raw_scores)
             return SelectorOutput(
                 method_name=self.name,

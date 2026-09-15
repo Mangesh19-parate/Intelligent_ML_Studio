@@ -1,6 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { ProjectContextHeader } from './navigation/ProjectContextHeader';
+import { Breadcrumbs } from './navigation/Breadcrumbs';
+import { CommandPalette } from './navigation/CommandPalette';
 import {
   Layers,
   LayoutDashboard,
@@ -55,9 +58,22 @@ export const AppLayout = ({ children }) => {
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsedSections, setCollapsedSections] = useState({});
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+
+  // Global keyboard shortcut for Command Palette (Ctrl+K / Cmd+K)
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setCommandPaletteOpen((prev) => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   // Close mobile drawer on Escape key
-  React.useEffect(() => {
+  useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape' && mobileOpen) {
         setMobileOpen(false);
@@ -463,10 +479,24 @@ export const AppLayout = ({ children }) => {
           </div>
         </header>
 
+        {/* Project Context Top Bar */}
+        <ProjectContextHeader onOpenCommandPalette={() => setCommandPaletteOpen(true)} />
+
+        {/* Dynamic Breadcrumb Trail */}
+        <div className="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pt-3 pb-1">
+          <Breadcrumbs />
+        </div>
+
         {/* Main Viewport */}
-        <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-5 sm:py-6 overflow-x-hidden">
+        <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-3 sm:py-5 overflow-x-hidden">
           {children}
         </main>
+
+        {/* Global Command Palette */}
+        <CommandPalette
+          isOpen={commandPaletteOpen}
+          onClose={() => setCommandPaletteOpen(false)}
+        />
 
         {/* Branded Launch-Ready Footer */}
         <footer className="border-t border-[var(--color-border)]/60 bg-[var(--color-surface)]/40 py-4 text-xs text-[var(--color-text-muted)] mt-auto">

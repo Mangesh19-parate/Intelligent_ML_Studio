@@ -28,8 +28,23 @@ async def _process_dataset_upload(
     project_service = ProjectService(db)
     project = project_service.get_project_by_id(project_id, current_user)
 
-    # Read uploaded file content
-    content = await file.read()
+    # Read uploaded file content with size limit safeguards
+    from app.core.config import settings
+    max_bytes = settings.MAX_UPLOAD_SIZE_MB * 1024 * 1024
+    chunks = []
+    total_size = 0
+    chunk_size = 64 * 1024  # 64KB
+
+    while chunk := await file.read(chunk_size):
+        total_size += len(chunk)
+        if total_size > max_bytes:
+            raise HTTPException(
+                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                detail=f"Uploaded file exceeds maximum allowed size of {settings.MAX_UPLOAD_SIZE_MB}MB."
+            )
+        chunks.append(chunk)
+
+    content = b"".join(chunks)
     if not content:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

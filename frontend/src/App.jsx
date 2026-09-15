@@ -1,6 +1,8 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { ToastProvider } from './context/ToastContext';
+import { ProjectProvider } from './context/ProjectContext';
 import { AppLayout } from './components/AppLayout';
 import { Login } from './pages/Login';
 import { Dashboard } from './pages/Dashboard';
@@ -42,9 +44,11 @@ const ProtectedRoute = ({ children, requiredRole }) => {
 export default function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/login" element={<Login />} />
+      <ToastProvider>
+        <ProjectProvider>
+          <BrowserRouter>
+            <Routes>
+              <Route path="/login" element={<Login />} />
           
           {/* Workspace */}
           <Route
@@ -158,111 +162,6 @@ export default function App() {
           <Route
             path="/analysis/imputation"
             element={
-              <ProtectedRoute>
-                <DataAnalysisStage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/analysis/feature-engineering"
-            element={
-              <ProtectedRoute>
-                <FeatureEngineeringStage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/analysis/feature-selection"
-            element={
-              <ProtectedRoute>
-                <FeatureEngineeringStage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/transformations"
-            element={
-              <ProtectedRoute>
-                <TransformationStage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/feature-engineering"
-            element={
-              <ProtectedRoute>
-                <FeatureEngineeringStage />
-              </ProtectedRoute>
-            }
-          />
-
-          {/* Intelligence Section */}
-          <Route
-            path="/diagnostics"
-            element={
-              <ProtectedRoute>
-                <DiagnosticsStage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/intelligence/diagnostics"
-            element={
-              <ProtectedRoute>
-                <DiagnosticsStage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/intelligence/recommendations"
-            element={
-              <ProtectedRoute>
-                <DiagnosticsStage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/intelligence/explainability"
-            element={
-              <ProtectedRoute>
-                <MLStage />
-              </ProtectedRoute>
-            }
-          />
-
-          {/* Machine Learning Section */}
-          <Route
-            path="/machine-learning"
-            element={
-              <ProtectedRoute>
-                <MLStage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/ml/training"
-            element={
-              <ProtectedRoute>
-                <MLStage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/ml/experiments"
-            element={
-              <ProtectedRoute>
-                <MLStage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/ml/evaluation"
-            element={
-              <ProtectedRoute>
-                <MLStage />
-              </ProtectedRoute>
-            }
-          />
           <Route
             path="/ml/registry"
             element={
@@ -344,6 +243,8 @@ export default function App() {
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
+        </ProjectProvider>
+      </ToastProvider>
     </AuthProvider>
   );
 }

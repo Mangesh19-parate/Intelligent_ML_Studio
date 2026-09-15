@@ -4,7 +4,7 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.dependencies import require_permission
+from app.core.dependencies import require_permission, verify_project_ownership
 from app.models.user import User
 from app.models.trained_model import TrainedModel
 from app.schemas.model_metric import ModelMetricResponse
@@ -28,6 +28,31 @@ from app.services.deployment_service import DeploymentService
 router = APIRouter(prefix="/models", tags=["Models & Evaluation"])
 
 
+def _get_model_and_verify_access(
+    model_id: UUID,
+    current_user: User,
+    db: Session,
+    allow_deployers: bool = False,
+    allow_readers: bool = False,
+) -> TrainedModel:
+    model = db.query(TrainedModel).filter(TrainedModel.id == model_id).first()
+    if not model:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Trained model not found"
+        )
+    if allow_readers:
+        return model
+
+    from app.core.dependencies import get_effective_permissions
+    permissions = get_effective_permissions(current_user)
+    if allow_deployers and ("DEPLOY" in permissions or "MANAGE_USERS" in permissions):
+        return model
+
+    verify_project_ownership(model.experiment.project_id, current_user, db)
+    return model
+
+
 @router.get(
     "/{id}/metrics",
     response_model=list[ModelMetricResponse],
@@ -39,14 +64,8 @@ def get_model_metrics(
     current_user: User = Depends(require_permission("READ")),
     db: Session = Depends(get_db),
 ):
+    model = _get_model_and_verify_access(id, current_user, db)
     exp_repo = ExperimentRepository(db)
-    model = db.query(TrainedModel).filter(TrainedModel.id == id).first()
-    if not model:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Trained model not found"
-        )
-
     metrics = exp_repo.get_model_metrics(id)
     return [
         ModelMetricResponse(
@@ -80,6 +99,7 @@ def get_global_explainability(
     Enforces caching: checks `explainability_summaries` table first.
     Returns 422 if model has no artifact (i.e. non-winning candidate).
     """
+    _get_model_and_verify_access(id, current_user, db)
     service = ExplainabilityService(db)
     return service.global_shap_summary(model_id=id, background_sample_size=background_sample_size)
 
@@ -99,6 +119,7 @@ def get_local_explainability(
     """
     Computes local SHAP explanation (contributions and base value) for an instance.
     """
+    _get_model_and_verify_access(id, current_user, db)
     service = ExplainabilityService(db)
     return service.local_shap_explanation(model_id=id, input_row=input_row)
 
@@ -118,6 +139,7 @@ def download_model(
     Loads the fitted pipeline artifact, re-verifies cryptographic SHA-256 integrity,
     and returns a downloadable file stream in the requested format.
     """
+    _get_model_and_verify_access(id, current_user, db, allow_deployers=True)
     registry = ModelRegistryService(db)
     buffer, filename, media_type = registry.download(model_id=id, format=format)
     return StreamingResponse(
@@ -141,6 +163,7 @@ def get_deployment_gate(
     """
     Evaluates or retrieves the 6-condition pre-deployment verification gate.
     """
+    _get_model_and_verify_access(id, current_user, db, allow_deployers=True)
     gate_service = DeploymentGateService(db)
     return gate_service.get_latest_gate(model_id=id)
 
@@ -159,6 +182,7 @@ def approve_deployment_gate(
     """
     Re-evaluates gate checks fresh and sets user_approved = true.
     """
+    _get_model_and_verify_access(id, current_user, db, allow_deployers=True)
     gate_service = DeploymentGateService(db)
     gate = gate_service.approve(model_id=id, approved_by_user_id=current_user.id)
     return DeploymentGateApproveResponse(
@@ -181,6 +205,7 @@ def deploy_model(
     """
     Provisions a LIVE deployment endpoint after verifying all 6 gate conditions.
     """
+    _get_model_and_verify_access(id, current_user, db, allow_deployers=True)
     deploy_service = DeploymentService(db)
     return deploy_service.deploy(model_id=id, user_id=current_user.id)
 
@@ -201,5 +226,6 @@ def get_model_passport(
     direct SELECT queries from stored records. Never triggers retraining, metric
     recomputation, or disk artifact loading (zero joblib/pickle IO).
     """
+    _get_model_and_verify_access(id, current_user, db, allow_readers=True)
     passport_service = ModelPassportService(db)
     return passport_service.get_passport(model_id=id)

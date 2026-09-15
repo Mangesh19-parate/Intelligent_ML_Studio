@@ -14,7 +14,9 @@ class ProjectUpdate(BaseModel):
     project_name: str | None = Field(default=None, min_length=1, max_length=200)
     task_type: TaskType | None = None
     target_column: str | None = Field(default=None, max_length=150)
-    pipeline_stage: str | None = None
+
+class ProjectTransitionRequest(BaseModel):
+    target_stage: str = Field(..., description="Target ProjectState to transition to")
 
 class TaskTypeUpdate(BaseModel):
     task_type: Literal["REGRESSION", "CLASSIFICATION"]

@@ -10,7 +10,7 @@ Validates:
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
-from app.core.seeder import seed_rbac_data
+from app.core.seeder import seed_rbac_data, seed_demo_accounts
 from app.core.security import create_access_token
 from app.models.user import User
 
@@ -18,6 +18,7 @@ from app.models.user import User
 @pytest.fixture(autouse=True)
 def ensure_rbac_and_demo_accounts(db_session: Session):
     seed_rbac_data(db_session)
+    seed_demo_accounts(db_session)
 
 
 def test_demo_accounts_non_admin_roles(db_session: Session):

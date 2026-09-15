@@ -8,8 +8,8 @@ from app.core.database import Base
 
 class DurableTask(Base):
     """
-    Persistent backing store for asynchronous durable tasks (P0.1).
-    Guarantees that task state, worker assignment, timestamps, and idempotency
+    Persistent backing store for asynchronous durable tasks (P0.1, P1.1).
+    Guarantees that task state, worker assignment, lease expiration, timestamps, and idempotency
     survive worker restarts and server reboots.
     """
     __tablename__ = "durable_tasks"
@@ -35,10 +35,12 @@ class DurableTask(Base):
     )
     started_at = Column(DateTime(timezone=True), nullable=True)
     finished_at = Column(DateTime(timezone=True), nullable=True)
+    lease_expires_at = Column(DateTime(timezone=True), nullable=True, index=True)
+    heartbeat_at = Column(DateTime(timezone=True), nullable=True)
     failure_reason = Column(Text, nullable=True)
     result_summary = Column(JSON, nullable=True)
 
     experiment = relationship("Experiment", backref="durable_tasks")
 
     def __repr__(self) -> str:
-        return f"<DurableTask id={self.id} exp={self.experiment_id} state={self.state}>"
+        return f"<DurableTask id={self.id} exp={self.experiment_id} state={self.state} worker={self.worker_id}>"

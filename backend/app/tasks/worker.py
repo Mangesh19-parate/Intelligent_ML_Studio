@@ -1,15 +1,16 @@
 """
-Standalone ML Studio Task Worker Process (P0.1, P0.2, P0.3).
+Standalone ML Studio Task Worker Process (P0.1, P0.2, P0.3, P1.1).
 Polls for queued durable tasks from database with atomic locking (FOR UPDATE SKIP LOCKED),
 executes them under OS-level process isolation with hard timeout termination,
-and performs lease-based crash recovery and retry orchestration.
+and performs lease-based crash recovery, periodic heartbeats, and retry orchestration.
 """
 
 import time
 import logging
 import signal
 import sys
-from datetime import datetime, timezone
+import uuid
+from datetime import datetime, timezone, timedelta
 from sqlalchemy.orm import Session
 from app.core.database import SessionLocal
 import app.models
@@ -18,7 +19,8 @@ from app.tasks.task_state import TaskState
 from app.tasks.experiment_tasks import (
     run_task_with_timeout_enforcement,
     recover_stale_tasks,
-    _model_to_record
+    _model_to_record,
+    DEFAULT_LEASE_DURATION_SECONDS,
 )
 
 logging.basicConfig(
@@ -40,10 +42,15 @@ signal.signal(signal.SIGINT, handle_shutdown)
 signal.signal(signal.SIGTERM, handle_shutdown)
 
 
-def claim_next_queued_task(db: Session, worker_id: str) -> DurableTask | None:
+def claim_next_queued_task(
+    db: Session,
+    worker_id: str,
+    lease_duration_seconds: int = DEFAULT_LEASE_DURATION_SECONDS,
+) -> DurableTask | None:
     """
     Atomically claims the next queued durable task.
     Uses PostgreSQL 'FOR UPDATE SKIP LOCKED' to prevent race conditions across multiple worker processes.
+    Sets worker_id, started_at, heartbeat_at, and lease_expires_at.
     Gracefully falls back to standard select for SQLite test environments.
     """
     try:
@@ -57,9 +64,12 @@ def claim_next_queued_task(db: Session, worker_id: str) -> DurableTask | None:
         
         task = query.first()
         if task:
+            now = datetime.now(timezone.utc)
             task.state = TaskState.RUNNING.value
             task.worker_id = worker_id
-            task.started_at = datetime.now(timezone.utc)
+            task.started_at = now
+            task.heartbeat_at = now
+            task.lease_expires_at = now + timedelta(seconds=lease_duration_seconds)
             db.commit()
             db.refresh(task)
             return task
@@ -74,8 +84,8 @@ from app.models.experiment import Experiment
 
 
 def main():
-    logger.info("ML Studio Durable Task Worker started (Process Isolation & Atomic Claiming enabled).")
-    worker_id = f"worker-daemon"
+    worker_instance_id = f"worker-{uuid.uuid4().hex[:8]}"
+    logger.info(f"ML Studio Durable Task Worker [{worker_instance_id}] started (Process Isolation & Lease Protocol enabled).")
 
     # Recover any stale or orphaned tasks on startup
     recovery_report = recover_stale_tasks()
@@ -87,7 +97,7 @@ def main():
     while RUNNING:
         db = SessionLocal()
         try:
-            task = claim_next_queued_task(db, worker_id=worker_id)
+            task = claim_next_queued_task(db, worker_id=worker_instance_id)
             if task:
                 task_id = task.id
                 exp_id = task.experiment_id
@@ -105,7 +115,7 @@ def main():
                 deployment_threshold = cfg.get("deployment_threshold") if cfg else None
                 db.close()
 
-                # Execute with process isolation & hard timeout kill
+                # Execute with process isolation, heartbeats & hard timeout kill
                 run_task_with_timeout_enforcement(
                     task_id=task_id,
                     project_id=project_id,
@@ -117,7 +127,7 @@ def main():
                     selection_direction=selection_direction,
                     deployment_threshold=deployment_threshold,
                     timeout_seconds=timeout_s,
-                    worker_id=worker_id,
+                    worker_id=worker_instance_id,
                 )
             else:
                 db.close()
@@ -130,7 +140,7 @@ def main():
                 pass
             time.sleep(2)
 
-    logger.info("ML Studio Durable Task Worker stopped.")
+    logger.info(f"ML Studio Durable Task Worker [{worker_instance_id}] stopped.")
 
 
 if __name__ == "__main__":

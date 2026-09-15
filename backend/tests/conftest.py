@@ -44,6 +44,8 @@ def db_session(tmp_path):
     Base.metadata.create_all(bind=engine)
     db = TestingSessionLocal()
     seed_rbac_data(db)
+    from app.core.seeder import seed_demo_accounts
+    seed_demo_accounts(db)
     try:
         yield db
     finally:

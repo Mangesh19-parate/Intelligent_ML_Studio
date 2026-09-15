@@ -128,5 +128,9 @@ def seed_rbac_data(db: Session) -> None:
     db.commit()
     logger.info("RBAC roles, permissions, and mappings successfully seeded.")
 
-    # 4. Seed Demo Accounts
-    seed_demo_accounts(db)
+    # 4. Seed Demo Accounts (Only if explicitly enabled and non-production)
+    from app.core.config import settings
+    if settings.SEED_DEMO_DATA and settings.ENV.lower() != "production":
+        seed_demo_accounts(db)
+    else:
+        logger.info("Demo account auto-seeding is skipped (SEED_DEMO_DATA is False or in production).")

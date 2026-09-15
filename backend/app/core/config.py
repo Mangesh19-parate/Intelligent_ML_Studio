@@ -25,6 +25,24 @@ class Settings(BaseSettings):
         description="Auto create tables via create_all (only allowed in development/testing; production must use alembic)"
     )
     
+    # Demo accounts seeding configuration
+    SEED_DEMO_DATA: bool = Field(
+        default=False,
+        description="Seed demo accounts (development only; prohibited in production)"
+    )
+    
+    # Artifact signing key configuration (isolated from JWT)
+    ARTIFACT_SIGNING_KEY: str = Field(
+        default="dev-artifact-key-change-in-production-0987654321",
+        description="Secret key for signing and verifying model artifacts via HMAC"
+    )
+    
+    # File upload limits
+    MAX_UPLOAD_SIZE_MB: int = Field(
+        default=50,
+        description="Maximum allowed file upload size in megabytes"
+    )
+    
     # JWT Security configuration
     JWT_SECRET: str = Field(
         default="dev-jwt-secret-key-change-in-production-1234567890",
@@ -67,6 +85,7 @@ class Settings(BaseSettings):
     def validate_production_hygiene(self) -> "Settings":
         known_dev_secrets = {
             "dev-jwt-secret-key-change-in-production-1234567890",
+            "dev-artifact-key-change-in-production-0987654321",
             "secret",
             "password",
             "changeme",
@@ -74,9 +93,21 @@ class Settings(BaseSettings):
             "secretkey",
         }
         if self.ENV.lower() == "production":
+            if self.SEED_DEMO_DATA:
+                raise ValueError(
+                    "Production security hygiene violation: SEED_DEMO_DATA is strictly prohibited in production."
+                )
             if self.JWT_SECRET in known_dev_secrets or len(self.JWT_SECRET) < 32:
                 raise ValueError(
                     "Production security hygiene violation: JWT_SECRET must be set to a secure, non-default secret with at least 32 characters in production."
+                )
+            if self.ARTIFACT_SIGNING_KEY in known_dev_secrets or len(self.ARTIFACT_SIGNING_KEY) < 32:
+                raise ValueError(
+                    "Production security hygiene violation: ARTIFACT_SIGNING_KEY must be set to a secure, non-default secret with at least 32 characters in production."
+                )
+            if self.ARTIFACT_SIGNING_KEY == self.JWT_SECRET:
+                raise ValueError(
+                    "Production security hygiene violation: ARTIFACT_SIGNING_KEY must not be identical to JWT_SECRET (key separation required)."
                 )
             if "*" in self.BACKEND_CORS_ORIGINS:
                 raise ValueError(

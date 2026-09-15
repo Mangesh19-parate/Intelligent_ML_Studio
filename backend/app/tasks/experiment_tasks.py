@@ -1,17 +1,19 @@
 """
-Durable Task Registry and Execution Engine for ML Studio (P0.1, P0.2, P0.3).
+Durable Task Registry and Execution Engine for ML Studio (P0.1, P0.2, P0.3, P1.1).
 Backs task records into the database (DurableTask model) so state survives process restarts.
 Enforces real execution timeouts with process-level isolation and hard OS termination,
-plus lease-based crash recovery and retry orchestration.
+plus lease-based crash recovery, periodic heartbeats, and retry orchestration.
 """
 
 import uuid
+import time
 import logging
+import threading
 import multiprocessing
 import concurrent.futures
 from typing import Any
 from uuid import UUID
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 from sqlalchemy.orm import Session
 from app.tasks.task_state import TaskState, DurableTaskRecord
@@ -20,6 +22,10 @@ from app.core.database import SessionLocal
 from app.services.experiment_service import ExperimentService
 
 logger = logging.getLogger(__name__)
+
+DEFAULT_LEASE_DURATION_SECONDS = 30
+DEFAULT_HEARTBEAT_INTERVAL_SECONDS = 10
+
 
 def _record_to_model(record: DurableTaskRecord) -> DurableTask:
     return DurableTask(
@@ -34,6 +40,8 @@ def _record_to_model(record: DurableTaskRecord) -> DurableTask:
         queued_at=record.queued_at,
         started_at=record.started_at,
         finished_at=record.finished_at,
+        lease_expires_at=record.lease_expires_at,
+        heartbeat_at=record.heartbeat_at,
         failure_reason=record.failure_reason,
         result_summary=record.result_summary,
     )
@@ -52,6 +60,8 @@ def _model_to_record(model: DurableTask) -> DurableTaskRecord:
         queued_at=model.queued_at,
         started_at=model.started_at,
         finished_at=model.finished_at,
+        lease_expires_at=model.lease_expires_at,
+        heartbeat_at=model.heartbeat_at,
         failure_reason=model.failure_reason,
         result_summary=model.result_summary,
     )
@@ -70,6 +80,8 @@ def save_task_record(record: DurableTaskRecord, db: Session | None = None) -> No
             existing.worker_id = record.worker_id
             existing.started_at = record.started_at
             existing.finished_at = record.finished_at
+            existing.lease_expires_at = record.lease_expires_at
+            existing.heartbeat_at = record.heartbeat_at
             existing.failure_reason = record.failure_reason
             existing.result_summary = record.result_summary
             existing.retry_count = record.retry_count
@@ -84,6 +96,92 @@ def save_task_record(record: DurableTaskRecord, db: Session | None = None) -> No
     finally:
         if close_db:
             db.close()
+
+
+def renew_task_lease(
+    task_id: str,
+    worker_id: str,
+    extend_seconds: int = DEFAULT_LEASE_DURATION_SECONDS,
+    db: Session | None = None,
+) -> bool:
+    """
+    Extends the worker lease and updates the heartbeat timestamp for an active running task.
+    Returns True if lease was successfully extended, False otherwise.
+    """
+    close_db = False
+    if db is None:
+        db = SessionLocal()
+        close_db = True
+    try:
+        task = (
+            db.query(DurableTask)
+            .filter(
+                DurableTask.id == task_id,
+                DurableTask.worker_id == worker_id,
+                DurableTask.state == TaskState.RUNNING.value,
+            )
+            .first()
+        )
+        if task:
+            now = datetime.now(timezone.utc)
+            task.heartbeat_at = now
+            task.lease_expires_at = now + timedelta(seconds=extend_seconds)
+            db.commit()
+            return True
+        return False
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Failed to renew lease for task {task_id} by worker {worker_id}: {e}")
+        return False
+    finally:
+        if close_db:
+            db.close()
+
+
+class HeartbeatRunner:
+    """
+    Background worker thread that sends periodic lease heartbeats for a running task.
+    """
+    def __init__(
+        self,
+        task_id: str,
+        worker_id: str,
+        interval_seconds: int = DEFAULT_HEARTBEAT_INTERVAL_SECONDS,
+        lease_duration_seconds: int = DEFAULT_LEASE_DURATION_SECONDS,
+    ):
+        self.task_id = task_id
+        self.worker_id = worker_id
+        self.interval_seconds = interval_seconds
+        self.lease_duration_seconds = lease_duration_seconds
+        self._stop_event = threading.Event()
+        self._thread: threading.Thread | None = None
+
+    def start(self) -> None:
+        self._stop_event.clear()
+        self._thread = threading.Thread(
+            target=self._run,
+            name=f"heartbeat-{self.task_id}",
+            daemon=True,
+        )
+        self._thread.start()
+
+    def _run(self) -> None:
+        while not self._stop_event.is_set():
+            time.sleep(self.interval_seconds)
+            if self._stop_event.is_set():
+                break
+            success = renew_task_lease(
+                task_id=self.task_id,
+                worker_id=self.worker_id,
+                extend_seconds=self.lease_duration_seconds,
+            )
+            if not success:
+                logger.debug(f"Heartbeat skipped or task {self.task_id} no longer running.")
+
+    def stop(self) -> None:
+        self._stop_event.set()
+        if self._thread and self._thread.is_alive():
+            self._thread.join(timeout=2)
 
 
 def submit_experiment_task(
@@ -215,7 +313,8 @@ def run_task_with_timeout_enforcement(
     db: Session | None = None,
 ) -> None:
     """
-    Executes task within an isolated child OS process and enforces true timeout termination.
+    Executes task within an isolated child OS process, maintains periodic lease heartbeats,
+    and enforces hard timeout termination.
     If the computation exceeds timeout_seconds, the child process is terminated (SIGTERM)
     and killed (SIGKILL) at the process boundary, marked TIMED_OUT in the DB, and partial writes are prevented.
     """
@@ -227,8 +326,17 @@ def run_task_with_timeout_enforcement(
         logger.info(f"Task {task_id} was cancelled before execution.")
         return
 
-    record.mark_running(worker_id=worker_id)
+    record.mark_running(worker_id=worker_id, lease_duration_seconds=DEFAULT_LEASE_DURATION_SECONDS)
     save_task_record(record, db=db)
+
+    # Start periodic background heartbeat runner to keep worker lease fresh
+    heartbeat = HeartbeatRunner(
+        task_id=task_id,
+        worker_id=worker_id,
+        interval_seconds=DEFAULT_HEARTBEAT_INTERVAL_SECONDS,
+        lease_duration_seconds=DEFAULT_LEASE_DURATION_SECONDS,
+    )
+    heartbeat.start()
 
     # Process-isolated execution
     parent_conn, child_conn = multiprocessing.Pipe()
@@ -249,60 +357,64 @@ def run_task_with_timeout_enforcement(
         name=f"ml-child-{task_id}",
     )
     
-    process.start()
-    child_conn.close()
+    try:
+        process.start()
+        child_conn.close()
 
-    process.join(timeout=timeout_seconds)
+        process.join(timeout=timeout_seconds)
 
-    if process.is_alive():
-        logger.warning(
-            f"Task {task_id} (PID {process.pid}) exceeded timeout of {timeout_seconds}s. "
-            f"Hard terminating child process at process boundary."
-        )
-        process.terminate()
-        process.join(timeout=2)
         if process.is_alive():
-            logger.warning(f"Task {task_id} (PID {process.pid}) did not terminate on SIGTERM. Sending SIGKILL.")
-            process.kill()
-            process.join()
+            logger.warning(
+                f"Task {task_id} (PID {process.pid}) exceeded timeout of {timeout_seconds}s. "
+                f"Hard terminating child process at process boundary."
+            )
+            process.terminate()
+            process.join(timeout=2)
+            if process.is_alive():
+                logger.warning(f"Task {task_id} (PID {process.pid}) did not terminate on SIGTERM. Sending SIGKILL.")
+                process.kill()
+                process.join()
 
-        record.mark_timed_out()
-        record.failure_reason = (
-            f"Execution terminated at process boundary: computation exceeded maximum timeout of {timeout_seconds}s."
-        )
-        save_task_record(record, db=db)
-    else:
-        # Process completed within timeout
-        payload = None
-        if parent_conn.poll():
-            try:
-                payload = parent_conn.recv()
-            except EOFError:
-                pass
-
-        if payload and payload.get("status") == "SUCCESS":
-            record.mark_succeeded(summary=payload.get("result", {"experiment_id": str(experiment_id), "status": "COMPLETED"}))
-        elif payload and payload.get("status") == "ERROR":
-            record.mark_failed(reason=payload.get("error", "Execution failed in child process"))
-        elif process.exitcode != 0:
-            record.mark_failed(reason=f"Worker process terminated unexpectedly with exit code {process.exitcode}")
+            record.mark_timed_out()
+            record.failure_reason = (
+                f"Execution terminated at process boundary: computation exceeded maximum timeout of {timeout_seconds}s."
+            )
+            save_task_record(record, db=db)
         else:
-            record.mark_succeeded(summary={"experiment_id": str(experiment_id), "status": "COMPLETED"})
+            # Process completed within timeout
+            payload = None
+            if parent_conn.poll():
+                try:
+                    payload = parent_conn.recv()
+                except EOFError:
+                    pass
 
-        save_task_record(record, db=db)
+            if payload and payload.get("status") == "SUCCESS":
+                record.mark_succeeded(summary=payload.get("result", {"experiment_id": str(experiment_id), "status": "COMPLETED"}))
+            elif payload and payload.get("status") == "ERROR":
+                record.mark_failed(reason=payload.get("error", "Execution failed in child process"))
+            elif process.exitcode != 0:
+                record.mark_failed(reason=f"Worker process terminated unexpectedly with exit code {process.exitcode}")
+            else:
+                record.mark_succeeded(summary={"experiment_id": str(experiment_id), "status": "COMPLETED"})
 
-    parent_conn.close()
+            save_task_record(record, db=db)
+    finally:
+        heartbeat.stop()
+        parent_conn.close()
 
 
 def recover_stale_tasks(
-    stale_threshold_seconds: int = 300,
+    stale_threshold_seconds: int = DEFAULT_LEASE_DURATION_SECONDS,
     max_retries: int = 3,
     db: Session | None = None,
 ) -> dict[str, list[str]]:
     """
-    Scans for orphaned/stale RUNNING tasks from crashed workers.
-    - If retry_count < max_retries: Requeues the task (RUNNING -> QUEUED) for automatic recovery.
-    - If retry_count >= max_retries: Marks the task FAILED (orphan cleanup).
+    Scans for orphaned/stale RUNNING tasks from crashed workers based on lease expiration.
+    - If lease_expires_at < now (or elapsed >= stale_threshold_seconds) and retry_count < max_retries:
+        Requeues the task (RUNNING -> QUEUED) for automatic recovery.
+    - If retry_count >= max_retries:
+        Marks the task FAILED (orphan cleanup).
     Returns a dict with 'requeued' and 'orphaned_failed' task ID lists.
     """
     close_db = False
@@ -314,26 +426,39 @@ def recover_stale_tasks(
         running_tasks = db.query(DurableTask).filter(DurableTask.state == TaskState.RUNNING.value).all()
         now = datetime.now(timezone.utc)
         for task in running_tasks:
-            started = task.started_at
-            if started:
+            is_stale = False
+            if task.lease_expires_at:
+                lease_exp = task.lease_expires_at
+                if lease_exp.tzinfo is None:
+                    lease_exp = lease_exp.replace(tzinfo=timezone.utc)
+                if now > lease_exp:
+                    is_stale = True
+            elif task.started_at:
+                started = task.started_at
                 if started.tzinfo is None:
                     started = started.replace(tzinfo=timezone.utc)
                 elapsed = (now - started).total_seconds()
                 if elapsed >= stale_threshold_seconds:
-                    current_retries = task.retry_count or 0
-                    task_max = task.max_retries or max_retries
-                    if current_retries < task_max:
-                        task.retry_count = current_retries + 1
-                        task.state = TaskState.QUEUED.value
-                        task.started_at = None
-                        task.worker_id = None
-                        task.failure_reason = f"Requeued after worker failure/timeout (retry {task.retry_count}/{task_max})"
-                        result["requeued"].append(task.id)
-                    else:
-                        task.state = TaskState.FAILED.value
-                        task.finished_at = now
-                        task.failure_reason = f"Worker process terminated or abandoned task. Exceeded max retries ({task_max}). Marked FAILED on orphan cleanup."
-                        result["orphaned_failed"].append(task.id)
+                    is_stale = True
+
+            if is_stale:
+                current_retries = task.retry_count or 0
+                task_max = task.max_retries or max_retries
+                if current_retries < task_max:
+                    task.retry_count = current_retries + 1
+                    task.state = TaskState.QUEUED.value
+                    task.started_at = None
+                    task.worker_id = None
+                    task.lease_expires_at = None
+                    task.heartbeat_at = None
+                    task.failure_reason = f"Requeued after worker lease expiration (retry {task.retry_count}/{task_max})"
+                    result["requeued"].append(task.id)
+                else:
+                    task.state = TaskState.FAILED.value
+                    task.finished_at = now
+                    task.lease_expires_at = None
+                    task.failure_reason = f"Worker process abandoned task or lease expired. Exceeded max retries ({task_max}). Marked FAILED on orphan cleanup."
+                    result["orphaned_failed"].append(task.id)
         db.commit()
     except Exception as e:
         db.rollback()

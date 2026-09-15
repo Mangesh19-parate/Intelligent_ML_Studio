@@ -28,9 +28,10 @@ def compute_file_sha256(file_path: Path | str) -> str:
     return hasher.hexdigest()
 
 
-def compute_hmac_signature(content_sha256: str, secret: str = settings.JWT_SECRET) -> str:
+def compute_hmac_signature(content_sha256: str, secret: str | None = None) -> str:
+    signing_secret = secret or settings.ARTIFACT_SIGNING_KEY
     return hmac.new(
-        secret.encode("utf-8"),
+        signing_secret.encode("utf-8"),
         content_sha256.encode("utf-8"),
         hashlib.sha256
     ).hexdigest()
@@ -39,7 +40,7 @@ def compute_hmac_signature(content_sha256: str, secret: str = settings.JWT_SECRE
 def save_signed_model_artifact(
     artifact: Any,
     file_path: Path | str,
-    secret: str = settings.JWT_SECRET,
+    secret: str | None = None,
     metadata: dict[str, Any] | None = None
 ) -> str:
     """
@@ -72,7 +73,7 @@ def save_signed_model_artifact(
 
 def verify_and_load_model_artifact(
     file_path: Path | str,
-    secret: str = settings.JWT_SECRET
+    secret: str | None = None
 ) -> Any:
     """
     Verifies the HMAC signature and hash of an artifact manifest before deserialization.

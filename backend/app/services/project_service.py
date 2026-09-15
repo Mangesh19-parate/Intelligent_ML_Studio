@@ -64,9 +64,32 @@ class ProjectService:
             project.task_type = payload.task_type
         if payload.target_column is not None:
             project.target_column = payload.target_column.strip() if payload.target_column else None
-        if payload.pipeline_stage is not None:
-            project.pipeline_stage = payload.pipeline_stage
 
+        return self.project_repo.update(project)
+
+    def transition_project(self, project_id: UUID | str, target_stage_str: str, current_user: User) -> Project:
+        from app.config.state_machines import ProjectState, validate_transition, InvalidStateTransitionError
+        
+        project = self.get_project_by_id(project_id, current_user)
+        
+        try:
+            current_stage = ProjectState(project.pipeline_stage)
+            target_stage = ProjectState(target_stage_str)
+        except ValueError:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"Invalid project stage identifier: '{target_stage_str}'"
+            )
+
+        try:
+            validate_transition(current_stage, target_stage)
+        except InvalidStateTransitionError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=str(exc)
+            )
+
+        project.pipeline_stage = target_stage.value
         return self.project_repo.update(project)
 
     def delete_project(self, project_id: UUID | str, current_user: User) -> None:

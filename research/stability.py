@@ -1,10 +1,18 @@
 """
 Stability Scorer and Selection Stability Metric for ML Studio Research Track (SRS §9).
 
-Implements the stability formula specified for Method B (Rank Aggregation + Stability)
-and post-experiment evaluation (SRS §9.2):
-    Stability(feature j) = (number of runs where j is selected) / (total runs)
-    FinalScore_j = alpha * EnsembleScore_j + (1 - alpha) * Stability_j
+Implements:
+1. Selection frequency per feature:
+       Stability(feature j) = (number of runs where j is selected) / (total runs)
+       FinalScore_j = alpha * EnsembleScore_j + (1 - alpha) * Stability_j
+2. Pairwise Jaccard Index across folds/repeats:
+       Jaccard(A, B) = |A ∩ B| / |A ∪ B|
+       Mean Pairwise Jaccard = (2 / M(M-1)) * sum_{i < j} Jaccard(S_i, S_j)
+3. Kuncheva Stability Index (corrected for chance agreement):
+       K(A, B) = (|A ∩ B| * p - |A| * |B|) / (min(|A|, |B|) * p - |A| * |B|)
+       Kuncheva = (2 / M(M-1)) * sum_{i < j} K(S_i, S_j)
+4. Nogueira et al. (2018) Stability Index:
+       1 - (p / (p - k_bar)) * sum_j (s_j^2 / (k_bar * (1 - k_bar / p)))
 
 METHODOLOGICAL DISCIPLINE (SRS §9):
 Stability is computed strictly via repeated Cross-Validation on the Development partition
@@ -12,10 +20,94 @@ only. The Locked Test partition NEVER enters this computation.
 """
 
 import json
+from itertools import combinations
 from typing import Sequence
 import numpy as np
 import pandas as pd
 from sklearn.model_selection import KFold, StratifiedKFold
+
+
+def compute_pairwise_jaccard(subsets: Sequence[Sequence[str]]) -> float:
+    """
+    Computes mean pairwise Jaccard similarity across all pairs of feature subsets.
+    Returns value in [0.0, 1.0].
+    """
+    m = len(subsets)
+    if m < 2:
+        return 1.0 if m == 1 and len(subsets[0]) > 0 else 0.0
+
+    sets = [set(s) for s in subsets]
+    jaccards = []
+    for s1, s2 in combinations(sets, 2):
+        union_len = len(s1.union(s2))
+        if union_len == 0:
+            jaccards.append(1.0)
+        else:
+            jaccards.append(len(s1.intersection(s2)) / float(union_len))
+
+    return float(np.mean(jaccards)) if jaccards else 0.0
+
+
+def compute_kuncheva_index(
+    subsets: Sequence[Sequence[str]],
+    total_features: int,
+) -> float:
+    """
+    Computes the Kuncheva Stability Index across all pairs of feature subsets,
+    corrected for chance overlap under random selection.
+    
+    K(A, B) = (|A ∩ B| * p - |A| * |B|) / (min(|A|, |B|) * p - |A| * |B|)
+    Returns value in [-1.0, 1.0], where 0 indicates chance agreement, 1 indicates identity.
+    """
+    m = len(subsets)
+    p = total_features
+    if m < 2 or p <= 1:
+        return 1.0 if m >= 1 and p > 0 else 0.0
+
+    sets = [set(s) for s in subsets]
+    indices = []
+    for s1, s2 in combinations(sets, 2):
+        k1 = len(s1)
+        k2 = len(s2)
+        r = len(s1.intersection(s2))
+        
+        denom = (min(k1, k2) * p) - (k1 * k2)
+        if denom == 0:
+            indices.append(1.0 if k1 == k2 == r else 0.0)
+        else:
+            num = (r * p) - (k1 * k2)
+            indices.append(float(num) / float(denom))
+
+    return float(np.mean(indices)) if indices else 0.0
+
+
+def compute_nogueira_stability(
+    selection_indicator_matrix: np.ndarray,
+) -> float:
+    """
+    Computes Nogueira et al. (2018) stability index from a binary selection matrix (M runs, p features).
+    Properly handles arbitrary and varying feature subset sizes across folds.
+    """
+    arr = np.asarray(selection_indicator_matrix, dtype=np.float64)
+    if arr.ndim != 2 or arr.shape[0] < 2 or arr.shape[1] <= 1:
+        return 1.0 if arr.ndim == 2 and arr.shape[1] > 0 else 0.0
+
+    m, p = arr.shape
+    # Feature selection frequencies
+    p_hat = np.mean(arr, axis=0)  # shape (p,)
+    # Sample variance per feature
+    s2 = (m / (m - 1.0)) * p_hat * (1.0 - p_hat)
+    k_bar = float(np.sum(p_hat))
+
+    if k_bar == 0 or k_bar == p:
+        return 1.0
+
+    denom = k_bar * (1.0 - k_bar / float(p))
+    if denom == 0:
+        return 1.0
+
+    stab = 1.0 - (float(p) / float(p - 1.0)) * (float(np.sum(s2)) / (float(m) * denom))
+    return float(np.clip(stab, -1.0, 1.0))
 
 
 def compute_selection_stability(
@@ -32,19 +124,7 @@ def compute_selection_stability(
 
     Reads from runs_df's `selected_features` column across all fold/run rows
     for the specified (dataset_name, method) pair.
-    Locked Test plays no role in this computation at all, by construction
-    (the data source never included it).
-
-    Args:
-        runs_df: DataFrame containing experiment run rows (e.g., loaded from runs.parquet).
-                 Must contain columns ['dataset', 'method', 'selected_features'].
-        dataset_name: Name of dataset to filter on (case-insensitive).
-        method: Name of feature selection method to filter on (case-insensitive).
-        all_features: Optional sequence of all feature names for the dataset.
-                      If not provided, inferred from the union of selected features.
-
-    Returns:
-        dict[str, float]: Mapping from feature name to stability fraction in [0.0, 1.0].
+    Locked Test plays no role in this computation at all.
     """
     if runs_df is None or runs_df.empty:
         if all_features:
@@ -122,13 +202,6 @@ class StabilityScorer:
     ) -> dict[str, float]:
         """
         Calculates selection frequency for each feature across a list of selected feature sets.
-
-        Args:
-            selected_subsets: List of selected feature name lists (one per run/fold).
-            all_feature_names: Master list of all feature names.
-
-        Returns:
-            Dictionary mapping feature_name -> stability fraction in [0.0, 1.0].
         """
         total_runs = len(selected_subsets)
         if total_runs == 0:

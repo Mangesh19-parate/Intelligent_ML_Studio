@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.dependencies import require_permission
 from app.models.user import User
-from app.schemas.project import ProjectCreate, ProjectUpdate, ProjectResponse
+from app.schemas.project import ProjectCreate, ProjectUpdate, ProjectResponse, ProjectTransitionRequest
 from app.schemas.model_metric import LeaderboardResponse
 from app.services.project_service import ProjectService
 
@@ -68,6 +68,21 @@ def update_project(
 ):
     service = ProjectService(db)
     return service.update_project(id, payload, current_user)
+
+@router.post(
+    "/{id}/transition",
+    response_model=ProjectResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Transition project pipeline stage according to state machine rules"
+)
+def transition_project(
+    id: UUID,
+    payload: ProjectTransitionRequest,
+    current_user: User = Depends(require_permission("EDIT_DATA")),
+    db: Session = Depends(get_db),
+):
+    service = ProjectService(db)
+    return service.transition_project(id, payload.target_stage, current_user)
 
 @router.delete(
     "/{id}",

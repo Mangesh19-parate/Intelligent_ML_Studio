@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.dependencies import require_permission
+from app.core.dependencies import require_permission, verify_project_ownership
 from app.models.user import User
 from app.models.deployment import Deployment
 from app.models.prediction_log import PredictionLog
@@ -36,6 +36,7 @@ def get_deployment(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Deployment not found",
         )
+    verify_project_ownership(deployment.model.experiment.project_id, current_user, db)
     return deployment
 
 
@@ -56,6 +57,13 @@ def update_deployment_status(
     Enforces that RETIRED deployments cannot be reactivated.
     """
     service = DeploymentService(db)
+    deployment = service.get_by_id(id)
+    if not deployment:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Deployment not found",
+        )
+    verify_project_ownership(deployment.model.experiment.project_id, current_user, db)
     return service.update_status(deployment_id=id, target_status=payload.status)
 
 
@@ -76,6 +84,22 @@ def rollback_deployment(
     Retires current deployment and provisions a new live deployment for the target model.
     """
     service = DeploymentService(db)
+    deployment = service.get_by_id(id)
+    if not deployment:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Deployment not found",
+        )
+    verify_project_ownership(deployment.model.experiment.project_id, current_user, db)
+
+    target_deployment = service.get_by_id(payload.target_deployment_id)
+    if not target_deployment:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Target deployment not found",
+        )
+    verify_project_ownership(target_deployment.model.experiment.project_id, current_user, db)
+
     return service.rollback_to_deployment(
         current_deployment_id=id,
         target_deployment_id=payload.target_deployment_id,
@@ -96,6 +120,15 @@ def get_deployment_logs(
     current_user: User = Depends(require_permission("READ")),
     db: Session = Depends(get_db),
 ):
+    service = DeploymentService(db)
+    deployment = service.get_by_id(id)
+    if not deployment:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Deployment not found",
+        )
+    verify_project_ownership(deployment.model.experiment.project_id, current_user, db)
+
     logs = (
         db.query(PredictionLog)
         .filter(PredictionLog.deployment_id == id)
@@ -122,9 +155,18 @@ def get_deployment_monitoring(
     Returns volume-over-time, latency summary (base vs explained), error rate with validation/server breakdown,
     and recent inference logs.
     """
+    service = DeploymentService(db)
+    deployment = service.get_by_id(id)
+    if not deployment:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Deployment not found",
+        )
+    verify_project_ownership(deployment.model.experiment.project_id, current_user, db)
+
     from app.services.monitoring_service import MonitoringService
-    service = MonitoringService(db)
-    return service.get_monitoring_dashboard(
+    monitoring_service = MonitoringService(db)
+    return monitoring_service.get_monitoring_dashboard(
         deployment_id=id,
         lookback_hours=lookback_hours,
         log_limit=log_limit,

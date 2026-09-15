@@ -102,12 +102,20 @@ class FeatureSelectionService:
 
     @staticmethod
     def compute_permutation_scores(
-        X: np.ndarray, y: np.ndarray, task_type: str, seed: int = 42
+        X: np.ndarray,
+        y: np.ndarray,
+        task_type: str,
+        seed: int = 42,
+        X_val: np.ndarray | None = None,
+        y_val: np.ndarray | None = None,
     ) -> np.ndarray:
         """
         Computes Permutation Feature Importance using PERMUTATION_IMPORTANCE_SELECTOR.
+        Fits estimator on training slice (X, y) and evaluates permutation strictly on (X_val, y_val).
         """
-        return PERMUTATION_IMPORTANCE_SELECTOR.compute_raw_scores(X, y, task_type, seed=seed)
+        return PERMUTATION_IMPORTANCE_SELECTOR.compute_raw_scores(
+            X, y, task_type, seed=seed, X_val=X_val, y_val=y_val
+        )
 
     # -------------------------------------------------------------------------
     # 2. Rank Aggregation Mathematical Engine (SRS §2.7)
@@ -361,12 +369,19 @@ class FeatureSelectionService:
             for fold_idx, (train_idx, val_idx) in enumerate(splitter.split(X_df, y_raw)):
                 X_train_fold = X_df.iloc[train_idx].copy()
                 y_train_fold = y_raw.iloc[train_idx].values
+                X_val_fold = X_df.iloc[val_idx].copy()
+                y_val_fold = y_raw.iloc[val_idx].values
 
                 # Fit fresh ColumnTransformer on training fold slice ONLY
                 transformer = self.trans_service.build_pipeline(project.id)
                 X_train_trans = transformer.fit_transform(X_train_fold)
                 if hasattr(X_train_trans, "toarray"):
                     X_train_trans = X_train_trans.toarray()
+
+                # Transform validation fold slice using fitted transformer (zero leakage)
+                X_val_trans = transformer.transform(X_val_fold)
+                if hasattr(X_val_trans, "toarray"):
+                    X_val_trans = X_val_trans.toarray()
 
                 # Robust numeric conversion for unencoded/passthrough columns
                 if isinstance(X_train_trans, pd.DataFrame):
@@ -391,11 +406,35 @@ class FeatureSelectionService:
                     else:
                         X_train_trans = np.asarray(X_arr, dtype=np.float64)
 
+                # Convert X_val_trans to float matrix matching X_train_trans
+                if isinstance(X_val_trans, pd.DataFrame):
+                    df_val_num = X_val_trans.copy()
+                    for c in df_val_num.columns:
+                        if not pd.api.types.is_numeric_dtype(df_val_num[c]):
+                            df_val_num[c] = pd.factorize(df_val_num[c])[0].astype(np.float64)
+                    X_val_trans = df_val_num.to_numpy(dtype=np.float64)
+                else:
+                    X_val_arr = np.asarray(X_val_trans)
+                    if not np.issubdtype(X_val_arr.dtype, np.number):
+                        n_vrows, n_vcols = X_val_arr.shape
+                        vnum_matrix = np.zeros((n_vrows, n_vcols), dtype=np.float64)
+                        for j in range(n_vcols):
+                            vcol_data = X_val_arr[:, j]
+                            try:
+                                vnum_matrix[:, j] = vcol_data.astype(np.float64)
+                            except (ValueError, TypeError):
+                                vcodes, _ = pd.factorize(vcol_data)
+                                vnum_matrix[:, j] = vcodes.astype(np.float64)
+                        X_val_trans = vnum_matrix
+                    else:
+                        X_val_trans = np.asarray(X_val_arr, dtype=np.float64)
+
                 # Fallback imputer for unhandled NaNs during feature selection
                 if np.isnan(X_train_trans).any():
                     from sklearn.impute import SimpleImputer
                     fallback_imputer = SimpleImputer(strategy="mean")
                     X_train_trans = fallback_imputer.fit_transform(X_train_trans)
+                    X_val_trans = fallback_imputer.transform(X_val_trans)
 
                 # Resolve feature names
                 fold_feature_names = self.extract_clean_feature_names(transformer, candidate_cols)
@@ -403,13 +442,15 @@ class FeatureSelectionService:
 
                 # Ensure y is clean for model fitting
                 if task_type == "CLASSIFICATION":
-                    # Convert to string labels or categorical codes
                     if pd.api.types.is_numeric_dtype(y_train_fold) and not np.isnan(y_train_fold).any():
                         y_fit = y_train_fold.astype(int)
+                        y_val_fit = y_val_fold.astype(int) if pd.api.types.is_numeric_dtype(y_val_fold) and not np.isnan(y_val_fold).any() else pd.Series(y_val_fold).astype(str).values
                     else:
                         y_fit = pd.Series(y_train_fold).astype(str).values
+                        y_val_fit = pd.Series(y_val_fold).astype(str).values
                 else:
                     y_fit = y_train_fold.astype(float)
+                    y_val_fit = y_val_fold.astype(float)
 
                 technique_results: dict[str, dict[str, Any]] = {}
 
@@ -458,7 +499,7 @@ class FeatureSelectionService:
                         "status_reason": f"Random Forest execution failed: {str(e)}",
                     }
 
-                # Technique D: Permutation Importance
+                # Technique D: Permutation Importance (Evaluated strictly on Validation partition)
                 n_eval_cells = X_train_trans.shape[0] * X_train_trans.shape[1]
                 if n_eval_cells > 500_000 or X_train_trans.shape[1] > 100:
                     technique_results["Permutation"] = {
@@ -468,7 +509,14 @@ class FeatureSelectionService:
                     }
                 else:
                     try:
-                        perm_scores = self.compute_permutation_scores(X_train_trans, y_fit, task_type, seed=seed + fold_idx)
+                        perm_scores = self.compute_permutation_scores(
+                            X_train_trans,
+                            y_fit,
+                            task_type,
+                            seed=seed + fold_idx,
+                            X_val=X_val_trans,
+                            y_val=y_val_fit,
+                        )
                         technique_results["Permutation"] = {
                             "status": "APPLIED",
                             "raw_scores": perm_scores,

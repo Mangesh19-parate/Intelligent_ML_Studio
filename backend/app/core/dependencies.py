@@ -1,4 +1,4 @@
-from typing import Callable
+from typing import Callable, Any
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
@@ -43,6 +43,41 @@ def get_current_user(
     return user
 
 
+def get_effective_permissions(user: User) -> set[str]:
+    effective_permissions: set[str] = set()
+    if user.role and user.role.permissions:
+        effective_permissions.update(
+            p.permission_key for p in user.role.permissions
+        )
+    if hasattr(user, "permission_overrides") and user.permission_overrides:
+        for override in user.permission_overrides:
+            if override.is_granted:
+                effective_permissions.add(override.permission_key)
+            else:
+                effective_permissions.discard(override.permission_key)
+    return effective_permissions
+
+
+def verify_project_ownership(project_id: str | Any, user: User, db: Session) -> None:
+    """
+    Enforces object-level authorization (IDOR prevention):
+    Verifies that the user owns the project or possesses MANAGE_USERS (admin) privileges.
+    """
+    from app.models.project import Project
+    project = db.query(Project).filter(Project.id == project_id).first()
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Project not found"
+        )
+    permissions = get_effective_permissions(user)
+    if "MANAGE_USERS" not in permissions and project.owner_id != user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have access to this project's resources"
+        )
+
+
 def require_permission(permission_key: str) -> Callable[[User], User]:
     """
     Dependency factory that enforces permission-based access control.
@@ -52,23 +87,9 @@ def require_permission(permission_key: str) -> Callable[[User], User]:
     def _permission_checker(
         current_user: User = Depends(get_current_user)
     ) -> User:
-        effective_permissions: set[str] = set()
+        effective_permissions = get_effective_permissions(current_user)
 
-        # 1. Base permissions from role
-        if current_user.role and current_user.role.permissions:
-            effective_permissions.update(
-                p.permission_key for p in current_user.role.permissions
-            )
-
-        # 2. Granular per-user overrides (grants add, revokes remove)
-        if hasattr(current_user, "permission_overrides") and current_user.permission_overrides:
-            for override in current_user.permission_overrides:
-                if override.is_granted:
-                    effective_permissions.add(override.permission_key)
-                else:
-                    effective_permissions.discard(override.permission_key)
-
-        # 3. Check requested permission key
+        # Check requested permission key
         if permission_key not in effective_permissions:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,

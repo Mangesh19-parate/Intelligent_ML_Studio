@@ -164,14 +164,18 @@ export const ProductionStage = () => {
     }
   };
 
+  const [measuredLatency, setMeasuredLatency] = useState(null);
+
   const handleFastPredict = async () => {
     if (!deployment?.id) return;
     setPredicting(true);
     setError('');
     setPredictResult(null);
+    const startTime = performance.now();
     try {
       const payload = JSON.parse(inputPayload);
       const res = await predictApi.predict(deployment.id, payload);
+      setMeasuredLatency(Math.round(performance.now() - startTime));
       setPredictResult(res.data);
     } catch (err) {
       setError(err.response?.data?.detail || 'Prediction failed. Check input JSON.');
@@ -185,9 +189,11 @@ export const ProductionStage = () => {
     setPredicting(true);
     setError('');
     setExplainResult(null);
+    const startTime = performance.now();
     try {
       const payload = JSON.parse(inputPayload);
       const res = await predictApi.predictExplain(deployment.id, payload);
+      setMeasuredLatency(Math.round(performance.now() - startTime));
       setExplainResult(res.data);
     } catch (err) {
       setError(err.response?.data?.detail || 'Explainable prediction failed.');
@@ -402,8 +408,19 @@ export const ProductionStage = () => {
                       {copiedUrl ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
                     </button>
                   </div>
-                  <div className="text-xs text-[var(--color-text-muted)]">
-                    Status: <strong className="text-emerald-400 font-bold">{deployment.status}</strong> &bull; Latency: ~12ms
+                  <div className="text-xs text-[var(--color-text-muted)] flex items-center gap-2">
+                    <span>Status: <strong className="text-emerald-400 font-bold">{deployment.status}</strong></span>
+                    {measuredLatency !== null ? (
+                      <>
+                        <span>&bull;</span>
+                        <span>Roundtrip Latency: <strong className="text-slate-200 font-mono">{measuredLatency}ms</strong></span>
+                      </>
+                    ) : (
+                      <>
+                        <span>&bull;</span>
+                        <span className="text-slate-400 italic">Ready for inference</span>
+                      </>
+                    )}
                   </div>
                 </div>
 

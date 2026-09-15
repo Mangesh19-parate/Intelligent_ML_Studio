@@ -148,21 +148,15 @@ class ModelRegistryService:
                 detail=f"Model artifact file not found at '{model.artifact_path}'",
             )
 
-        # Cryptographic Checksum Re-verification
-        hasher = hashlib.sha256()
-        with open(artifact_file, "rb") as f:
-            while chunk := f.read(65536):
-                hasher.update(chunk)
-        disk_checksum = hasher.hexdigest()
-
-        if model.artifact_checksum and disk_checksum != model.artifact_checksum:
+        # Cryptographic Checksum and HMAC Signature Verification
+        from app.core.artifact_signing import verify_and_load_model_artifact, SecurityError
+        try:
+            artifact = verify_and_load_model_artifact(artifact_file)
+        except SecurityError as sec_err:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail=f"Artifact integrity check failed: SHA-256 checksum mismatch. Disk hash ({disk_checksum[:12]}...) != DB record ({model.artifact_checksum[:12]}...).",
+                detail=f"Cryptographic verification failed: {str(sec_err)}",
             )
-
-        try:
-            artifact = joblib.load(artifact_file)
         except Exception as e:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,

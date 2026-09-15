@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { ProjectContextHeader } from './navigation/ProjectContextHeader';
 import { Breadcrumbs } from './navigation/Breadcrumbs';
 import { CommandPalette } from './navigation/CommandPalette';
 import {
@@ -478,9 +477,6 @@ export const AppLayout = ({ children }) => {
             </button>
           </div>
         </header>
-
-        {/* Project Context Top Bar */}
-        <ProjectContextHeader onOpenCommandPalette={() => setCommandPaletteOpen(true)} />
 
         {/* Dynamic Breadcrumb Trail */}
         <div className="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pt-3 pb-1">

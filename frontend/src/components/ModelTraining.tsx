@@ -17,7 +17,7 @@ import {
 } from './training';
 import { EmptyState } from './feedback/EmptyState';
 import { ErrorState } from './feedback/ErrorState';
-import { ShieldCheck, CheckCircle2, Layers, AlertTriangle, Cpu, Activity, ArrowRight, Sparkles } from 'lucide-react';
+import { ShieldCheck, CheckCircle2, Layers, AlertTriangle, Cpu, Activity, ArrowRight, Sparkles, Trophy, Play } from 'lucide-react';
 
 interface ModelTrainingProps {
   projectId: string;
@@ -424,10 +424,114 @@ export const ModelTraining: React.FC<ModelTrainingProps> = ({
         {/* Right 2 Columns: Official Leaderboard & Winner Callout */}
         <div className="lg:col-span-2 space-y-5">
           {!leaderboard || !activeExperiment ? (
-            <EmptyState
-              title="No Model Leaderboard Available"
-              description="Configure algorithms and folds on the left, then launch training to populate the authoritative primary-metric leaderboard."
-            />
+            <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl p-6 sm:p-8 shadow-sm space-y-6">
+              {/* Header */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-[var(--color-border)]">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 rounded-xl bg-[var(--color-accent-soft)] border border-[var(--color-accent)]/20 text-[var(--color-accent)] flex items-center justify-center shrink-0">
+                    <Trophy className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-black text-[var(--color-text)] tracking-tight">
+                      Authoritative Model Leaderboard
+                    </h3>
+                    <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
+                      Multi-algorithm cross-validation ranking & generalization benchmarking
+                    </p>
+                  </div>
+                </div>
+                <span className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-500 border border-amber-500/20 self-start sm:self-auto">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                  <span>Awaiting Training Run</span>
+                </span>
+              </div>
+
+              {/* Pre-flight Configuration Summary Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="bg-[var(--color-bg)] border border-[var(--color-border)] rounded-xl p-4 space-y-1">
+                  <span className="text-[10px] uppercase font-bold text-[var(--color-text-muted)] tracking-wider">
+                    Optimization Metric
+                  </span>
+                  <div className="text-sm font-mono font-bold text-[var(--color-accent)]">
+                    {selectionMetric.toUpperCase()}
+                  </div>
+                  <span className="text-[10px] text-[var(--color-text-muted)] block">
+                    {isRegression ? 'Minimizes validation error' : 'Maximizes macro classification'}
+                  </span>
+                </div>
+
+                <div className="bg-[var(--color-bg)] border border-[var(--color-border)] rounded-xl p-4 space-y-1">
+                  <span className="text-[10px] uppercase font-bold text-[var(--color-text-muted)] tracking-wider">
+                    Validation Scheme
+                  </span>
+                  <div className="text-sm font-mono font-bold text-emerald-400">
+                    {folds}-Fold {isClassification ? 'Stratified CV' : 'K-Fold CV'}
+                  </div>
+                  <span className="text-[10px] text-[var(--color-text-muted)] block">
+                    Leakage-isolated partitions
+                  </span>
+                </div>
+
+                <div className="bg-[var(--color-bg)] border border-[var(--color-border)] rounded-xl p-4 space-y-1">
+                  <span className="text-[10px] uppercase font-bold text-[var(--color-text-muted)] tracking-wider">
+                    Active Algorithms
+                  </span>
+                  <div className="text-sm font-mono font-bold text-indigo-400">
+                    {selectedAlgorithms.length} Selected
+                  </div>
+                  <span className="text-[10px] text-[var(--color-text-muted)] block truncate" title={selectedAlgorithms.join(', ')}>
+                    {selectedAlgorithms.join(', ')}
+                  </span>
+                </div>
+              </div>
+
+              {/* Step Flow Preview */}
+              <div className="bg-[var(--color-bg)]/60 border border-[var(--color-border)] rounded-xl p-4 sm:p-5 space-y-3">
+                <h4 className="text-xs font-bold text-[var(--color-text)] uppercase tracking-wider flex items-center space-x-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-[var(--color-accent)]" />
+                  <span>Automated Training & Evaluation Pipeline</span>
+                </h4>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs text-[var(--color-text-muted)]">
+                  <div className="flex items-start space-x-2">
+                    <span className="w-5 h-5 rounded-full bg-[var(--color-surface-hover)] border border-[var(--color-border)] text-[var(--color-text)] font-mono text-[10px] font-bold flex items-center justify-center shrink-0 mt-0.5">1</span>
+                    <span><strong>CV Fitting:</strong> Trains all selected estimators across {folds} fold splits with strict isolation.</span>
+                  </div>
+                  <div className="flex items-start space-x-2">
+                    <span className="w-5 h-5 rounded-full bg-[var(--color-surface-hover)] border border-[var(--color-border)] text-[var(--color-text)] font-mono text-[10px] font-bold flex items-center justify-center shrink-0 mt-0.5">2</span>
+                    <span><strong>Gap Diagnostics:</strong> Measures overfit ratios, signal quality, and train vs test deviation.</span>
+                  </div>
+                  <div className="flex items-start space-x-2">
+                    <span className="w-5 h-5 rounded-full bg-[var(--color-surface-hover)] border border-[var(--color-border)] text-[var(--color-text)] font-mono text-[10px] font-bold flex items-center justify-center shrink-0 mt-0.5">3</span>
+                    <span><strong>Champion Promotion:</strong> Crowns top-performing model and generates cryptographic passport.</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Button */}
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
+                <p className="text-xs text-[var(--color-text-muted)]">
+                  Click below to execute cross-validation and populate the leaderboard.
+                </p>
+                <button
+                  type="button"
+                  onClick={handleStartTraining}
+                  disabled={loading || pollingActive || selectedAlgorithms.length === 0}
+                  className="w-full sm:w-auto inline-flex items-center justify-center space-x-2 px-6 py-2.5 rounded-full bg-[var(--color-accent)] hover:opacity-90 text-white text-xs font-bold transition-all shadow-md cursor-pointer disabled:opacity-50"
+                >
+                  {loading || pollingActive ? (
+                    <>
+                      <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      <span>Training in Progress...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Play className="w-4 h-4 fill-white" />
+                      <span>Launch Model Training</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
           ) : (
             <div className="space-y-5">
               {/* Winner Callout Card */}

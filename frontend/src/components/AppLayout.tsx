@@ -117,12 +117,9 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                 </span>
               </div>
 
-              <div className="flex items-center space-x-1.5">
+              <div className="flex items-center">
                 <span className="text-base font-extrabold tracking-tight text-[var(--color-text)] leading-none">
                   ML Studio
-                </span>
-                <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded-full bg-[var(--color-accent-soft)] text-[var(--color-accent)] border border-[var(--color-accent)]/20">
-                  PRO
                 </span>
               </div>
             </Link>

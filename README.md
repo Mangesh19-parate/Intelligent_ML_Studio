@@ -22,7 +22,7 @@ In tabular machine learning, subtle data leakage, undocumented transformation dr
 1. **Dataset Profiling & Quality Inspection**: Ingest tabular data (CSV) and automatically compute statistical summaries, missingness distributions, cardinality, and data quality indices.
 2. **Immutable Partition Isolation**: Deterministic 80/20 train/holdout splitting with row hash verification. Model training and preprocessing estimators never fit on locked holdout data.
 3. **Fold-Isolated Feature Engineering**: Imputation, scaling, encoding, and ranking-based feature selection run strictly within cross-validation training folds.
-4. **Multi-Model Tournament Training**: Train and evaluate multiple tabular algorithms (Random Forest, Gradient Boosting, Ridge, Logistic Regression) with standardized metric tracking (F1, ROC-AUC, RMSE, MAE).
+4. **Canonical Multi-Algorithm Tournament**: Train and benchmark a curated 6-algorithm catalog (Linear Regression, Random Forest Regressor, Gradient Boosting Regressor, Logistic Regression, Random Forest Classifier, Gradient Boosting Classifier) across cross-validation folds with standardized metric tracking.
 5. **Cryptographic Model Passports**: Generate tamper-evident technical passports recording exact dataset hashes, hyperparameter manifests, fold metrics, and SHA-256 artifact checksums.
 6. **Four-Eyes Governance & Deployment**: Enforce server-side separation-of-duties (`approved_by != created_by`) before models can be promoted to production endpoints.
 7. **Production Serving & Instant Rollback**: Serve live inference endpoints with structured input validation and one-click deployment rollbacks.
@@ -82,9 +82,13 @@ To ensure complete transparency, every architectural capability is documented ac
 
 ## 🚀 Quick Start
 
-### Option A: Run with Docker Compose (Recommended)
+### Option A: Run with Docker Compose
 ```bash
-docker compose up --build -d
+# Standard Developer Stack (Hot-reloading, dev defaults)
+docker compose -f docker-compose.dev.yml up --build -d
+
+# Production-Hardened Stack (Internal database, secret enforcement, least-privilege)
+POSTGRES_PASSWORD=your_secure_password JWT_SECRET=your_32char_secret docker compose -f docker-compose.prod.yml up --build -d
 ```
 Access the application:
 - **Frontend Application**: `http://localhost:3000`

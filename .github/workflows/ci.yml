@@ -30,7 +30,12 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r backend/requirements.txt
-          pip install pip-audit
+          pip install pip-audit ruff
+
+      - name: Static Code Analysis & Syntax Gate
+        run: |
+          python -m compileall -q backend/app
+          ruff check backend/app
 
       - name: Dependency Security Audit (CVEs)
         run: |
@@ -46,7 +51,7 @@ jobs:
           pytest backend/tests -v --durations=10
 
   frontend-quality-gate:
-    name: Frontend Typecheck, Lint & Production Bundle Gate
+    name: Frontend Typecheck, Vitest Suite & Production Bundle Gate
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -65,19 +70,34 @@ jobs:
         working-directory: frontend
         run: npm ci
 
-      - name: Validate TypeScript Types & Build Production Bundle
+      - name: Strict TypeScript Compilation Gate
         working-directory: frontend
-        run: |
-          npm run typecheck
-          npm run build
+        run: npm run typecheck
+
+      - name: Run Vitest Frontend Unit & Component Suite
+        working-directory: frontend
+        run: npm test
+
+      - name: Build Production Web Bundle
+        working-directory: frontend
+        run: npm run build
 
   production-promotion-gate:
-    name: Production Promotion Gate
+    name: Production Promotion & Release Packaging Gate
     needs: [backend-quality-gate, frontend-quality-gate]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:
-      - name: Verify Promotion Readiness
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Validate Release Packaging Hygiene
         run: |
-          echo "All quality, security, and invariant gates passed cleanly."
-          echo "Build artifacts verified and ready for production promotion."
+          python scripts/package_release.py
+          echo "All quality, security, and packaging gates passed cleanly."
+          echo "Clean production release archive generated and verified."

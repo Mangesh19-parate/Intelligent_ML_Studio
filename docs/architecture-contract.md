@@ -25,7 +25,6 @@ The core system restricts training to a curated six-algorithm catalog (3 regress
 | Canonical Identifier | Display Name | Task Type | Baseline | Scikit-Learn Class | Purpose & Mechanics |
 |---|---|---|---|---|---|
 | `linear_regression` | Linear Regression | `REGRESSION` | Yes | `sklearn.linear_model.LinearRegression` | Ordinary least squares baseline |
-| `ridge_regression` | Ridge Regression | `REGRESSION` | No | `sklearn.linear_model.Ridge` | L2-regularized linear model |
 | `random_forest_regressor` | Random Forest Regressor | `REGRESSION` | No | `sklearn.ensemble.RandomForestRegressor` | Non-linear ensemble bagging regressor |
 | `gradient_boosting_regressor`| Gradient Boosting Regressor | `REGRESSION` | No | `sklearn.ensemble.GradientBoostingRegressor` | Stage-wise additive boosting regressor |
 | `logistic_regression` | Logistic Regression | `CLASSIFICATION` | Yes | `sklearn.linear_model.LogisticRegression` | Regularized linear classification baseline |

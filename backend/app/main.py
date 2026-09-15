@@ -28,6 +28,9 @@ async def lifespan(app: FastAPI):
             seed_rbac_data(db)
         logger.info("Database initialized and RBAC seeded successfully.")
     except Exception as e:
+        if settings.ENV == "production":
+            logger.critical(f"FATAL: Production database initialization/seeding failed: {e}")
+            raise RuntimeError(f"FATAL: Production database connection/seeding failed: {e}") from e
         logger.warning(f"Database initialization deferred or skipped: {e}")
     yield
 

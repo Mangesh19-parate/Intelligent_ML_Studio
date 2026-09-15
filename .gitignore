@@ -28,9 +28,11 @@ wheels/
 htmlcov/
 
 # Data, SQLite databases, and Serialized Artifacts
-data/
 /data/
 backend/data/
+research/data/
+!frontend/src/components/data/
+!frontend/src/data/
 *.db
 *.sqlite
 *.sqlite3

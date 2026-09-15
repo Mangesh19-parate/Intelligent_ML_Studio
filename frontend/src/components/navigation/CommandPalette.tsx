@@ -131,18 +131,6 @@ export const CommandPalette: React.FC<{
           onClose();
         },
       },
-      {
-        id: 'action-2fa',
-        title: 'Two-Factor Authentication (2FA / OTP)',
-        subtitle: 'Configure secure TOTP authenticator pairing and emergency recovery keys',
-        icon: <ShieldCheck className="w-4 h-4 text-emerald-400" />,
-        category: 'Actions',
-        shortcut: '2FA',
-        onSelect: () => {
-          window.dispatchEvent(new CustomEvent('open-2fa-modal'));
-          onClose();
-        },
-      },
 
       // 2. Navigation
       {

@@ -319,7 +319,7 @@ export const FeatureEngineeringStage: React.FC = () => {
       )}
 
       {/* Stability Metrics Banner (if run) */}
-      {importanceData && (
+      {importanceData && importanceData.features && importanceData.features.length > 0 && (
         <StabilityRanker
           totalFeatures={totalCount}
           selectedFeaturesCount={selectedCount}

@@ -109,34 +109,44 @@ export const SchemaTable: React.FC<SchemaTableProps> = ({
         </div>
       ) : (
         <div className="overflow-x-auto rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-card)]">
-          {previewData && previewData.length > 0 ? (
-            <table className="w-full text-left text-xs font-mono">
-              <thead className="bg-[var(--color-surface)] border-b border-[var(--color-border)] text-[var(--color-text-muted)] uppercase tracking-wider font-semibold text-[10px]">
-                <tr>
-                  {Object.keys(previewData[0]).map((col) => (
-                    <th key={col} className="px-3 py-2.5 whitespace-nowrap">
-                      {col}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[var(--color-border)] text-[11px]">
-                {previewData.slice(0, 10).map((row, rIdx) => (
-                  <tr key={rIdx} className="hover:bg-[var(--color-surface-hover)]">
-                    {Object.entries(row).map(([k, v]) => (
-                      <td key={k} className="px-3 py-2 whitespace-nowrap text-[var(--color-text)]">
-                        {v !== null && v !== undefined ? String(v) : <span className="text-[var(--color-text-muted)] italic">null</span>}
-                      </td>
+          {(() => {
+            const rows: Record<string, any>[] = Array.isArray(previewData)
+              ? previewData
+              : (previewData as any)?.preview_rows || [];
+
+            if (rows.length === 0) {
+              return (
+                <div className="p-8 text-center text-xs text-[var(--color-text-muted)]">
+                  No development partition preview records available. Please ensure a train/test split has been created.
+                </div>
+              );
+            }
+
+            return (
+              <table className="w-full text-left text-xs font-mono">
+                <thead className="bg-[var(--color-surface)] border-b border-[var(--color-border)] text-[var(--color-text-muted)] uppercase tracking-wider font-semibold text-[10px]">
+                  <tr>
+                    {Object.keys(rows[0]).map((col) => (
+                      <th key={col} className="px-3 py-2.5 whitespace-nowrap">
+                        {col}
+                      </th>
                     ))}
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          ) : (
-            <div className="p-8 text-center text-xs text-[var(--color-text-muted)]">
-              No development partition preview records available.
-            </div>
-          )}
+                </thead>
+                <tbody className="divide-y divide-[var(--color-border)] text-[11px]">
+                  {rows.slice(0, 10).map((row, rIdx) => (
+                    <tr key={rIdx} className="hover:bg-[var(--color-surface-hover)]">
+                      {Object.entries(row).map(([k, v]) => (
+                        <td key={k} className="px-3 py-2 whitespace-nowrap text-[var(--color-text)]">
+                          {v !== null && v !== undefined ? String(v) : <span className="text-[var(--color-text-muted)] italic">null</span>}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            );
+          })()}
         </div>
       )}
     </div>

@@ -18,11 +18,17 @@ import {
   ArrowRight,
   CheckCircle2,
   Sliders,
+  FolderOpen,
+  AlertTriangle,
 } from 'lucide-react';
+import { Button } from '../components/ui/Button';
 
 export const FeatureEngineeringStage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const { currentProject, currentProjectId, setCurrentProjectId } = useProject();
+  const { currentProject, currentProjectId, projects, selectProject } = useProject();
+
+  const urlProjectId = searchParams.get('project_id');
+  const activeProjectId = urlProjectId || currentProjectId;
 
   const [activeDataset, setActiveDataset] = useState<any>(null);
 
@@ -52,9 +58,20 @@ export const FeatureEngineeringStage: React.FC = () => {
   const [successMsg, setSuccessMsg] = useState<string>('');
   const [showFoldModal, setShowFoldModal] = useState<boolean>(false);
 
+  // Sync URL project_id with ProjectContext
+  useEffect(() => {
+    if (urlProjectId && urlProjectId !== currentProjectId) {
+      selectProject(urlProjectId);
+    } else if (!currentProjectId && projects.length > 0) {
+      const firstId = String(projects[0].id);
+      selectProject(firstId);
+      setSearchParams({ project_id: firstId }, { replace: true });
+    }
+  }, [urlProjectId, currentProjectId, projects, selectProject, setSearchParams]);
+
   // Load project datasets and feature selection scores
   useEffect(() => {
-    if (!currentProjectId) {
+    if (!activeProjectId) {
       setLoading(false);
       return;
     }
@@ -65,7 +82,7 @@ export const FeatureEngineeringStage: React.FC = () => {
       setSuccessMsg('');
       try {
         // Fetch datasets
-        const dsResp = await datasetApi.listVersions(currentProjectId);
+        const dsResp = await datasetApi.listVersions(activeProjectId);
         const dsList = dsResp.data || [];
         if (dsList.length > 0) {
           setActiveDataset(dsList[0]);
@@ -75,7 +92,7 @@ export const FeatureEngineeringStage: React.FC = () => {
 
         // Fetch current feature importance scores if previously run
         try {
-          const impResp = await featureSelectionApi.getImportance(currentProjectId);
+          const impResp = await featureSelectionApi.getImportance(activeProjectId);
           const imp = impResp.data;
           setImportanceData(imp);
           setExperimentId(imp.experiment_id || null);
@@ -89,7 +106,7 @@ export const FeatureEngineeringStage: React.FC = () => {
 
             if (imp.experiment_id) {
               try {
-                const foldsResp = await featureSelectionApi.getFolds(currentProjectId, imp.experiment_id);
+                const foldsResp = await featureSelectionApi.getFolds(activeProjectId, imp.experiment_id);
                 setFoldData(foldsResp.data);
               } catch (foldErr) {
                 console.warn('No fold details found for experiment', foldErr);
@@ -111,11 +128,16 @@ export const FeatureEngineeringStage: React.FC = () => {
     };
 
     loadProjectData();
-  }, [currentProjectId]);
+  }, [activeProjectId]);
+
+  const handleSelectProject = (projId: string) => {
+    selectProject(projId);
+    setSearchParams({ project_id: projId });
+  };
 
   // Execute Cross-Validation Feature Selection Ensemble
   const handleRunFeatureSelection = async () => {
-    if (!currentProjectId) return;
+    if (!activeProjectId) return;
     setRunning(true);
     setError('');
     setSuccessMsg('');
@@ -129,7 +151,7 @@ export const FeatureEngineeringStage: React.FC = () => {
         method: method,
       };
 
-      const resp = await featureSelectionApi.run(currentProjectId, payload);
+      const resp = await featureSelectionApi.run(activeProjectId, payload);
       const data = resp.data;
       setImportanceData(data);
       setExperimentId(data.experiment_id || null);
@@ -144,7 +166,7 @@ export const FeatureEngineeringStage: React.FC = () => {
 
       if (data.experiment_id) {
         try {
-          const foldsResp = await featureSelectionApi.getFolds(currentProjectId, data.experiment_id);
+          const foldsResp = await featureSelectionApi.getFolds(activeProjectId, data.experiment_id);
           setFoldData(foldsResp.data);
         } catch (foldErr) {
           console.warn('Failed to load fold details', foldErr);
@@ -200,7 +222,7 @@ export const FeatureEngineeringStage: React.FC = () => {
   };
 
   const handleSaveSelection = async () => {
-    if (!currentProjectId) return;
+    if (!activeProjectId) return;
     setUpdatingThreshold(true);
     setError('');
     setSuccessMsg('');
@@ -210,7 +232,7 @@ export const FeatureEngineeringStage: React.FC = () => {
         .filter(([_, isSel]) => isSel)
         .map(([col]) => col);
 
-      const resp = await featureSelectionApi.updateThreshold(currentProjectId, {
+      const resp = await featureSelectionApi.updateThreshold(activeProjectId, {
         threshold: threshold,
         selected_features: selectedList,
       });
@@ -263,7 +285,7 @@ export const FeatureEngineeringStage: React.FC = () => {
     );
   }
 
-  if (!currentProjectId) {
+  if (!activeProjectId) {
     return (
       <div className="p-6 max-w-7xl mx-auto">
         <EmptyState
@@ -273,6 +295,8 @@ export const FeatureEngineeringStage: React.FC = () => {
       </div>
     );
   }
+
+  const hasMissingPrerequisites = !currentProject?.target_column || !currentProject?.task_type || currentProject?.task_type === 'UNSET';
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto p-6">
@@ -292,16 +316,57 @@ export const FeatureEngineeringStage: React.FC = () => {
           </p>
         </div>
 
-        {currentProject && (
-          <Link
-            to={`/ml-stage?project_id=${currentProjectId}`}
-            className="inline-flex items-center space-x-1.5 px-4 py-2 rounded-full bg-[var(--color-accent-soft)] hover:bg-[var(--color-accent)] hover:text-white text-[var(--color-accent)] text-xs font-bold transition-all border border-[var(--color-accent-border)]"
-          >
-            <span>Proceed to Model Training</span>
-            <ArrowRight className="w-4 h-4" />
-          </Link>
-        )}
+        <div className="flex items-center space-x-3 flex-wrap gap-2">
+          {/* Project Selector Dropdown */}
+          {projects.length > 0 && (
+            <div className="flex items-center gap-2 bg-[var(--color-surface-hover)] border border-[var(--color-border)] rounded-xl px-3 py-1.5 shadow-xs">
+              <FolderOpen className="w-4 h-4 text-[var(--color-accent)]" />
+              <select
+                id="project-select"
+                value={activeProjectId || ''}
+                onChange={(e) => handleSelectProject(e.target.value)}
+                className="bg-transparent text-xs font-semibold text-[var(--color-text)] border-none focus:outline-none cursor-pointer pr-2"
+              >
+                {projects.map((p) => (
+                  <option key={p.id} value={p.id} className="bg-[var(--color-surface)] text-[var(--color-text)]">
+                    {p.project_name || (p as any).name || p.id}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {activeProjectId && (
+            <Link
+              to={`/ml?project_id=${activeProjectId}`}
+              className="inline-flex items-center space-x-1.5 px-4 py-2 rounded-full bg-[var(--color-accent-soft)] hover:bg-[var(--color-accent)] hover:text-white text-[var(--color-accent)] text-xs font-bold transition-all border border-[var(--color-accent-border)]"
+            >
+              <span>Proceed to Model Training</span>
+              <ArrowRight className="w-4 h-4" />
+            </Link>
+          )}
+        </div>
       </div>
+
+      {/* Target Column / Task Type Warning Banner if not yet set */}
+      {hasMissingPrerequisites && (
+        <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center space-x-2.5">
+            <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0" />
+            <div>
+              <span className="font-bold">Project Target Column or Task Type Not Configured: </span>
+              <span>Feature selection requires a target column and valid task type (Classification or Regression).</span>
+            </div>
+          </div>
+          <Link
+            to={`/data-analysis?project_id=${activeProjectId}`}
+            className="px-3.5 py-1.5 rounded-full bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 font-bold text-xs whitespace-nowrap transition-colors inline-flex items-center gap-1.5 border border-amber-500/30 self-start sm:self-auto"
+          >
+            <span>Run Data Profiling & Auto-Detect</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
+        </div>
+      )}
 
       {error && (
         <ErrorState
@@ -342,6 +407,7 @@ export const FeatureEngineeringStage: React.FC = () => {
         onMethodChange={setMethod}
         onRun={handleRunFeatureSelection}
         running={running}
+        disabled={hasMissingPrerequisites}
       />
 
       {/* Feature Importance Table */}

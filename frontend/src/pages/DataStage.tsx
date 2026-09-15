@@ -18,14 +18,17 @@ import {
   ArrowRight,
   CheckCircle2,
   Plus,
-  Lock,
+  FolderOpen,
 } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 
 export const DataStage: React.FC = () => {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { currentProject, currentProjectId, projects, refreshProjects } = useProject();
+  const { currentProject, currentProjectId, projects, selectProject, refreshProjects } = useProject();
+
+  const urlProjectId = searchParams.get('project_id');
+  const activeProjectId = urlProjectId || currentProjectId;
 
   const [datasets, setDatasets] = useState<DatasetItem[]>([]);
   const [selectedDataset, setSelectedDataset] = useState<DatasetItem | null>(null);
@@ -48,6 +51,17 @@ export const DataStage: React.FC = () => {
   const [newTaskType, setNewTaskType] = useState<string>('UNSET');
   const [creatingProject, setCreatingProject] = useState<boolean>(false);
 
+  // Sync URL project_id with ProjectContext
+  useEffect(() => {
+    if (urlProjectId && urlProjectId !== currentProjectId) {
+      selectProject(urlProjectId);
+    } else if (!currentProjectId && projects.length > 0) {
+      const firstId = String(projects[0].id);
+      selectProject(firstId);
+      setSearchParams({ project_id: firstId }, { replace: true });
+    }
+  }, [urlProjectId, currentProjectId, projects, selectProject, setSearchParams]);
+
   // Load dataset split and preview
   const loadSplitAndPreview = async (datasetId: string) => {
     try {
@@ -55,7 +69,8 @@ export const DataStage: React.FC = () => {
       setSplitSummary(splitRes.data);
 
       const previewRes = await datasetSplitApi.getDevelopmentPreview(datasetId, 10);
-      setDevPreview(previewRes.data);
+      const rows = previewRes.data?.preview_rows || (Array.isArray(previewRes.data) ? previewRes.data : []);
+      setDevPreview(rows);
     } catch (err) {
       setSplitSummary(null);
       setDevPreview(null);
@@ -97,16 +112,21 @@ export const DataStage: React.FC = () => {
   };
 
   useEffect(() => {
-    if (currentProjectId) {
-      loadProjectData(currentProjectId);
+    if (activeProjectId) {
+      loadProjectData(activeProjectId);
     } else {
       setLoading(false);
     }
-  }, [currentProjectId]);
+  }, [activeProjectId]);
+
+  const handleSelectProject = (projId: string) => {
+    selectProject(projId);
+    setSearchParams({ project_id: projId });
+  };
 
   // Handle dataset file upload
   const handleFileUpload = async (file: File) => {
-    if (!currentProjectId) {
+    if (!activeProjectId) {
       setError('Please select or create a project first.');
       return;
     }
@@ -118,9 +138,9 @@ export const DataStage: React.FC = () => {
       const formData = new FormData();
       formData.append('file', file);
 
-      await datasetApi.upload(currentProjectId, formData);
+      await datasetApi.upload(activeProjectId, formData);
       setSuccessMsg(`Dataset "${file.name}" uploaded and validated successfully!`);
-      await loadProjectData(currentProjectId);
+      await loadProjectData(activeProjectId);
     } catch (err: any) {
       console.error('Upload error', err);
       setError(err.response?.data?.detail || 'Failed to upload dataset.');
@@ -174,7 +194,8 @@ export const DataStage: React.FC = () => {
       setNewTargetCol('');
       setNewTaskType('UNSET');
       await refreshProjects();
-      navigate(`/data-stage?project_id=${res.data.id}`);
+      selectProject(String(res.data.id));
+      navigate(`/data?project_id=${res.data.id}`);
     } catch (err: any) {
       console.error('Create project error', err);
       setError(err.response?.data?.detail || 'Failed to create project.');
@@ -182,28 +203,6 @@ export const DataStage: React.FC = () => {
       setCreatingProject(false);
     }
   };
-
-  if (loading) {
-    return (
-      <div className="space-y-6 max-w-7xl mx-auto p-6">
-        <Skeleton variant="rectangular" height="120px" className="rounded-2xl" />
-        <Skeleton variant="rectangular" height="300px" className="rounded-2xl" />
-      </div>
-    );
-  }
-
-  if (!currentProjectId) {
-    return (
-      <div className="p-6 max-w-7xl mx-auto space-y-6">
-        <EmptyState
-          title="No Project Selected"
-          description="Create a new ML project or select an existing one to begin dataset ingestion and partitioning."
-          actionLabel="Create Project"
-          onAction={() => setShowCreateModal(true)}
-        />
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto p-6">
@@ -223,7 +222,26 @@ export const DataStage: React.FC = () => {
           </p>
         </div>
 
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center space-x-3 flex-wrap gap-2">
+          {/* Project Selector Dropdown */}
+          {projects.length > 0 && (
+            <div className="flex items-center gap-2 bg-[var(--color-surface-hover)] border border-[var(--color-border)] rounded-xl px-3 py-1.5 shadow-xs">
+              <FolderOpen className="w-4 h-4 text-[var(--color-accent)]" />
+              <select
+                id="project-select"
+                value={activeProjectId || ''}
+                onChange={(e) => handleSelectProject(e.target.value)}
+                className="bg-transparent text-xs font-semibold text-[var(--color-text)] border-none focus:outline-none cursor-pointer pr-2"
+              >
+                {projects.map((p) => (
+                  <option key={p.id} value={p.id} className="bg-[var(--color-surface)] text-[var(--color-text)]">
+                    {p.project_name || (p as any).name || p.id}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
           <Button
             type="button"
             variant="secondary"
@@ -237,7 +255,7 @@ export const DataStage: React.FC = () => {
 
           {selectedDataset && (
             <Link
-              to={`/data-analysis?project_id=${currentProjectId}`}
+              to={`/data-analysis?project_id=${activeProjectId}`}
               className="inline-flex items-center space-x-1.5 px-4 py-2 rounded-full bg-[var(--color-accent-soft)] hover:bg-[var(--color-accent)] hover:text-white text-[var(--color-accent)] text-xs font-bold transition-all border border-[var(--color-accent-border)]"
             >
               <span>Proceed to Data Profiling</span>
@@ -247,67 +265,85 @@ export const DataStage: React.FC = () => {
         </div>
       </div>
 
-      {error && (
-        <ErrorState
-          title="Data Stage Error"
-          message={error}
-          onRetry={() => setError('')}
-        />
-      )}
-
-      {successMsg && (
-        <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs flex items-center space-x-2">
-          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-          <span>{successMsg}</span>
+      {loading ? (
+        <div className="space-y-6">
+          <Skeleton variant="rectangular" height="120px" className="rounded-2xl" />
+          <Skeleton variant="rectangular" height="300px" className="rounded-2xl" />
         </div>
-      )}
+      ) : !activeProjectId ? (
+        <div className="p-6 space-y-6">
+          <EmptyState
+            title="No Project Selected"
+            description="Create a new ML project or select an existing one to begin dataset ingestion and partitioning."
+            actionLabel="Create Project"
+            onAction={() => setShowCreateModal(true)}
+          />
+        </div>
+      ) : (
+        <>
+          {error && (
+            <ErrorState
+              title="Data Stage Error"
+              message={error}
+              onRetry={() => setError('')}
+            />
+          )}
 
-      {/* Dataset Summary Cards (if version exists) */}
-      {selectedDataset && (
-        <DatasetSummaryCards
-          datasets={datasets}
-          selectedDataset={selectedDataset}
-          onSelectDataset={(ds) => {
-            setSelectedDataset(ds);
-            datasetApi.getColumns(ds.id).then((res) => setColumns((res.data || []) as unknown as ColumnSchemaItem[]));
-            loadSplitAndPreview(ds.id);
-          }}
-        />
-      )}
+          {successMsg && (
+            <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs flex items-center space-x-2">
+              <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+              <span>{successMsg}</span>
+            </div>
+          )}
 
-      {/* Upload Zone */}
-      <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl p-6 space-y-4 shadow-sm">
-        <h2 className="text-sm font-bold text-[var(--color-text)]">
-          {selectedDataset ? 'Upload New Dataset Version' : 'Upload Initial Dataset'}
-        </h2>
-        <UploadZone
-          onFileUpload={handleFileUpload}
-          uploading={uploading}
-        />
-      </div>
+          {/* Dataset Summary Cards (if version exists) */}
+          {selectedDataset && (
+            <DatasetSummaryCards
+              datasets={datasets}
+              selectedDataset={selectedDataset}
+              onSelectDataset={(ds) => {
+                setSelectedDataset(ds);
+                datasetApi.getColumns(ds.id).then((res) => setColumns((res.data || []) as unknown as ColumnSchemaItem[]));
+                loadSplitAndPreview(ds.id);
+              }}
+            />
+          )}
 
-      {/* Split & Partitioning Panel (if dataset exists) */}
-      {selectedDataset && (
-        <SplitPanel
-          splitSummary={splitSummary}
-          totalRows={selectedDataset.row_count}
-          lockedTestPct={lockedTestPct}
-          onLockedTestPctChange={setLockedTestPct}
-          splitSeed={splitSeed}
-          onSplitSeedChange={setSplitSeed}
-          onRandomizeSeed={handleRandomizeSeed}
-          onCreateSplit={handleCreateSplit}
-          creatingSplit={creatingSplit}
-        />
-      )}
+          {/* Upload Zone */}
+          <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl p-6 space-y-4 shadow-sm">
+            <h2 className="text-sm font-bold text-[var(--color-text)]">
+              {selectedDataset ? 'Upload New Dataset Version' : 'Upload Initial Dataset'}
+            </h2>
+            <UploadZone
+              onFileUpload={handleFileUpload}
+              uploading={uploading}
+            />
+          </div>
 
-      {/* Schema & Preview Table */}
-      {columns.length > 0 && (
-        <SchemaTable
-          columns={columns}
-          targetColumn={currentProject?.target_column}
-          previewData={devPreview}
-        />
+          {/* Split & Partitioning Panel (if dataset exists) */}
+          {selectedDataset && (
+            <SplitPanel
+              splitSummary={splitSummary}
+              totalRows={selectedDataset.row_count}
+              lockedTestPct={lockedTestPct}
+              onLockedTestPctChange={setLockedTestPct}
+              splitSeed={splitSeed}
+              onSplitSeedChange={setSplitSeed}
+              onRandomizeSeed={handleRandomizeSeed}
+              onCreateSplit={handleCreateSplit}
+              creatingSplit={creatingSplit}
+            />
+          )}
+
+          {/* Schema & Preview Table */}
+          {columns.length > 0 && (
+            <SchemaTable
+              columns={columns}
+              targetColumn={currentProject?.target_column}
+              previewData={devPreview}
+            />
+          )}
+        </>
       )}
 
       {/* Quick Create Project Modal */}

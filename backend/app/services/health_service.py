@@ -130,11 +130,11 @@ class HealthService:
             from sqlalchemy import func
             
             counts = (
-                session.query(DurableTask.status, func.count(DurableTask.task_id))
-                .group_by(DurableTask.status)
+                session.query(DurableTask.state, func.count(DurableTask.id))
+                .group_by(DurableTask.state)
                 .all()
             )
-            count_map = {status: count for status, count in counts}
+            count_map = {state: count for state, count in counts}
             latency_ms = round((time.perf_counter() - start) * 1000, 2)
             
             return SubsystemHealth(

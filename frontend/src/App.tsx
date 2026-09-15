@@ -18,6 +18,11 @@ import { ProductionStage } from './pages/ProductionStage';
 import { AdminConsole } from './pages/AdminConsole';
 import { NotFound } from './pages/NotFound';
 
+import { LandingPage } from './pages/LandingPage';
+import { PrivacyPolicy } from './pages/legal/PrivacyPolicy';
+import { TermsOfService } from './pages/legal/TermsOfService';
+import { LegalCenter } from './pages/legal/LegalCenter';
+
 interface ProtectedRouteProps {
   children: ReactNode;
   requiredRole?: string;
@@ -53,17 +58,18 @@ export const App: React.FC = () => {
         <ProjectProvider>
           <BrowserRouter>
             <Routes>
+              {/* Public Landing & Auth */}
+              <Route path="/" element={<LandingPage />} />
+              <Route path="/landing" element={<LandingPage />} />
+              <Route path="/welcome" element={<LandingPage />} />
               <Route path="/login" element={<Login />} />
 
-              {/* Workspace */}
-              <Route
-                path="/"
-                element={
-                  <ProtectedRoute>
-                    <Dashboard />
-                  </ProtectedRoute>
-                }
-              />
+              {/* Legal Center & Compliance Documents */}
+              <Route path="/legal" element={<LegalCenter />} />
+              <Route path="/privacy" element={<PrivacyPolicy />} />
+              <Route path="/legal/privacy" element={<PrivacyPolicy />} />
+              <Route path="/terms" element={<TermsOfService />} />
+              <Route path="/legal/terms" element={<TermsOfService />} />
               <Route
                 path="/dashboard"
                 element={

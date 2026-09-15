@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { projectApi } from '../api/client';
 import { Project } from '../types/api';
+import { useAuth } from './AuthContext';
 
 interface ProjectContextType {
   projects: Project[];
@@ -18,12 +19,14 @@ interface ProjectContextType {
 const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
 
 export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { isAuthenticated, loading: authLoading } = useAuth();
   const [projects, setProjects] = useState<Project[]>([]);
   const [activeProject, setActiveProject] = useState<Project | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
   const fetchProjects = useCallback(async () => {
+    if (!isAuthenticated) return;
     setIsLoading(true);
     setError(null);
     try {
@@ -40,21 +43,30 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
           return;
         }
       }
-      if (list.length > 0 && !activeProject) {
+      if (list.length > 0) {
         setActiveProject(list[0]);
         localStorage.setItem('mlstudio_active_project_id', String(list[0].id));
+      } else {
+        setActiveProject(null);
       }
     } catch (err: any) {
-      console.error('Failed to fetch projects in ProjectContext', err);
-      setError(err.response?.data?.detail || 'Failed to load projects');
+      if (err.response?.status !== 401) {
+        console.error('Failed to fetch projects in ProjectContext', err);
+        setError(err.response?.data?.detail || 'Failed to load projects');
+      }
     } finally {
       setIsLoading(false);
     }
-  }, [activeProject]);
+  }, [isAuthenticated]);
 
   useEffect(() => {
-    fetchProjects();
-  }, []);
+    if (isAuthenticated) {
+      fetchProjects();
+    } else if (!authLoading) {
+      setProjects([]);
+      setActiveProject(null);
+    }
+  }, [isAuthenticated, authLoading, fetchProjects]);
 
   const selectProject = useCallback(
     (projectId: string) => {

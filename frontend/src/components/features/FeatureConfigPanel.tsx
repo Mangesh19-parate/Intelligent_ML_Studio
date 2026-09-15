@@ -48,9 +48,7 @@ export const FeatureConfigPanel: React.FC<FeatureConfigPanelProps> = ({
             disabled={running || disabled}
             className="w-full px-3.5 py-2 text-xs rounded-full border border-[var(--color-border)] bg-[var(--color-bg)] text-[var(--color-text)] focus:outline-none focus:border-[var(--color-accent)] cursor-pointer"
           >
-            <option value="RANK_AGGREGATION">Cross-Fold Rank Aggregation</option>
-            <option value="IMPORTANCE_THRESHOLD">Mean Importance Cutoff</option>
-            <option value="FORWARD_STABILITY">Forward Stability Elimination</option>
+            <option value="RANK_AGGREGATION">Rank Aggregation Ensemble (Correlation + Lasso + RF + Permutation)</option>
           </select>
         </div>
 

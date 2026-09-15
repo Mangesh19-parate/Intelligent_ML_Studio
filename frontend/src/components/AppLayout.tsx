@@ -3,6 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Breadcrumbs } from './navigation/Breadcrumbs';
 import { CommandPalette } from './navigation/CommandPalette';
+import { TwoFactorSettingsModal } from './TwoFactorSettingsModal';
 import {
   Layers,
   LayoutDashboard,
@@ -18,6 +19,7 @@ import {
   Sun,
   LogOut,
   LucideIcon,
+  Shield,
 } from 'lucide-react';
 
 interface NavItem {
@@ -35,8 +37,9 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [commandPaletteOpen, setCommandPaletteOpen] = useState<boolean>(false);
+  const [twoFactorModalOpen, setTwoFactorModalOpen] = useState<boolean>(false);
 
-  // Global keyboard shortcut for Command Palette (Ctrl+K / Cmd+K)
+  // Global keyboard shortcut for Command Palette & custom events
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent): void => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
@@ -44,8 +47,14 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         setCommandPaletteOpen((prev) => !prev);
       }
     };
+    const handleOpen2FA = () => setTwoFactorModalOpen(true);
+
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener('open-2fa-modal', handleOpen2FA);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('open-2fa-modal', handleOpen2FA);
+    };
   }, []);
 
   const handleLogout = async (): Promise<void> => {
@@ -173,6 +182,22 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
               {darkMode ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4" />}
             </button>
 
+            {/* 2FA Security Button */}
+            {user && (
+              <button
+                type="button"
+                onClick={() => setTwoFactorModalOpen(true)}
+                className={`p-2 rounded-xl min-h-[38px] min-w-[38px] flex items-center justify-center transition-colors cursor-pointer ${
+                  user.is_two_factor_enabled
+                    ? 'text-emerald-500 hover:bg-emerald-500/10'
+                    : 'text-[var(--color-text-muted)] hover:text-[var(--color-accent)] hover:bg-[var(--color-surface-hover)]'
+                }`}
+                title={user.is_two_factor_enabled ? '2FA Protection Active (Click to manage)' : 'Enable 2FA OTP Security'}
+              >
+                <ShieldCheck className="w-4 h-4" />
+              </button>
+            )}
+
             {/* User Profile / Logout */}
             {user && (
               <div className="flex items-center space-x-2 pl-2 border-l border-[var(--color-border)]">
@@ -235,6 +260,12 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       <CommandPalette
         isOpen={commandPaletteOpen}
         onClose={() => setCommandPaletteOpen(false)}
+      />
+
+      {/* Two-Factor Authentication Settings Modal */}
+      <TwoFactorSettingsModal
+        isOpen={twoFactorModalOpen}
+        onClose={() => setTwoFactorModalOpen(false)}
       />
 
       {/* Launch-Ready Footer */}

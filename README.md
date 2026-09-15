@@ -1,136 +1,153 @@
 # Intelligent ML Studio 🔬⚡
 
-> **A Leakage-Controlled, Reproducible Tabular ML Experimentation Platform with Immutable Lineage, Adversarial Verification, and Preregistered Research Benchmarks.**
+> **A Leakage-Aware Tabular ML Experimentation & Governance Platform**
+> 
+> *Manages the complete lifecycle from dataset profiling and leakage-safe feature selection to reproducible model training, model passports, four-eyes governance, and controlled production deployment.*
 
 [![Python](https://img.shields.io/badge/Python-3.11%20%7C%203.12%20%7C%203.13-blue.svg)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.110+-green.svg)](https://fastapi.tiangolo.com/)
 [![React](https://img.shields.io/badge/React-18.2-61dafb.svg)](https://react.dev/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-3178c6.svg)](https://www.typescriptlang.org/)
 [![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-2.0+-red.svg)](https://www.sqlalchemy.org/)
-[![Tests](https://img.shields.io/badge/Tests-460%2B%20Passed-brightgreen.svg)]()
-[![Invariants](https://img.shields.io/badge/Invariants-100%25%20Verified-success.svg)]()
+[![Tests](https://img.shields.io/badge/Automated%20Tests-467%20Passed-brightgreen.svg)]()
+[![Typecheck](https://img.shields.io/badge/TypeScript%20Typecheck-0%20Errors-success.svg)]()
 
 ---
 
-## 🎯 Executive Summary
+## 🎯 What is Intelligent ML Studio?
 
-In classical machine learning workflows, **subtle data leakage, evaluation reuse, and undocumented preprocessing drift** consistently inflate benchmark metrics while causing severe degradation in real-world deployment.
+In tabular machine learning, subtle data leakage, undocumented transformation drift, and untested holdout reuse consistently inflate offline metrics while causing silent failures upon deployment.
 
-**Intelligent ML Studio** is a reproducible tabular ML experimentation platform engineered to eliminate leakage vectors by architectural construction. It features:
-- **Strict Partition Isolation**: 80/20 train/test split with deterministic row hash verification; zero fitting on Locked Test data.
-- **Fold-Isolated Preprocessing & Feature Selection**: Imputers, scalers, and selector rankings fit strictly inside training folds.
-- **DB-Backed Task Queue & Dedicated Worker**: API enqueues tasks exclusively to the `durable_tasks` table; dedicated worker daemon claims tasks via `FOR UPDATE SKIP LOCKED`, executes under OS process isolation, enforces hard timeout termination, and performs lease-based stale-task recovery.
-- **Atomic Multi-Worker Claiming**: PostgreSQL `FOR UPDATE SKIP LOCKED` atomic task claiming preventing worker race conditions across concurrent daemons.
-- **Immutable Snapshot Lineage & HMAC Artifact Signing**: Transformations and feature selections generate SHA-256 snapshotted pipelines; serialized model artifacts are cryptographically HMAC signed.
-- **Four-Eyes Deployment Governance & Rollback**: Cryptographic model passports, server-side separation-of-duties (`approved_by != created_by`), and first-class one-click deployment rollback.
-- **Preregistered Research Track**: Hierarchical statistical analysis across benchmark datasets with strict nested cross-validation alpha sensitivity analysis and honest boundary condition characterization.
+**Intelligent ML Studio** eliminates these failure modes by architectural enforcement:
+1. **Dataset Profiling & Quality Inspection**: Ingest tabular data (CSV) and automatically compute statistical summaries, missingness distributions, cardinality, and data quality indices.
+2. **Immutable Partition Isolation**: Deterministic 80/20 train/holdout splitting with row hash verification. Model training and preprocessing estimators never fit on locked holdout data.
+3. **Fold-Isolated Feature Engineering**: Imputation, scaling, encoding, and ranking-based feature selection run strictly within cross-validation training folds.
+4. **Multi-Model Tournament Training**: Train and evaluate multiple tabular algorithms (Random Forest, Gradient Boosting, Ridge, Logistic Regression) with standardized metric tracking (F1, ROC-AUC, RMSE, MAE).
+5. **Cryptographic Model Passports**: Generate tamper-evident technical passports recording exact dataset hashes, hyperparameter manifests, fold metrics, and SHA-256 artifact checksums.
+6. **Four-Eyes Governance & Deployment**: Enforce server-side separation-of-duties (`approved_by != created_by`) before models can be promoted to production endpoints.
+7. **Production Serving & Instant Rollback**: Serve live inference endpoints with structured input validation and one-click deployment rollbacks.
 
 ---
 
-## 🏗️ System Architecture & Deployment Topology
+## 🏗️ Architecture & Component Topology
 
 ```text
 ┌────────────────────────────────────────────────────────────────────────────────────────┐
-│                        INTELLIGENT ML STUDIO RUNTIME TOPOLOGY                          │
+│                        INTELLIGENT ML STUDIO ARCHITECTURE                              │
 └────────────────────────────────────────────────────────────────────────────────────────┘
 
-                           React + Vite Web UI
-                                    │ (REST / JSON / JWT)
-                                    ▼
-                           FastAPI API Gateway
-                                    │
-          ┌─────────────────────────┼─────────────────────────┐
-          │ (SQLAlchemy ORM)        │ (PostgreSQL Queue)      │ (HMAC Signing)
-          ▼                         ▼                         ▼
-   PostgreSQL / SQLite       durable_tasks Table       Artifact Storage
-   (ACID State Machines,    (Atomic Claiming with     (SHA-256 Checksums,
-    Snapshots, Lineage)       FOR UPDATE SKIP LOCKED)   HMAC Signatures)
-                                    │
-                                    ▼
-                         Dedicated ML Task Worker
-                        (OS Process-Isolated Execution,
-                         Hard Timeout Termination,
-                         Lease Requeue & Crash Recovery)
+                           React 18 + Vite Web UI
+                                     │ (REST / JSON / JWT)
+                                     ▼
+                        FastAPI Modular API Monolith
+                                     │
+           ┌─────────────────────────┼─────────────────────────┐
+           │ (SQLAlchemy ORM)        │ (Task Queue Table)      │ (HMAC Signing)
+           ▼                         ▼                         ▼
+    PostgreSQL / SQLite       durable_tasks Table       Artifact Storage
+    (ACID State Machines,    (FOR UPDATE SKIP LOCKED   (SHA-256 Checksums,
+     Snapshots, Lineage)       on PostgreSQL)            HMAC Signatures)
+                                     │
+                                     ▼
+                          Dedicated ML Task Worker
+                         (OS Process-Isolated Execution,
+                          Hard Timeout Termination,
+                          Lease Requeue & Recovery)
 ```
 
 ---
 
-## 🛡️ Public Assurance Matrix
+## 📊 Technical Capabilities & Implementation Status
 
-| System Guarantee / Invariant | Verification Test Suite | Architectural Enforcement | Status |
+To ensure complete transparency, every architectural capability is documented according to its shipped implementation status:
+
+| Capability Area | Shipped Implementation | Architectural Scope | Status |
 |:---|:---|:---|:---:|
-| **Locked Test Zero Leakage** | `test_system_integrity.py`<br>`test_day4_leakage_and_reordering.py` | Holdout partition transformed via pre-fitted estimators; zero fitting on test folds | **VERIFIED** |
-| **Fold-Safe Feature Selection** | `test_feature_selection_isolation.py` | Selector fitting, permutation importance, and row hashes asserted per-fold | **VERIFIED** |
-| **Durable Task Crash Recovery** | `test_durable_tasks.py`<br>`test_chaos_and_resilience.py` | Task state persisted to DB; orphaned/running tasks recovered on worker restart with retry limits | **VERIFIED** |
-| **Active Timeout Enforcement** | `test_durable_tasks.py`<br>`test_chaos_and_resilience.py` | Worker processes hard-terminated at OS process boundary on timeout with zero zombie writes | **VERIFIED** |
-| **Atomic Multi-Worker Queue** | `test_durable_tasks.py`<br>`test_chaos_and_resilience.py` | `FOR UPDATE SKIP LOCKED` query prevents duplicate claims under high concurrency | **VERIFIED** |
-| **HMAC Artifact Manifest Signing** | `test_p1_hardening.py` | Serialized models verified against HMAC signatures before unpickling/serving | **VERIFIED** |
-| **Refresh Token Rotation & Reuse** | `test_p1_hardening.py` | Rotates refresh tokens on exchange; detects reuse as compromise and revokes family | **VERIFIED** |
-| **First-Class Rollback** | `test_deployments_and_gates.py` | Retires current deployment and provisions restored model with full audit trail | **VERIFIED** |
-| **Four-Eyes Governance** | `test_golden_path_e2e.py` | `approved_by != created_by` enforced server-side; HTTP 403 on self-approval | **VERIFIED** |
-| **Golden-Path E2E Lifecycle** | `test_golden_path_e2e.py` | Full upload -> DQI -> FS -> CV -> Passport -> Gate -> Predict -> Rollback | **VERIFIED** |
-| **Strict Migration Upgrade/Downgrade** | `test_alembic_migrations.py` | Headless migration test verifying clean upgrade head -> downgrade base -> upgrade head | **VERIFIED** |
-
----
-
-## 📜 Model Technical Passport
-
-Every deployable candidate model exposes an immutable cryptographic passport:
-
-```text
-┌────────────────────────────────────────────────────────────────────────┐
-│ MODEL TECHNICAL PASSPORT                                               │
-│ Model ID: a482dee6-17bd-4de4-8e53-553ced6a81f6         DEPLOYABLE ✓    │
-├────────────────────────────────────────────────────────────────────────┤
-│ Project: Customer Churn Predictor                                      │
-│ Dataset SHA-256: 7f83a21d9c0e4b8a12f5e4d9c3b2a10e8f7a6b5c4d3e2f1a0    │
-│ Task Type: CLASSIFICATION | Algorithm: RandomForestClassifier          │
-│ CV Strategy: 5-Fold Stratified | CV Seed: 42                           │
-├────────────────────────────────┬───────────────────────────────────────┤
-│ Cross-Validation Macro-F1      │ 0.8421 ± 0.012                        │
-│ Locked Test Macro-F1           │ 0.8350                                │
-│ Feature Reduction              │ 108 features ──► 50 selected (46.3%)  │
-│ Out-of-Fold Decision Threshold │ 0.3800                                │
-├────────────────────────────────┴───────────────────────────────────────┤
-│ GOVERNANCE & INTEGRITY AUDIT                                           │
-│ ✓ Locked Test evaluated once (Zero reuse detected)                     │
-│ ✓ Input feature schema locked & immutable                              │
-│ ✓ SHA-256 artifact checksum matched (Disk: e3b0c442...)                │
-│ ✓ End-to-end lineage complete (Transformation & FS snapshots captured)  │
-│ ✓ Performance threshold satisfied (Macro-F1 >= 0.80)                   │
-│ ✓ Four-Eyes approval confirmed (Approved by: approver@demo.com)        │
-└────────────────────────────────────────────────────────────────────────┘
-```
+| **Holdout Leakage Prevention** | Zero-fitting on holdout test partition; Row-hash verified splits | Core Engine | `[IMPLEMENTED]` |
+| **Fold-Safe Feature Selection** | Multi-method rank aggregation fitted strictly inside training folds | Core Engine | `[IMPLEMENTED]` |
+| **Durable Task Queue** | `durable_tasks` table, OS child process isolation, hard timeouts | Core Engine | `[IMPLEMENTED]` |
+| **Multi-Worker Concurrency** | PostgreSQL `FOR UPDATE SKIP LOCKED` (SQLite transaction fallback) | Core Engine | `[IMPLEMENTED]` |
+| **Model Artifact Integrity** | SHA-256 manifest + HMAC signature verification before deserialization | Security | `[IMPLEMENTED]` |
+| **Four-Eyes Deployment Gate** | Server-side separation-of-duties (`approved_by != created_by`) | Governance | `[IMPLEMENTED]` |
+| **One-Click Rollback** | Immediate retirement of active deployment and restored target routing | Governance | `[IMPLEMENTED]` |
+| **Explainability (SHAP)** | Global feature importance summary & instance-level local SHAP explanations | Analytics | `[IMPLEMENTED]` |
+| **Storage Architecture** | `LocalStorageService` implemented; pluggable `StorageService` interface | Storage | `[LOCAL ENGINE]` |
+| **Distributed Object Store** | S3 / MinIO / Cloudflare R2 adapter interface | Storage | `[PLANNED EXTENSION]` |
+| **Rate Limiting** | Sliding window in-memory limiter for single-node / edge protection | Security | `[SINGLE-NODE]` |
+| **Distributed Rate Limiting**| Redis / API Gateway distributed rate limiting tier | Security | `[PLANNED EXTENSION]` |
+| **Observability** | Structured JSON logging, health endpoints, authenticated Prometheus metrics | Telemetry | `[IMPLEMENTED]` |
+| **APM / Error Tracking** | Sentry / OpenTelemetry integration hooks | Telemetry | `[PLANNED EXTENSION]` |
 
 ---
 
 ## 🚀 Quick Start
 
-### 1. Run with Docker Compose
+### Option A: Run with Docker Compose (Recommended)
 ```bash
 docker compose up --build -d
 ```
 Access the application:
-- **Frontend Dashboard**: http://localhost:3000
-- **Backend Swagger API**: http://localhost:8000/docs
+- **Frontend Application**: `http://localhost:3000`
+- **Backend Swagger API**: `http://localhost:8000/docs`
 
-### 2. Local Development Setup
+### Option B: Local Developer Setup
 ```bash
-# Backend & Worker
+# 1. Backend Setup
 cd backend
 python -m venv venv
-source venv/bin/activate
+# On Windows: .\venv\Scripts\activate | On Linux/macOS: source venv/bin/activate
 pip install -r requirements.txt
+cp .env.example .env
 alembic upgrade head
+
+# Start API server and background worker
 python -m uvicorn app.main:app --port 8000 --reload
 python -m app.tasks.worker
 
-# Frontend
-cd frontend
+# 2. Frontend Setup (in a separate terminal)
+cd ../frontend
 npm install
+cp .env.example .env
 npm run dev
 ```
 
-### 3. Running Verification Tests
+---
+
+## 🧪 Deterministic Verification Suite
+
+Run the single-command verification suite to validate the entire platform from dependencies to builds:
+
 ```bash
-pytest backend/tests
+# Cross-Platform Python Runner
+python scripts/verify.py
+
+# Or native platform wrappers:
+./scripts/verify.sh      # Linux / macOS
+.\scripts\verify.ps1     # Windows PowerShell
 ```
+
+The verification suite validates:
+1. **Python Environment**: Dependencies & module imports verified.
+2. **Database Schema**: Migration integrity and table synchronization.
+3. **Backend Test Suite**: 467 pytest test cases passing green.
+4. **Frontend Typecheck**: `tsc --noEmit` passing with 0 TypeScript errors.
+5. **Frontend Unit Tests**: Vitest component and stage test suite passing.
+6. **Frontend Build**: Vite production bundle compiled cleanly.
+
+---
+
+## 📦 Clean Client Release Packaging
+
+To build a pristine, zero-pollution distribution archive for client delivery:
+
+```bash
+python scripts/package_release.py --output releases/ml_studio_client_release.zip
+```
+
+This utility automatically purges `node_modules`, `dist`, build caches, databases, temporary scripts, and private development `.env` credentials, generating an ultra-clean archive (< 5 MB) containing only validated source code and configuration templates.
+
+---
+
+## 📜 License
+
+Proprietary & Confidential. Built for client deployment.

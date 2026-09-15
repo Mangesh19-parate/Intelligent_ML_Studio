@@ -398,7 +398,6 @@ export const ModelTraining: React.FC<ModelTrainingProps> = ({
       {passportModalOpen && selectedPassportModelId && (
         <ModelPassportModal
           modelId={selectedPassportModelId}
-          isOpen={passportModalOpen}
           onClose={() => {
             setPassportModalOpen(false);
             setSelectedPassportModelId(null);

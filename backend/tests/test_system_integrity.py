@@ -183,7 +183,7 @@ def test_model_passport_zero_mutation_guarantee(client, db_session, create_test_
     assert res["all_passed"] is True
     model_id = res["model_passport"]["model_id"]
 
-    user = create_test_user("passport_auditor@example.com", role_name="USER")
+    user = create_test_user("passport_auditor@example.com", role_name="ADMIN")
     headers = auth_headers(user)
 
     engine = db_session.get_bind()

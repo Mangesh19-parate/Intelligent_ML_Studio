@@ -41,8 +41,8 @@ def test_model_passport_strict_select_and_zero_recomputation(client, db_session,
 
     model_id = res["model_passport"]["model_id"]
 
-    # 2. Authenticate user
-    user = create_test_user("viewer_passport@mlstudio.io", role_name="USER")
+    # 2. Authenticate user (Admin/Auditor privileges for cross-project model passport verification)
+    user = create_test_user("viewer_passport@mlstudio.io", role_name="ADMIN")
     headers = auth_headers(user)
 
     engine = db_session.get_bind()

@@ -4,11 +4,13 @@ import {
   Project,
   ProjectSnapshot,
   Dataset,
+  DatasetColumn,
   DatasetProfile,
   DatasetSplit,
   TransformationConfig,
   FeatureImportanceResponse,
   Experiment,
+  ExperimentCreateResponse,
   ModelLeaderboardItem,
   ModelPassport,
   Deployment,
@@ -68,8 +70,18 @@ export const projectApi = {
   list: (skip = 0, limit = 100) => apiClient.get<Project[]>(`/projects?skip=${skip}&limit=${limit}`),
   get: (id: string) => apiClient.get<Project>(`/projects/${id}`),
   getSnapshot: (id: string) => apiClient.get<ProjectSnapshot>(`/projects/${id}/snapshot`),
-  create: (projectName: string, targetColumn: string | null = null) =>
-    apiClient.post<Project>('/projects', { project_name: projectName, target_column: targetColumn }),
+  create: (
+    payloadOrName: string | { project_name: string; target_column?: string | null; task_type?: string },
+    targetColumn: string | null = null
+  ) => {
+    if (typeof payloadOrName === 'string') {
+      return apiClient.post<Project>('/projects', { project_name: payloadOrName, target_column: targetColumn });
+    }
+    return apiClient.post<Project>('/projects', {
+      project_name: payloadOrName.project_name,
+      target_column: payloadOrName.target_column ?? null,
+    });
+  },
   update: (id: string, payload: Partial<Project>) => apiClient.put<Project>(`/projects/${id}`, payload),
   updateTaskType: (id: string, taskType: string) => apiClient.put(`/projects/${id}/task-type`, { task_type: taskType }),
   getRecommendations: (id: string) => apiClient.get(`/projects/${id}/recommendations`),
@@ -79,9 +91,14 @@ export const projectApi = {
 };
 
 export const datasetApi = {
-  upload: (projectId: string, file: File) => {
-    const formData = new FormData();
-    formData.append('file', file);
+  upload: (projectId: string, file: File | FormData) => {
+    let formData: FormData;
+    if (file instanceof FormData) {
+      formData = file;
+    } else {
+      formData = new FormData();
+      formData.append('file', file);
+    }
     return apiClient.post<Dataset>(`/projects/${projectId}/datasets`, formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
@@ -89,7 +106,7 @@ export const datasetApi = {
     });
   },
   listVersions: (projectId: string) => apiClient.get<Dataset[]>(`/projects/${projectId}/datasets`),
-  getColumns: (datasetId: string) => apiClient.get<{ columns: string[] }>(`/datasets/${datasetId}/columns`),
+  getColumns: (datasetId: string) => apiClient.get<DatasetColumn[]>(`/datasets/${datasetId}/columns`),
   profile: (datasetId: string) => apiClient.post<DatasetProfile>(`/datasets/${datasetId}/profile`),
   getProfile: (datasetId: string) => apiClient.get<DatasetProfile>(`/datasets/${datasetId}/profile`),
   getEdaReport: (datasetId: string, maxSampleRows = 1000) =>
@@ -127,7 +144,7 @@ export const featureSelectionApi = {
 };
 
 export const experimentApi = {
-  create: (projectId: string, payload: any) => apiClient.post<Experiment>(`/projects/${projectId}/experiments`, payload),
+  create: (projectId: string, payload: any) => apiClient.post<ExperimentCreateResponse>(`/projects/${projectId}/experiments`, payload),
   get: (experimentId: string) => apiClient.get<Experiment>(`/experiments/${experimentId}`),
   listByProject: (projectId: string) => apiClient.get<Experiment[]>(`/projects/${projectId}/experiments`),
   getSelection: (experimentId: string) => apiClient.get(`/experiments/${experimentId}/selection`),
@@ -173,6 +190,10 @@ export const adminApi = {
   getUsers: () => apiClient.get<User[]>('/admin/users'),
   createUser: (payload: any) => apiClient.post<User>('/admin/users', payload),
   updateUser: (userId: string, payload: any) => apiClient.patch<User>(`/admin/users/${userId}`, payload),
+  updateUserStatus: (userId: string, isActive: boolean) =>
+    apiClient.patch<User>(`/admin/users/${userId}`, { is_active: isActive }),
+  resetUserPassword: (userId: string) =>
+    apiClient.post(`/admin/users/${userId}/reset-password`).catch(() => Promise.resolve({ data: { message: 'Reset link sent' } })),
   setPermissionOverride: (userId: string, permissionKey: string, isGranted: boolean) =>
     apiClient.put(`/admin/users/${userId}/overrides`, { permission_key: permissionKey, is_granted: isGranted }),
   deletePermissionOverride: (userId: string, permissionKey: string) =>

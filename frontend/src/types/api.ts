@@ -60,7 +60,9 @@ export interface DatasetColumn {
   id: UUID;
   dataset_id: UUID;
   column_name: string;
-  data_type: 'NUMERIC' | 'CATEGORICAL' | 'DATETIME' | 'BOOLEAN' | 'TEXT';
+  data_type: 'NUMERIC' | 'CATEGORICAL' | 'DATETIME' | 'BOOLEAN' | 'TEXT' | 'MIXED' | string;
+  unique_count?: number;
+  missing_percentage?: number | string;
   is_target: boolean;
 }
 
@@ -108,29 +110,46 @@ export interface TransformationConfig {
   is_active: boolean;
 }
 
+export interface FeatureImportanceItem {
+  column_name: string;
+  avg_rank_score?: number;
+  importance_score?: number;
+  stability_score?: number;
+  rank?: number;
+  is_selected: boolean;
+}
+
 export interface FeatureImportanceResponse {
-  features: Array<{
-    feature_name: string;
-    importance_score: number;
-    stability_score?: number;
-    rank: number;
-    is_selected: boolean;
-  }>;
-  selection_threshold: number;
-  total_features: number;
-  selected_count: number;
+  project_id?: UUID;
+  experiment_id?: UUID | null;
+  features: FeatureImportanceItem[];
+  selection_threshold?: number;
+  total_features?: number;
+  selected_count?: number;
+}
+
+export interface ExperimentCreateResponse {
+  experiment_id: UUID;
+  status: string;
+  task_type?: string | null;
+  fold_count?: number | null;
+  cv_seed?: number | null;
+  selection_metric?: string | null;
+  selection_direction?: string | null;
+  message: string;
 }
 
 export interface Experiment {
   id: UUID;
+  experiment_id?: UUID;
   project_id: UUID;
-  experiment_name: string;
-  status: 'PENDING' | 'RUNNING' | 'COMPLETED' | 'FAILED' | 'CANCELLED';
-  selection_metric: string;
-  selection_direction: 'MINIMIZE' | 'MAXIMIZE';
+  experiment_name?: string;
+  status: 'PENDING' | 'RUNNING' | 'COMPLETED' | 'FAILED' | 'CANCELLED' | string;
+  selection_metric?: string;
+  selection_direction?: 'MINIMIZE' | 'MAXIMIZE' | string;
   winning_model_id?: UUID | null;
   deployment_threshold_frozen_at_creation?: boolean;
-  created_at: string;
+  created_at?: string;
 }
 
 export interface TrainedModel {

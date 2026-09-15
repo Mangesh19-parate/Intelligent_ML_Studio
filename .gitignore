@@ -24,30 +24,50 @@ wheels/
 .installed.cfg
 *.egg
 .pytest_cache/
+.coverage
+htmlcov/
 
-# Data and Storage
+# Data, SQLite databases, and Serialized Artifacts
 data/
 /data/
+backend/data/
 *.db
 *.sqlite
 *.sqlite3
 *.pkl
 *.joblib
-.coverage
-htmlcov/
+*.npy
+*.parquet
 
-# Node
+# Node & Frontend Build Artifacts
 node_modules/
+frontend/node_modules/
 dist/
+frontend/dist/
 .vite/
+frontend/.vite/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# Environment & IDE
+# Environment & Secrets (Never commit production or dev secrets)
 .env
+.env.local
+.env.*.local
+backend/.env
+frontend/.env
+*.env
+
+# IDE, Scratch & System
 .idea/
 .vscode/
 *.swp
 *.swo
+.DS_Store
 dist_export/
+releases/
+*.zip
+*.tar.gz
+brain/
+scratch/
+.agents/

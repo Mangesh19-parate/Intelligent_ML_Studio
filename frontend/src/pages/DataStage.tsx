@@ -137,8 +137,8 @@ export const DataStage: React.FC = () => {
       setSuccessMsg('');
 
       const payload = {
-        test_percentage: lockedTestPct / 100,
-        split_seed: splitSeed ? Number(splitSeed) : null,
+        locked_test_pct: Number(lockedTestPct),
+        seed: splitSeed ? Number(splitSeed) : null,
       };
 
       await datasetSplitApi.createSplit(selectedDataset.id, payload);

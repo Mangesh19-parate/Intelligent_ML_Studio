@@ -33,7 +33,6 @@ def _get_model_and_verify_access(
     current_user: User,
     db: Session,
     allow_deployers: bool = False,
-    allow_readers: bool = False,
 ) -> TrainedModel:
     model = db.query(TrainedModel).filter(TrainedModel.id == model_id).first()
     if not model:
@@ -41,8 +40,6 @@ def _get_model_and_verify_access(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Trained model not found"
         )
-    if allow_readers:
-        return model
 
     from app.core.dependencies import get_effective_permissions
     permissions = get_effective_permissions(current_user)
@@ -226,6 +223,6 @@ def get_model_passport(
     direct SELECT queries from stored records. Never triggers retraining, metric
     recomputation, or disk artifact loading (zero joblib/pickle IO).
     """
-    _get_model_and_verify_access(id, current_user, db, allow_readers=True)
+    _get_model_and_verify_access(id, current_user, db)
     passport_service = ModelPassportService(db)
     return passport_service.get_passport(model_id=id)

@@ -13,7 +13,8 @@ Every resource endpoint (`/projects`, `/datasets`, `/experiments`, `/transformat
 
 ### 2. Rate Limiting on Authentication Endpoints
 - **Endpoints Protected**: `/api/v1/auth/login`, `/api/v1/auth/signup`, `/api/v1/auth/register`.
-- **Mechanism**: In-memory thread-safe sliding window rate limiter (`app.core.rate_limiter.SlidingWindowRateLimiter`).
+- **Mechanism**: In-memory thread-safe sliding window rate limiter (`app.core.rate_limiter.SlidingWindowRateLimiter`) for single-node and local deployments.
+- **Distributed Note**: For multi-instance horizontal deployments across multiple containers, distributed rate limiting at the API Gateway / reverse proxy (e.g. Nginx, Cloudflare) or Redis tier is recommended.
 - **Policy**:
   - `/auth/login`: Maximum 15 requests per 60-second window per IP.
   - `/auth/signup`: Maximum 10 requests per 60-second window per IP.
@@ -21,7 +22,7 @@ Every resource endpoint (`/projects`, `/datasets`, `/experiments`, `/transformat
 
 ### 3. Production Secret Management & JWT Rotation
 - In production (`ENV=production`), `app.core.config.Settings` enforces:
-  - `JWT_SECRET` must NOT match known development defaults (`dev-jwt-secret...`, `changeme`, etc.) and must be $\ge 32$ characters.
+  - `JWT_SECRET` must NOT match known development defaults (`dev-jwt-secret...`, `changeme`, etc.) and must be >= 32 characters.
   - Wildcard CORS origins (`"*"`) are rejected during startup.
 - **Recommended Secret Managers**:
   - **AWS Secrets Manager / SSM Parameter Store**: Retrieve `JWT_SECRET` and `DATABASE_URL` via IAM instance profiles at container launch.
@@ -30,7 +31,7 @@ Every resource endpoint (`/projects`, `/datasets`, `/experiments`, `/transformat
 
 ### 4. Dependency Vulnerability Audits (`pip-audit`)
 - Automated scanning via `pip-audit` runs in the CI/CD pipeline before every deploy.
-- Patched baseline: `python-multipart>=0.0.20`, `fastapi>=0.115.0`, `cryptography>=43.0.0`.
+- Dependency baseline: `fastapi>=0.110.0,<1.0.0`, `python-multipart>=0.0.9`, `cryptography>=42.0.0`.
 
 ### 5. HTTPS & Security Headers Middleware
 - `app.core.security_headers.SecurityHeadersMiddleware` is registered in `main.py`:
@@ -45,13 +46,14 @@ Every resource endpoint (`/projects`, `/datasets`, `/experiments`, `/transformat
 ### 1. Asynchronous Model Training Off the Request Path
 - All model training (`POST /projects/{id}/experiments`) submits tasks to the persistent task engine (`app.tasks.experiment_tasks.submit_experiment_task`):
   - Backed by database records (`DurableTask` model) with lease management, process-level isolation, and worker timeouts.
-  - HTTP requests return immediately with `HTTP 200 OK` (`status: "TRAINING"`), preventing Render 30s/100s proxy gateway timeouts.
+  - PostgreSQL `FOR UPDATE SKIP LOCKED` guarantees multi-worker atomic task claiming with zero collisions (SQLite transaction locking for local dev).
+  - HTTP requests return immediately with `HTTP 200 OK` (`status: "TRAINING"`), preventing proxy gateway timeouts.
   - Frontend polls `/experiments/{id}` or listens to lifecycle updates until completion.
 
-### 2. S3-Compatible Object Storage Architecture
+### 2. Pluggable Storage Architecture
 - The `StorageService` abstract base class (`app.services.storage_service.StorageService`) decouples artifact persistence from local disk.
-- **To switch to S3 / Cloudflare R2 / MinIO**:
-  Configure `STORAGE_BACKEND=s3`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `S3_BUCKET_NAME`, and `AWS_ENDPOINT_URL`.
+- **Local Engine (Shipped)**: `LocalStorageService` manages structured local filesystem storage with path isolation.
+- **Object Store Extension**: Pluggable interface defined for adding multi-node S3 / MinIO / Cloudflare R2 storage backends.
 
 ### 3. Database Connection Pooling
 - SQLAlchemy engine configured in `app.core.database`:
@@ -64,13 +66,13 @@ Every resource endpoint (`/projects`, `/datasets`, `/experiments`, `/transformat
 
 ### 1. Test-Gated CI/CD Pipeline
 - GitHub Actions workflow (`.github/workflows/ci.yml`) executes on every push and pull request to `main`:
-  - **Backend Gate**: Runs `pip-audit` CVE checks and full 454-test `pytest` suite testing leakage invariants.
-  - **Frontend Gate**: Runs TypeScript check and Vite production bundle build.
+  - **Backend Gate**: Runs `pip-audit` CVE checks and full 467-test `pytest` suite testing leakage invariants.
+  - **Frontend Gate**: Runs TypeScript check (`tsc --noEmit`) and Vite production bundle build.
   - **Deploy Gate**: Deploys only trigger after all quality gates pass.
 
-### 2. Structured Logging & Error Tracking
+### 2. Structured Logging & Observability
 - `StructuredLoggingMiddleware` emits structured JSON request logs including `request_id`, duration in ms, and status codes.
-- **Sentry Integration**: Set `SENTRY_DSN` in production environment to capture unhandled exceptions automatically.
+- **Monitoring Hooks**: Health endpoints (`/health`) and authenticated Prometheus metrics (`/metrics`). APM providers like Sentry or OpenTelemetry can be connected via standard ASGI middleware hooks.
 
 ### 3. Backups, Restore & Migration Rollbacks
 - **Automated Database Backups**:

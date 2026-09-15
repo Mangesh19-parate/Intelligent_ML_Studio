@@ -5,9 +5,12 @@ import { Project } from '../types/api';
 interface ProjectContextType {
   projects: Project[];
   activeProject: Project | null;
+  currentProject: Project | null;
+  currentProjectId: string | null;
   isLoading: boolean;
   error: string | null;
   selectProject: (projectId: string) => void;
+  setCurrentProjectId: (projectId: string) => void;
   refreshProjects: () => Promise<void>;
   updateActiveProject: (updated: Partial<Project>) => void;
 }
@@ -71,14 +74,19 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     );
   }, [activeProject]);
 
+  const currentProjectId = activeProject?.id ? String(activeProject.id) : null;
+
   return (
     <ProjectContext.Provider
       value={{
         projects,
         activeProject,
+        currentProject: activeProject,
+        currentProjectId,
         isLoading,
         error,
         selectProject,
+        setCurrentProjectId: selectProject,
         refreshProjects: fetchProjects,
         updateActiveProject,
       }}

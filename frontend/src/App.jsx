@@ -162,6 +162,11 @@ export default function App() {
           <Route
             path="/analysis/imputation"
             element={
+              <ProtectedRoute>
+                <DataAnalysisStage />
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/ml/registry"
             element={

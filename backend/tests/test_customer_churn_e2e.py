@@ -38,6 +38,10 @@ def test_customer_churn_real_world_lifecycle_e2e(client, db_session, tmp_path, c
     - Live REST prediction & rollback
     """
     churn_path = Path("research/data/customer_churn.csv")
+    if not churn_path.exists():
+        churn_path = Path("../research/data/customer_churn.csv")
+    if not churn_path.exists():
+        churn_path = Path(__file__).resolve().parent.parent.parent / "research" / "data" / "customer_churn.csv"
     assert churn_path.exists(), "customer_churn.csv must exist"
 
     df = pd.read_csv(churn_path)

@@ -173,28 +173,11 @@ export const MLStage: React.FC = () => {
           title="Select a Project to View Leaderboard"
           description="Choose a workspace project to configure training algorithms, launch cross-validation experiments, and view the authoritative model leaderboard."
         />
-      ) : !currentProject?.task_type || currentProject.task_type === 'UNSET' ? (
-        <div className="bg-[var(--color-surface)] border border-amber-500/30 rounded-2xl p-8 text-center space-y-4 shadow-sm">
-          <AlertTriangle className="w-12 h-12 mx-auto text-amber-400" />
-          <h3 className="text-base font-bold text-[var(--color-text)]">Task Type Not Configured</h3>
-          <p className="text-xs text-[var(--color-text-muted)] max-w-md mx-auto">
-            Project <strong className="text-[var(--color-text)]">{currentProject?.project_name}</strong> does not have a confirmed task type (Regression or Classification) or target column yet.
-          </p>
-          <div className="pt-2">
-            <Link
-              to={`/data-analysis?project_id=${currentProjectId}`}
-              className="inline-flex items-center space-x-2 px-5 py-2.5 rounded-full bg-[var(--color-accent)] hover:bg-[var(--color-accent-hover)] text-white text-xs font-bold shadow-sm transition-all"
-            >
-              <span>Go to Data Analysis & Profiling</span>
-              <ArrowRight className="w-4 h-4" />
-            </Link>
-          </div>
-        </div>
       ) : (
         <ModelTraining
           projectId={currentProjectId}
-          taskType={currentProject.task_type}
-          targetColumn={currentProject.target_column}
+          taskType={currentProject?.task_type}
+          targetColumn={currentProject?.target_column}
           onExperimentCompleted={handleRefresh}
         />
       )}

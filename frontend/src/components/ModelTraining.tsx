@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { experimentApi, modelApi } from '../api/client';
+import { experimentApi, modelApi, projectApi } from '../api/client';
+import { useProject } from '../context/ProjectContext';
 import { LineageViewer } from './LineageViewer';
 import { ExplainabilityViewer } from './ExplainabilityViewer';
 import DeploymentGateModal from './DeploymentGateModal';
@@ -16,7 +17,7 @@ import {
 } from './training';
 import { EmptyState } from './feedback/EmptyState';
 import { ErrorState } from './feedback/ErrorState';
-import { ShieldCheck, CheckCircle2, Layers, AlertTriangle } from 'lucide-react';
+import { ShieldCheck, CheckCircle2, Layers, AlertTriangle, Cpu, Activity, ArrowRight, Sparkles } from 'lucide-react';
 
 interface ModelTrainingProps {
   projectId: string;
@@ -226,12 +227,137 @@ export const ModelTraining: React.FC<ModelTrainingProps> = ({
     }
   };
 
+  const { refreshProjects } = useProject();
+  const [updatingTaskType, setUpdatingTaskType] = useState(false);
+
+  const handleSetTaskType = async (selectedType: 'CLASSIFICATION' | 'REGRESSION') => {
+    try {
+      setUpdatingTaskType(true);
+      setError('');
+      await projectApi.updateTaskType(projectId, selectedType);
+      await refreshProjects();
+      if (onExperimentCompleted) {
+        onExperimentCompleted();
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.detail || 'Failed to update project task type');
+    } finally {
+      setUpdatingTaskType(false);
+    }
+  };
+
   if (!taskType || !['REGRESSION', 'CLASSIFICATION'].includes(taskType)) {
     return (
-      <EmptyState
-        title="Task Type Required"
-        description="Please confirm the project task type (Regression or Classification) in the Data Profiling tab before running model training."
-      />
+      <div className="space-y-6">
+        <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl p-6 sm:p-8 shadow-sm space-y-6">
+          <div className="max-w-2xl space-y-2">
+            <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-500 text-xs font-semibold">
+              <AlertTriangle className="w-3.5 h-3.5" />
+              <span>Task Type Required</span>
+            </div>
+            <h2 className="text-xl sm:text-2xl font-black text-[var(--color-text)] tracking-tight">
+              Select ML Task Type
+            </h2>
+            <p className="text-xs sm:text-sm text-[var(--color-text-muted)] leading-relaxed">
+              Confirm your project's modeling objective below. This customizes algorithm selection, loss functions, and evaluation metrics across cross-validation folds.
+            </p>
+          </div>
+
+          {error && (
+            <ErrorState
+              title="Configuration Error"
+              message={error}
+              onRetry={() => setError('')}
+            />
+          )}
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+            {/* Classification Option */}
+            <button
+              type="button"
+              disabled={updatingTaskType}
+              onClick={() => handleSetTaskType('CLASSIFICATION')}
+              className="group text-left p-6 rounded-2xl bg-[var(--color-bg)] border border-[var(--color-border)] hover:border-[var(--color-accent)] hover:bg-[var(--color-accent-soft)]/20 transition-all duration-200 cursor-pointer shadow-xs hover:shadow-md flex flex-col justify-between space-y-4"
+            >
+              <div className="space-y-3">
+                <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <Cpu className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-base font-bold text-[var(--color-text)] group-hover:text-[var(--color-accent)] transition-colors">
+                      Classification
+                    </h3>
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 font-semibold">
+                      Discrete Classes
+                    </span>
+                  </div>
+                  <p className="text-xs text-[var(--color-text-muted)] mt-1.5 leading-relaxed">
+                    Predict categorical labels, churn states, binary outcomes, or multi-class decisions.
+                  </p>
+                </div>
+                <div className="text-[11px] text-[var(--color-text-muted)] space-y-1 pt-1 border-t border-[var(--color-border)]/50">
+                  <div className="flex items-center space-x-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-indigo-400" />
+                    <span><strong>Algorithms:</strong> Logistic Regression, Random Forest, Gradient Boosting</span>
+                  </div>
+                  <div className="flex items-center space-x-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-indigo-400" />
+                    <span><strong>Metrics:</strong> Macro-F1, ROC-AUC, Precision, Recall, Accuracy</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="inline-flex items-center space-x-1.5 text-xs font-bold text-[var(--color-accent)] pt-2">
+                <span>{updatingTaskType ? 'Configuring...' : 'Confirm Classification'}</span>
+                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+              </div>
+            </button>
+
+            {/* Regression Option */}
+            <button
+              type="button"
+              disabled={updatingTaskType}
+              onClick={() => handleSetTaskType('REGRESSION')}
+              className="group text-left p-6 rounded-2xl bg-[var(--color-bg)] border border-[var(--color-border)] hover:border-[var(--color-accent)] hover:bg-[var(--color-accent-soft)]/20 transition-all duration-200 cursor-pointer shadow-xs hover:shadow-md flex flex-col justify-between space-y-4"
+            >
+              <div className="space-y-3">
+                <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <Activity className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-base font-bold text-[var(--color-text)] group-hover:text-[var(--color-accent)] transition-colors">
+                      Regression
+                    </h3>
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 font-semibold">
+                      Continuous Values
+                    </span>
+                  </div>
+                  <p className="text-xs text-[var(--color-text-muted)] mt-1.5 leading-relaxed">
+                    Predict continuous numerical quantities, prices, target metrics, or financial values.
+                  </p>
+                </div>
+                <div className="text-[11px] text-[var(--color-text-muted)] space-y-1 pt-1 border-t border-[var(--color-border)]/50">
+                  <div className="flex items-center space-x-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                    <span><strong>Algorithms:</strong> Linear Regression, Ridge, Random Forest, Gradient Boosting</span>
+                  </div>
+                  <div className="flex items-center space-x-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                    <span><strong>Metrics:</strong> RMSE, MAE, R², Mean Squared Error</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="inline-flex items-center space-x-1.5 text-xs font-bold text-[var(--color-accent)] pt-2">
+                <span>{updatingTaskType ? 'Configuring...' : 'Confirm Regression'}</span>
+                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+              </div>
+            </button>
+          </div>
+        </div>
+      </div>
     );
   }
 

@@ -45,6 +45,7 @@ export const DataStage: React.FC = () => {
   const [showCreateModal, setShowCreateModal] = useState<boolean>(false);
   const [newProjectName, setNewProjectName] = useState<string>('');
   const [newTargetCol, setNewTargetCol] = useState<string>('');
+  const [newTaskType, setNewTaskType] = useState<string>('UNSET');
   const [creatingProject, setCreatingProject] = useState<boolean>(false);
 
   // Load dataset split and preview
@@ -166,11 +167,12 @@ export const DataStage: React.FC = () => {
       const res = await projectApi.create({
         project_name: newProjectName.trim(),
         target_column: newTargetCol.trim() || null,
-        task_type: 'UNSET',
+        task_type: newTaskType,
       });
       setShowCreateModal(false);
       setNewProjectName('');
       setNewTargetCol('');
+      setNewTaskType('UNSET');
       await refreshProjects();
       navigate(`/data-stage?project_id=${res.data.id}`);
     } catch (err: any) {
@@ -335,6 +337,19 @@ export const DataStage: React.FC = () => {
                   onChange={(e) => setNewTargetCol(e.target.value)}
                   className="w-full px-3.5 py-2 text-xs rounded-full border border-[var(--color-border)] bg-[var(--color-bg)] text-[var(--color-text)] focus:outline-none focus:border-[var(--color-accent)]"
                 />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-[var(--color-text)]">Task Type (Optional)</label>
+                <select
+                  value={newTaskType}
+                  onChange={(e) => setNewTaskType(e.target.value)}
+                  className="w-full px-3.5 py-2 text-xs rounded-full border border-[var(--color-border)] bg-[var(--color-bg)] text-[var(--color-text)] focus:outline-none focus:border-[var(--color-accent)] cursor-pointer"
+                >
+                  <option value="UNSET">Auto-detect / Profile Later</option>
+                  <option value="CLASSIFICATION">Classification (Categorical / Labels)</option>
+                  <option value="REGRESSION">Regression (Continuous Values)</option>
+                </select>
               </div>
 
               <div className="flex justify-end space-x-2 pt-2">

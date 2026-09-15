@@ -319,7 +319,7 @@ export const LandingPage: React.FC = () => {
             {/* Actions */}
             <div className="flex flex-wrap items-center gap-4 pt-2">
               <Button
-                variant="accent"
+                variant="primary"
                 size="lg"
                 onClick={() => openSignInModal(false)}
                 className="rounded-full text-xs font-bold shadow-md hover:shadow-lg transition-all"
@@ -821,7 +821,7 @@ export const LandingPage: React.FC = () => {
         </p>
         <div className="flex items-center justify-center space-x-4 pt-2">
           <Button
-            variant="accent"
+            variant="primary"
             size="lg"
             onClick={() => openSignInModal(false)}
             className="rounded-full text-xs font-bold shadow-lg"
@@ -974,7 +974,7 @@ export const LandingPage: React.FC = () => {
               {/* Submit Button */}
               <Button
                 type="submit"
-                variant="accent"
+                variant="primary"
                 size="md"
                 disabled={authSubmitting}
                 isLoading={authSubmitting}

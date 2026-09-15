@@ -167,6 +167,99 @@ export default function App() {
               </ProtectedRoute>
             }
           />
+          {/* Transformation Section */}
+          <Route
+            path="/transformations"
+            element={
+              <ProtectedRoute>
+                <TransformationStage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/transform"
+            element={
+              <ProtectedRoute>
+                <TransformationStage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Feature Engineering & Selection Section */}
+          <Route
+            path="/feature-engineering"
+            element={
+              <ProtectedRoute>
+                <FeatureEngineeringStage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/features"
+            element={
+              <ProtectedRoute>
+                <FeatureEngineeringStage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/analysis/feature-selection"
+            element={
+              <ProtectedRoute>
+                <FeatureEngineeringStage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/analysis/feature-engineering"
+            element={
+              <ProtectedRoute>
+                <FeatureEngineeringStage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Machine Learning & Experiments Section */}
+          <Route
+            path="/ml"
+            element={
+              <ProtectedRoute>
+                <MLStage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/ml/training"
+            element={
+              <ProtectedRoute>
+                <MLStage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/ml/experiments"
+            element={
+              <ProtectedRoute>
+                <MLStage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/ml/evaluation"
+            element={
+              <ProtectedRoute>
+                <MLStage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/machine-learning"
+            element={
+              <ProtectedRoute>
+                <MLStage />
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/ml/registry"
             element={
@@ -180,6 +273,48 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <MLStage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Intelligence & Diagnostics Section */}
+          <Route
+            path="/diagnostics"
+            element={
+              <ProtectedRoute>
+                <DiagnosticsStage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/intelligence/diagnostics"
+            element={
+              <ProtectedRoute>
+                <DiagnosticsStage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/intelligence/recommendations"
+            element={
+              <ProtectedRoute>
+                <DiagnosticsStage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/intelligence/explainability"
+            element={
+              <ProtectedRoute>
+                <DiagnosticsStage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/explainability"
+            element={
+              <ProtectedRoute>
+                <DiagnosticsStage />
               </ProtectedRoute>
             }
           />

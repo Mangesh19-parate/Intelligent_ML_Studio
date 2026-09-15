@@ -157,10 +157,10 @@ export const ProjectContextHeader: React.FC<ProjectContextHeaderProps> = ({
             </Badge>
 
             {activeProject.target_column && (
-              <div className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-800/60 border border-slate-700/60 text-[11px] text-slate-300">
-                <Target className="w-3 h-3 text-indigo-400" />
-                <span className="text-slate-500">Target:</span>
-                <span className="font-medium font-mono text-slate-200 truncate max-w-[120px]">
+              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[var(--color-surface-hover)] border border-[var(--color-border)] text-[11px] text-[var(--color-text-muted)]">
+                <Target className="w-3 h-3 text-[var(--color-accent)]" />
+                <span className="text-[var(--color-text-muted)] font-semibold">Target:</span>
+                <span className="font-bold font-mono text-[var(--color-text)] truncate max-w-[120px]">
                   {activeProject.target_column}
                 </span>
               </div>
@@ -173,12 +173,12 @@ export const ProjectContextHeader: React.FC<ProjectContextHeaderProps> = ({
       <div className="flex items-center gap-2 sm:gap-3 shrink-0">
         <button
           onClick={onOpenCommandPalette}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-800/50 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 text-slate-400 hover:text-slate-200 transition-all text-xs group"
+          className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[var(--color-surface-hover)] hover:bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-all text-xs group cursor-pointer shadow-xs"
           aria-label="Open Command Palette"
         >
-          <Search className="w-3.5 h-3.5 text-slate-400 group-hover:text-indigo-400 transition-colors" />
-          <span className="hidden sm:inline">Search actions or projects...</span>
-          <kbd className="inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-mono text-slate-400 bg-slate-850 border border-slate-700 rounded shadow-sm">
+          <Search className="w-3.5 h-3.5 text-[var(--color-text-muted)] group-hover:text-[var(--color-accent)] transition-colors" />
+          <span className="hidden sm:inline">Search actions, stages, or projects...</span>
+          <kbd className="inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-mono text-[var(--color-text-muted)] bg-[var(--color-bg)] border border-[var(--color-border)] rounded shadow-xs">
             ⌘K
           </kbd>
         </button>

@@ -14,6 +14,13 @@ import {
   FileSpreadsheet,
   CheckCircle2,
   Sparkles,
+  Shield,
+  FileText,
+  Lock,
+  Flame,
+  ChevronRight,
+  Database,
+  ArrowRight,
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useProject } from '../../context/ProjectContext';
@@ -23,7 +30,7 @@ export interface CommandItem {
   title: string;
   subtitle?: string;
   icon: React.ReactNode;
-  category: 'Actions' | 'Navigation' | 'Projects';
+  category: 'Actions' | 'Navigation' | 'Projects' | 'Legal & Governance';
   shortcut?: string;
   onSelect: () => void;
 }
@@ -33,7 +40,7 @@ export const CommandPalette: React.FC<{
   onClose: () => void;
 }> = ({ isOpen, onClose }) => {
   const navigate = useNavigate();
-  const { projects, selectProject } = useProject();
+  const { projects, currentProjectId, selectProject } = useProject();
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -47,65 +54,90 @@ export const CommandPalette: React.FC<{
     }
   }, [isOpen]);
 
+  // Global Escape key listener
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isOpen) {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, [isOpen, onClose]);
+
+  const projectQueryParam = currentProjectId ? `?project_id=${currentProjectId}` : '';
+
   // Command items catalog
   const allItems: CommandItem[] = useMemo(() => {
     const items: CommandItem[] = [
-      // Actions
+      // 1. Actions
       {
         id: 'action-upload',
         title: 'Upload Tabular Dataset',
-        subtitle: 'Upload CSV, Excel, or JSON file to active project',
-        icon: <Upload className="w-4 h-4 text-indigo-400" />,
+        subtitle: 'Upload CSV, Excel, or Parquet and seal cryptographic test partition',
+        icon: <Upload className="w-4 h-4 text-[var(--color-accent)]" />,
         category: 'Actions',
         shortcut: 'U',
         onSelect: () => {
-          navigate('/data/upload');
+          navigate(`/data${projectQueryParam}`);
           onClose();
         },
       },
       {
-        id: 'action-train',
-        title: 'Launch Model Training',
-        subtitle: 'Configure algorithms and execute inner CV folds',
-        icon: <Play className="w-4 h-4 text-emerald-400" />,
+        id: 'action-eda',
+        title: 'Run Exploratory Data Analysis',
+        subtitle: 'Inspect distributions, missingness matrices, and correlation heatmaps',
+        icon: <BarChart3 className="w-4 h-4 text-emerald-400" />,
         category: 'Actions',
-        shortcut: 'T',
+        shortcut: 'E',
         onSelect: () => {
-          navigate('/ml/training');
+          navigate(`/data-analysis${projectQueryParam}`);
           onClose();
         },
       },
       {
         id: 'action-feature-selection',
         title: 'Run Feature Selection',
-        subtitle: 'Calculate stability ranking across candidates',
+        subtitle: 'Calculate stability ranking across candidates with rank aggregation',
         icon: <Sliders className="w-4 h-4 text-amber-400" />,
         category: 'Actions',
         shortcut: 'F',
         onSelect: () => {
-          navigate('/features/selection');
+          navigate(`/features${projectQueryParam}`);
+          onClose();
+        },
+      },
+      {
+        id: 'action-train',
+        title: 'Launch Model Training',
+        subtitle: 'Configure algorithms and execute inner CV folds with zero leakage',
+        icon: <Play className="w-4 h-4 text-orange-400" />,
+        category: 'Actions',
+        shortcut: 'T',
+        onSelect: () => {
+          navigate(`/ml${projectQueryParam}`);
           onClose();
         },
       },
       {
         id: 'action-gates',
         title: 'Evaluate Deployment Gates',
-        subtitle: 'Verify 6-condition pre-deployment checklist',
-        icon: <ShieldCheck className="w-4 h-4 text-purple-400" />,
+        subtitle: 'Verify 6-condition pre-deployment checklist with dual-signoff',
+        icon: <ShieldCheck className="w-4 h-4 text-indigo-400" />,
         category: 'Actions',
         shortcut: 'G',
         onSelect: () => {
-          navigate('/production/gates');
+          navigate(`/production${projectQueryParam}`);
           onClose();
         },
       },
 
-      // Navigation
+      // 2. Navigation
       {
         id: 'nav-workspace',
-        title: 'Workspace Overview',
-        subtitle: 'View all projects and platform health',
-        icon: <FolderKanban className="w-4 h-4 text-slate-400" />,
+        title: 'Workspace Dashboard',
+        subtitle: 'Project portfolio overview, active pipelines, and platform metrics',
+        icon: <FolderKanban className="w-4 h-4 text-[var(--color-text-muted)]" />,
         category: 'Navigation',
         onSelect: () => {
           navigate('/dashboard');
@@ -114,90 +146,139 @@ export const CommandPalette: React.FC<{
       },
       {
         id: 'nav-data',
-        title: 'Data & Schema Inspection',
-        subtitle: 'Column statistics, dtypes, and null counts',
-        icon: <FileSpreadsheet className="w-4 h-4 text-slate-400" />,
+        title: '1. Ingest & Profile Stage',
+        subtitle: 'Dataset schema, preview rows, data quality score, and locked test split',
+        icon: <Database className="w-4 h-4 text-[var(--color-text-muted)]" />,
         category: 'Navigation',
         onSelect: () => {
-          navigate('/data');
+          navigate(`/data${projectQueryParam}`);
           onClose();
         },
       },
       {
         id: 'nav-analysis',
-        title: 'Exploratory Data Analysis (EDA)',
-        subtitle: 'Interactive distributions and correlation matrix',
-        icon: <BarChart3 className="w-4 h-4 text-slate-400" />,
+        title: '2. Exploratory Analysis Stage',
+        subtitle: 'Interactive bivariate scatterplots, distributions, and IQR outlier boundaries',
+        icon: <BarChart3 className="w-4 h-4 text-[var(--color-text-muted)]" />,
         category: 'Navigation',
         onSelect: () => {
-          navigate('/data-analysis');
+          navigate(`/data-analysis${projectQueryParam}`);
           onClose();
         },
       },
       {
         id: 'nav-transformations',
-        title: 'Feature Transformations',
-        subtitle: 'Scaling, encoding, and imputation pipeline',
-        icon: <Layers className="w-4 h-4 text-slate-400" />,
+        title: '3. Preprocessing Transformations',
+        subtitle: 'Strict train-fitted scalers, categorical encoders, and KNN imputers',
+        icon: <Layers className="w-4 h-4 text-[var(--color-text-muted)]" />,
         category: 'Navigation',
         onSelect: () => {
-          navigate('/transformations');
+          navigate(`/transformations${projectQueryParam}`);
+          onClose();
+        },
+      },
+      {
+        id: 'nav-features',
+        title: '4. Feature Engineering & Selection',
+        subtitle: 'Stability index, multicollinearity pruning, and rank aggregation',
+        icon: <Sliders className="w-4 h-4 text-[var(--color-text-muted)]" />,
+        category: 'Navigation',
+        onSelect: () => {
+          navigate(`/features${projectQueryParam}`);
           onClose();
         },
       },
       {
         id: 'nav-ml',
-        title: 'Model Leaderboard & Evaluation',
-        subtitle: 'Compare candidate models and locked test metrics',
-        icon: <Sparkles className="w-4 h-4 text-slate-400" />,
+        title: '5. Model Training & Leaderboard',
+        subtitle: 'Algorithm comparisons, ROC/PR curves, confusion matrices, and SHAP trees',
+        icon: <Sparkles className="w-4 h-4 text-[var(--color-text-muted)]" />,
         category: 'Navigation',
         onSelect: () => {
-          navigate('/ml/leaderboard');
+          navigate(`/ml${projectQueryParam}`);
           onClose();
         },
       },
       {
         id: 'nav-production',
-        title: 'Production & Serving',
-        subtitle: 'Real-time REST inference and prediction logs',
-        icon: <Server className="w-4 h-4 text-slate-400" />,
+        title: '6. Production Serving & Gating',
+        subtitle: 'Dual-key approval, locked test score evaluation, and live REST inference',
+        icon: <Server className="w-4 h-4 text-[var(--color-text-muted)]" />,
         category: 'Navigation',
         onSelect: () => {
-          navigate('/production');
+          navigate(`/production${projectQueryParam}`);
           onClose();
         },
       },
       {
         id: 'nav-monitoring',
-        title: 'Telemetry & Observability',
-        subtitle: 'Task queue depth, worker state, and latencies',
-        icon: <Activity className="w-4 h-4 text-slate-400" />,
+        title: '7. Telemetry & Observability',
+        subtitle: 'Real-time worker task queue, P99 inference latencies, and PSI drift tracking',
+        icon: <Activity className="w-4 h-4 text-[var(--color-text-muted)]" />,
         category: 'Navigation',
         onSelect: () => {
           navigate('/monitoring');
           onClose();
         },
       },
+
+      // 3. Legal & Governance
+      {
+        id: 'legal-center',
+        title: 'Legal & Governance Center',
+        subtitle: 'Enterprise documentation hub, security safeguards, and compliance terms',
+        icon: <Shield className="w-4 h-4 text-[var(--color-accent)]" />,
+        category: 'Legal & Governance',
+        onSelect: () => {
+          navigate('/legal');
+          onClose();
+        },
+      },
+      {
+        id: 'legal-privacy',
+        title: 'Privacy Policy & Data Transparency',
+        subtitle: '14-section disclosure on customer dataset isolation and retention',
+        icon: <Lock className="w-4 h-4 text-emerald-400" />,
+        category: 'Legal & Governance',
+        onSelect: () => {
+          navigate('/privacy');
+          onClose();
+        },
+      },
+      {
+        id: 'legal-terms',
+        title: 'Enterprise Terms of Service',
+        subtitle: '18-clause SaaS agreement with customer IP and model ownership protections',
+        icon: <FileText className="w-4 h-4 text-indigo-400" />,
+        category: 'Legal & Governance',
+        onSelect: () => {
+          navigate('/terms');
+          onClose();
+        },
+      },
     ];
 
-    // Add projects
+    // 4. Projects
     projects.forEach((p) => {
+      const isCurrent = String(p.id) === String(currentProjectId);
       items.push({
         id: `project-${p.id}`,
-        title: p.project_name,
-        subtitle: `Stage: ${p.pipeline_stage} • Task: ${p.task_type}`,
-        icon: <FolderKanban className="w-4 h-4 text-indigo-400" />,
+        title: p.project_name || p.name || `Project #${p.id}`,
+        subtitle: `Stage: ${p.pipeline_stage || 'NEW'} • Task: ${p.task_type || 'Unassigned'}${
+          p.target_column ? ` • Target: ${p.target_column}` : ''
+        }${isCurrent ? ' (Active)' : ''}`,
+        icon: <FolderKanban className={cn('w-4 h-4', isCurrent ? 'text-[var(--color-accent)]' : 'text-slate-400')} />,
         category: 'Projects',
         onSelect: () => {
           selectProject(String(p.id));
-          navigate(`/projects/${p.id}`);
+          navigate(`/dashboard?tab=overview&project_id=${p.id}`);
           onClose();
         },
       });
     });
 
     return items;
-  }, [projects, navigate, onClose, selectProject]);
+  }, [projects, currentProjectId, projectQueryParam, navigate, onClose, selectProject]);
 
   // Filter items by query
   const filteredItems = useMemo(() => {
@@ -238,44 +319,45 @@ export const CommandPalette: React.FC<{
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center pt-20 p-4 bg-slate-950/80 backdrop-blur-md animate-fadeIn"
+      className="fixed inset-0 z-50 flex items-start justify-center pt-16 sm:pt-24 p-4 bg-black/60 backdrop-blur-sm animate-fadeIn"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-2xl bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col text-slate-100 animate-scaleUp"
+        className="w-full max-w-2xl bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl shadow-2xl overflow-hidden flex flex-col text-[var(--color-text)] animate-scaleUp transition-colors"
         onClick={(e) => e.stopPropagation()}
         onKeyDown={handleKeyDown}
       >
-        {/* Search Input */}
-        <div className="flex items-center gap-3 px-4 py-3.5 border-b border-slate-800 bg-slate-900/90">
-          <Search className="w-5 h-5 text-slate-400 shrink-0" />
+        {/* Search Input Bar */}
+        <div className="flex items-center gap-3 px-4 py-3.5 border-b border-[var(--color-border)] bg-[var(--color-surface)]">
+          <Search className="w-4 h-4 text-[var(--color-accent)] shrink-0" />
           <input
             ref={inputRef}
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Type a command, action, or search projects..."
-            className="w-full bg-transparent text-slate-100 placeholder-slate-500 text-sm focus:outline-none"
+            className="w-full bg-transparent text-[var(--color-text)] placeholder-[var(--color-text-muted)] text-xs sm:text-sm font-medium focus:outline-none"
           />
-          <kbd className="hidden sm:inline-flex items-center gap-0.5 px-2 py-0.5 text-[10px] font-semibold text-slate-400 bg-slate-800 border border-slate-700 rounded">
+          <kbd className="hidden sm:inline-flex items-center gap-0.5 px-2 py-0.5 text-[10px] font-mono text-[var(--color-text-muted)] bg-[var(--color-surface-hover)] border border-[var(--color-border)] rounded shadow-xs">
             ESC
           </kbd>
         </div>
 
         {/* Results List */}
-        <div className="max-h-[60vh] overflow-y-auto p-2 divide-y divide-slate-800/40">
+        <div className="max-h-[60vh] overflow-y-auto p-2 divide-y divide-[var(--color-border)]/50">
           {filteredItems.length === 0 ? (
-            <div className="py-12 text-center text-slate-500 text-sm">
-              No matching commands or projects found for "{query}"
+            <div className="py-12 text-center text-[var(--color-text-muted)] text-xs space-y-1">
+              <div>No matching actions, navigation items, or projects found for:</div>
+              <div className="font-mono font-bold text-[var(--color-text)]">"{query}"</div>
             </div>
           ) : (
-            ['Actions', 'Navigation', 'Projects'].map((category) => {
+            (['Actions', 'Navigation', 'Projects', 'Legal & Governance'] as const).map((category) => {
               const categoryItems = filteredItems.filter((i) => i.category === category);
               if (categoryItems.length === 0) return null;
 
               return (
-                <div key={category} className="py-1.5 first:pt-0 last:pb-0">
-                  <div className="px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                <div key={category} className="py-2 first:pt-1 last:pb-1 space-y-1">
+                  <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)]">
                     {category}
                   </div>
                   {categoryItems.map((item) => {
@@ -288,31 +370,37 @@ export const CommandPalette: React.FC<{
                         onClick={item.onSelect}
                         onMouseEnter={() => setSelectedIndex(globalIdx)}
                         className={cn(
-                          'flex items-center justify-between px-3 py-2.5 rounded-xl cursor-pointer transition-colors',
+                          'flex items-center justify-between px-3 py-2 rounded-xl cursor-pointer transition-all',
                           isSelected
-                            ? 'bg-indigo-600/15 text-indigo-200 border border-indigo-500/20'
-                            : 'text-slate-300 hover:bg-slate-800/50 border border-transparent'
+                            ? 'bg-[var(--color-accent-soft)] text-[var(--color-accent)] border border-[var(--color-accent)]/30 font-medium'
+                            : 'text-[var(--color-text)] hover:bg-[var(--color-surface-hover)] border border-transparent'
                         )}
                       >
                         <div className="flex items-center gap-3 min-w-0">
                           <div
                             className={cn(
-                              'p-1.5 rounded-lg shrink-0',
-                              isSelected ? 'bg-indigo-500/20 text-indigo-400' : 'bg-slate-800 text-slate-400'
+                              'p-1.5 rounded-lg shrink-0 transition-colors',
+                              isSelected
+                                ? 'bg-[var(--color-accent)]/20 text-[var(--color-accent)]'
+                                : 'bg-[var(--color-surface-hover)] text-[var(--color-text-muted)]'
                             )}
                           >
                             {item.icon}
                           </div>
                           <div className="min-w-0">
-                            <p className="text-sm font-medium truncate">{item.title}</p>
+                            <p className="text-xs font-bold truncate text-[var(--color-text)]">
+                              {item.title}
+                            </p>
                             {item.subtitle && (
-                              <p className="text-xs text-slate-400 truncate">{item.subtitle}</p>
+                              <p className="text-[11px] text-[var(--color-text-muted)] truncate">
+                                {item.subtitle}
+                              </p>
                             )}
                           </div>
                         </div>
 
                         {item.shortcut && (
-                          <kbd className="hidden sm:inline-flex items-center px-1.5 py-0.5 text-[10px] font-mono text-slate-400 bg-slate-800 border border-slate-700 rounded">
+                          <kbd className="hidden sm:inline-flex items-center px-1.5 py-0.5 text-[10px] font-mono text-[var(--color-text-muted)] bg-[var(--color-surface-hover)] border border-[var(--color-border)] rounded shadow-xs">
                             {item.shortcut}
                           </kbd>
                         )}
@@ -326,21 +414,22 @@ export const CommandPalette: React.FC<{
         </div>
 
         {/* Footer info */}
-        <div className="flex items-center justify-between px-4 py-2 border-t border-slate-800 bg-slate-900/50 text-[11px] text-slate-500">
+        <div className="flex items-center justify-between px-4 py-2.5 border-t border-[var(--color-border)] bg-[var(--color-surface-hover)]/40 text-[11px] text-[var(--color-text-muted)]">
           <div className="flex items-center gap-3">
             <span>
-              <strong className="text-slate-400">↑↓</strong> Navigate
+              <strong className="text-[var(--color-text)]">↑↓</strong> Navigate
             </span>
             <span>
-              <strong className="text-slate-400">↵</strong> Select
+              <strong className="text-[var(--color-text)]">↵</strong> Select
             </span>
             <span>
-              <strong className="text-slate-400">ESC</strong> Close
+              <strong className="text-[var(--color-text)]">ESC</strong> Close
             </span>
           </div>
-          <span>ML Studio Command Palette</span>
+          <span className="font-medium">ML Studio Universal Command Palette</span>
         </div>
       </div>
     </div>
   );
 };
+export default CommandPalette;

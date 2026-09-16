@@ -44,6 +44,14 @@ def test_alembic_upgrade_downgrade_cycle(tmp_path):
     assert "revoked_tokens" in tables
     assert "reproducibility_runs" in tables
     assert "feature_selection_fold_results" in tables
+    assert "model_metrics" in tables
+
+    # Verify user auth and 2FA columns
+    user_cols = [c["name"] for c in inspector.get_columns("users")]
+    assert "password_changed_at" in user_cols
+    assert "is_two_factor_enabled" in user_cols
+    assert "two_factor_secret" in user_cols
+    assert "two_factor_backup_codes" in user_cols
 
     # Verify provenance columns in feature_selection_fold_results
     fs_cols = [c["name"] for c in inspector.get_columns("feature_selection_fold_results")]
@@ -61,6 +69,7 @@ def test_alembic_upgrade_downgrade_cycle(tmp_path):
     tables_after_downgrade = inspector.get_table_names()
     assert "durable_tasks" not in tables_after_downgrade
     assert "revoked_tokens" not in tables_after_downgrade
+    assert "model_metrics" not in tables_after_downgrade
     engine.dispose()
 
     # 3. Upgrade back to head (re-verification)
@@ -68,4 +77,7 @@ def test_alembic_upgrade_downgrade_cycle(tmp_path):
     engine = create_engine(db_url)
     inspector = inspect(engine)
     assert "durable_tasks" in inspector.get_table_names()
+    assert "model_metrics" in inspector.get_table_names()
+    user_cols_final = [c["name"] for c in inspector.get_columns("users")]
+    assert "password_changed_at" in user_cols_final
     engine.dispose()

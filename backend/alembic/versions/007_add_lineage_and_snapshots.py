@@ -1,7 +1,7 @@
 """add lineage, snapshots, and artifact checksum tracking
 
-Revision ID: 007_add_lineage_and_snapshots
-Revises: 006_add_model_training
+Revision ID: 007_lineage_snapshots
+Revises: 006_model_training
 Create Date: 2026-09-04 20:00:00.000000
 
 """
@@ -12,8 +12,8 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision: str = '007_add_lineage_and_snapshots'
-down_revision: Union[str, None] = '006_add_model_training'
+revision: str = '007_lineage_snapshots'
+down_revision: Union[str, None] = '006_model_training'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

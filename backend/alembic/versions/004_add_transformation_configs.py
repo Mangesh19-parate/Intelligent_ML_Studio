@@ -1,7 +1,7 @@
 """add transformation_configs table
 
-Revision ID: 004_add_transformation_configs
-Revises: 003_add_profiling_and_recommendations
+Revision ID: 004_transform_configs
+Revises: 003_profiling_recs
 Create Date: 2026-09-04 16:00:00.000000
 
 """
@@ -12,8 +12,8 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision: str = '004_add_transformation_configs'
-down_revision: Union[str, None] = '003_add_profiling_and_recommendations'
+revision: str = '004_transform_configs'
+down_revision: Union[str, None] = '003_profiling_recs'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

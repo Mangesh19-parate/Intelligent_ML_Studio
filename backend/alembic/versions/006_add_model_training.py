@@ -1,7 +1,7 @@
 """add task_type, fold_count, cv_seed to experiments and create trained_models table
 
-Revision ID: 006_add_model_training
-Revises: 005_add_experiments_and_feature_selection
+Revision ID: 006_model_training
+Revises: 005_exp_feature_select
 Create Date: 2026-09-04 19:30:00.000000
 
 """
@@ -12,8 +12,8 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision: str = '006_add_model_training'
-down_revision: Union[str, None] = '005_add_experiments_and_feature_selection'
+revision: str = '006_model_training'
+down_revision: Union[str, None] = '005_exp_feature_select'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

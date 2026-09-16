@@ -1,7 +1,7 @@
 """add worker lease and heartbeat columns to durable_tasks
 
-Revision ID: 014_add_worker_lease_columns
-Revises: 013_add_durable_tasks_and_revoked_tokens
+Revision ID: 014_worker_leases
+Revises: 013_durable_tasks
 Create Date: 2026-09-15 12:45:00.000000
 
 """
@@ -11,8 +11,8 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '014_add_worker_lease_columns'
-down_revision: Union[str, None] = '013_add_durable_tasks_and_revoked_tokens'
+revision: str = '014_worker_leases'
+down_revision: Union[str, None] = '013_durable_tasks'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

@@ -1,7 +1,7 @@
 """add deployments, deployment_gates, prediction_logs and experiment threshold flag
 
-Revision ID: 009_add_deployments_and_gates
-Revises: 008_add_explainability_summaries
+Revision ID: 009_deployments_gates
+Revises: 008_explainability
 Create Date: 2026-09-05 14:00:00.000000
 
 """
@@ -12,8 +12,8 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision: str = '009_add_deployments_and_gates'
-down_revision: Union[str, None] = '008_add_explainability_summaries'
+revision: str = '009_deployments_gates'
+down_revision: Union[str, None] = '008_explainability'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

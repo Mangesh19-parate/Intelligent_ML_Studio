@@ -1,7 +1,7 @@
 """add reproducibility runs table
 
-Revision ID: 012_add_reproducibility_runs_table
-Revises: 011_migrate_legacy_roles_to_two_role_model
+Revision ID: 012_reproducibility
+Revises: 011_migrate_roles
 Create Date: 2026-09-13 14:00:00.000000
 
 """
@@ -11,8 +11,8 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '012_add_reproducibility_runs_table'
-down_revision: Union[str, None] = '011_migrate_legacy_roles_to_two_role_model'
+revision: str = '012_reproducibility'
+down_revision: Union[str, None] = '011_migrate_roles'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

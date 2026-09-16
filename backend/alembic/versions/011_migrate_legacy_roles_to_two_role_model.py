@@ -1,7 +1,7 @@
 """migrate legacy roles to two role model
 
-Revision ID: 011_migrate_legacy_roles_to_two_role_model
-Revises: 010_add_user_permission_overrides
+Revision ID: 011_migrate_roles
+Revises: 010_permission_overrides
 Create Date: 2026-09-12 12:00:00.000000
 
 """
@@ -12,8 +12,8 @@ import sqlalchemy as sa
 from sqlalchemy.sql import table, column
 
 # revision identifiers, used by Alembic.
-revision: str = '011_migrate_legacy_roles_to_two_role_model'
-down_revision: Union[str, None] = '010_add_user_permission_overrides'
+revision: str = '011_migrate_roles'
+down_revision: Union[str, None] = '010_permission_overrides'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

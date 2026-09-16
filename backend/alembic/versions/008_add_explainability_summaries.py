@@ -1,7 +1,7 @@
 """add explainability_summaries table
 
-Revision ID: 008_add_explainability_summaries
-Revises: 007_add_lineage_and_snapshots
+Revision ID: 008_explainability
+Revises: 007_lineage_snapshots
 Create Date: 2026-09-04 20:30:00.000000
 
 """
@@ -12,8 +12,8 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision: str = '008_add_explainability_summaries'
-down_revision: Union[str, None] = '007_add_lineage_and_snapshots'
+revision: str = '008_explainability'
+down_revision: Union[str, None] = '007_lineage_snapshots'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

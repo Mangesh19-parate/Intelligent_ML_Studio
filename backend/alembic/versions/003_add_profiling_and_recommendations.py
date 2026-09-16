@@ -1,7 +1,7 @@
 """add profiling_reports and recommendations tables, add task_type_confidence to projects
 
-Revision ID: 003_add_profiling_and_recommendations
-Revises: 002_add_dataset_splits_and_content_hash
+Revision ID: 003_profiling_recs
+Revises: 002_dataset_splits_hash
 Create Date: 2026-09-04 12:00:00.000000
 
 """
@@ -12,8 +12,8 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision: str = '003_add_profiling_and_recommendations'
-down_revision: Union[str, None] = '002_add_dataset_splits_and_content_hash'
+revision: str = '003_profiling_recs'
+down_revision: Union[str, None] = '002_dataset_splits_hash'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

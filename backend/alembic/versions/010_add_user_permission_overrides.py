@@ -1,7 +1,7 @@
 """add user_permission_overrides table
 
-Revision ID: 010_add_user_permission_overrides
-Revises: 009_add_deployments_and_gates
+Revision ID: 010_permission_overrides
+Revises: 009_deployments_gates
 Create Date: 2026-09-06 14:00:00.000000
 
 """
@@ -11,8 +11,8 @@ from alembic import op
 import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
-revision: str = '010_add_user_permission_overrides'
-down_revision: Union[str, None] = '009_add_deployments_and_gates'
+revision: str = '010_permission_overrides'
+down_revision: Union[str, None] = '009_deployments_gates'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

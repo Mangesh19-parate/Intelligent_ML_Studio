@@ -1,7 +1,7 @@
 """add durable tasks and revoked tokens
  
-Revision ID: 013_add_durable_tasks_and_revoked_tokens
-Revises: 012_add_reproducibility_runs_table
+Revision ID: 013_durable_tasks
+Revises: 012_reproducibility
 Create Date: 2026-09-13 15:30:00.000000
 
 """
@@ -11,8 +11,8 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '013_add_durable_tasks_and_revoked_tokens'
-down_revision: Union[str, None] = '012_add_reproducibility_runs_table'
+revision: str = '013_durable_tasks'
+down_revision: Union[str, None] = '012_reproducibility'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

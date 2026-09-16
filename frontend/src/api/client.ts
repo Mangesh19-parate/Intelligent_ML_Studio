@@ -41,6 +41,14 @@ const resolveApiBaseUrl = (): string => {
 
 const API_BASE_URL = resolveApiBaseUrl();
 
+if (typeof window !== 'undefined' && window.location && !['localhost', '127.0.0.1'].includes(window.location.hostname) && API_BASE_URL.startsWith('/')) {
+  console.error(
+    '⚠️ [ML Studio Configuration Alert] VITE_API_URL is missing in this Vercel deployment.\n' +
+    'API requests are falling back to relative paths on Vercel CDN which rejects POST with 405.\n' +
+    'To fix: Add VITE_API_URL=https://<your-render-backend>.onrender.com/api/v1 in Vercel Environment Variables and redeploy.'
+  );
+}
+
 let inMemoryAccessToken: string | null = null;
 
 export const setAccessToken = (token: string | null): void => {

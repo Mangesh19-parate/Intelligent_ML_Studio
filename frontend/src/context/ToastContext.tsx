@@ -1,6 +1,11 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
 import { CheckCircle2, AlertCircle, AlertTriangle, Info, X } from 'lucide-react';
-import { cn } from '../lib/utils';
+import { clsx, type ClassValue } from 'clsx';
+import { twMerge } from 'tailwind-merge';
+
+function cn(...inputs: ClassValue[]): string {
+  return twMerge(clsx(inputs));
+}
 
 export type ToastType = 'success' | 'error' | 'warning' | 'info';
 

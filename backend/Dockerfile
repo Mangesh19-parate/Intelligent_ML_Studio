@@ -16,9 +16,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy backend application code
 COPY . .
 
-# Ensure storage directory exists
-RUN mkdir -p /data/datasets
+# Ensure storage directory exists and start script is executable
+RUN mkdir -p /data/datasets && chmod +x start.sh
 
 EXPOSE 8000
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["./start.sh"]
+

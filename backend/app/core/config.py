@@ -1,7 +1,8 @@
+import json
 import os
 from pathlib import Path
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic import Field, model_validator
+from pydantic import Field, model_validator, field_validator
 
 _BACKEND_DIR = Path(__file__).resolve().parent.parent.parent
 _ROOT_DIR = _BACKEND_DIR.parent
@@ -9,6 +10,10 @@ _ROOT_DIR = _BACKEND_DIR.parent
 class Settings(BaseSettings):
     PROJECT_NAME: str = "ML Studio"
     API_V1_STR: str = "/api/v1"
+    PORT: int = Field(
+        default=8000,
+        description="Web server listening port (dynamically injected by Render/Heroku)"
+    )
     
     # Database configuration
     DATABASE_URL: str = Field(
@@ -68,6 +73,25 @@ class Settings(BaseSettings):
         "http://localhost:8000",
         "http://127.0.0.1:8000",
     ]
+    
+    @field_validator("BACKEND_CORS_ORIGINS", mode="before")
+    @classmethod
+    def assemble_cors_origins(cls, v: str | list[str] | None) -> list[str]:
+        if not v:
+            return []
+        if isinstance(v, str):
+            v_trimmed = v.strip()
+            if v_trimmed.startswith("[") and v_trimmed.endswith("]"):
+                try:
+                    parsed = json.loads(v_trimmed)
+                    if isinstance(parsed, list):
+                        return [str(item).strip() for item in parsed if str(item).strip()]
+                except json.JSONDecodeError:
+                    pass
+            return [item.strip() for item in v.split(",") if item.strip()]
+        if isinstance(v, list):
+            return [str(item).strip() for item in v if str(item).strip()]
+        return []
     
     model_config = SettingsConfigDict(
         env_file=(

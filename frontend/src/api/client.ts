@@ -27,7 +27,19 @@ import {
   TwoFactorStatusResponse,
 } from '../types/api';
 
-const API_BASE_URL = (import.meta as any).env?.VITE_API_URL || '/api/v1';
+const resolveApiBaseUrl = (): string => {
+  const envUrl = (import.meta as any).env?.VITE_API_URL;
+  if (!envUrl || typeof envUrl !== 'string' || !envUrl.trim()) {
+    return '/api/v1';
+  }
+  const cleanUrl = envUrl.trim().replace(/\/+$/, '');
+  if (cleanUrl.endsWith('/api/v1')) {
+    return cleanUrl;
+  }
+  return `${cleanUrl}/api/v1`;
+};
+
+const API_BASE_URL = resolveApiBaseUrl();
 
 let inMemoryAccessToken: string | null = null;
 

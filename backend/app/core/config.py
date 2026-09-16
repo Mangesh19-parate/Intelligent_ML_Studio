@@ -67,14 +67,14 @@ class Settings(BaseSettings):
     GIT_COMMIT_HASH: str | None = None
     
     # CORS (explicit origins with local dev defaults)
-    BACKEND_CORS_ORIGINS: list[str] = [
+    BACKEND_CORS_ORIGINS: str | list[str] = [
         "http://localhost:3000",
         "http://127.0.0.1:3000",
         "http://localhost:8000",
         "http://127.0.0.1:8000",
     ]
     
-    @field_validator("BACKEND_CORS_ORIGINS", mode="before")
+    @field_validator("BACKEND_CORS_ORIGINS", mode="after")
     @classmethod
     def assemble_cors_origins(cls, v: str | list[str] | None) -> list[str]:
         if not v:
@@ -86,9 +86,9 @@ class Settings(BaseSettings):
                     parsed = json.loads(v_trimmed)
                     if isinstance(parsed, list):
                         return [str(item).strip() for item in parsed if str(item).strip()]
-                except json.JSONDecodeError:
+                except Exception:
                     pass
-            return [item.strip() for item in v.split(",") if item.strip()]
+            return [item.strip() for item in v_trimmed.split(",") if item.strip()]
         if isinstance(v, list):
             return [str(item).strip() for item in v if str(item).strip()]
         return []

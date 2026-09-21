@@ -475,3 +475,31 @@ class AuthService:
             token_type="bearer",
             user=user_response,
         )
+
+    def revoke_refresh_token(self, refresh_token_str: str) -> bool:
+        """
+        Revokes a refresh token on logout by recording its SHA-256 hash in RevokedToken table.
+        """
+        if not refresh_token_str or not isinstance(refresh_token_str, str):
+            return False
+        
+        payload = decode_token(refresh_token_str)
+        user_id = payload.get("sub")
+        token_hash = hashlib.sha256(refresh_token_str.encode("utf-8")).hexdigest()
+
+        existing = self.db.query(RevokedToken).filter(RevokedToken.token_hash == token_hash).first()
+        if not existing:
+            parsed_uid = None
+            if user_id:
+                try:
+                    parsed_uid = PyUUID(str(user_id)) if not isinstance(user_id, PyUUID) else user_id
+                except Exception:
+                    parsed_uid = None
+            if parsed_uid:
+                revoked_record = RevokedToken(
+                    token_hash=token_hash,
+                    user_id=parsed_uid,
+                )
+                self.db.add(revoked_record)
+                self.db.commit()
+        return True

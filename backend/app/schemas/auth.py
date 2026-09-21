@@ -34,7 +34,7 @@ class UserResponse(BaseModel):
 class SignupRequest(BaseModel):
     full_name: str = Field(..., min_length=2, max_length=150)
     email: str = Field(..., min_length=3, max_length=150)
-    password: str = Field(..., min_length=6)
+    password: str = Field(..., min_length=8)
 
     @field_validator("email")
     @classmethod

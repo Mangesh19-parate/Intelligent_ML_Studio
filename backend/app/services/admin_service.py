@@ -207,6 +207,25 @@ class AdminService:
 
         return self._serialize_user(user)
 
+    def reset_user_password(self, user_id: PyUUID | str) -> dict[str, str]:
+        """
+        Resets a user's password securely and generates a temporary password.
+        """
+        import secrets
+        uid = PyUUID(str(user_id)) if not isinstance(user_id, PyUUID) else user_id
+        user = self.db.query(User).filter(User.id == uid).first()
+        if not user:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+        temp_password = secrets.token_urlsafe(10) + "A1!"
+        user.password_hash = get_password_hash(temp_password)
+        self.db.commit()
+        return {
+            "message": "Password reset successfully",
+            "temporary_password": temp_password,
+            "email": user.email,
+        }
+
     def get_algorithm_catalog(self) -> list[AlgorithmCatalogItem]:
         items: list[AlgorithmCatalogItem] = []
         for algo_id, meta in ALGORITHM_SET.items():

@@ -17,6 +17,7 @@ from app.config.state_machines import (
     InvalidStateTransitionError,
 )
 from app.services.model_registry_service import ModelRegistryService
+from app.core.config import settings
 
 
 class DeploymentGateService:
@@ -77,7 +78,7 @@ class DeploymentGateService:
         schema_locked = bool(schema and len(schema) > 0)
 
         # 3. Condition: artifact_verified
-        # Live disk check: artifact exists and SHA-256 checksum matches right now
+        # Live disk check: artifact exists, SHA-256 checksum matches, and HMAC signature is verified
         artifact_verified = False
         if model.artifact_path and model.artifact_checksum:
             artifact_file = Path(model.artifact_path)
@@ -87,7 +88,26 @@ class DeploymentGateService:
                     while chunk := f.read(65536):
                         hasher.update(chunk)
                 disk_checksum = hasher.hexdigest()
-                artifact_verified = (disk_checksum == model.artifact_checksum)
+                if disk_checksum == model.artifact_checksum:
+                    manifest_file = artifact_file.with_suffix(".manifest.json")
+                    if manifest_file.exists():
+                        try:
+                            import json
+                            import hmac
+                            with open(manifest_file, "r", encoding="utf-8") as mf:
+                                mdata = json.load(mf)
+                            expected_sig = mdata.get("signature")
+                            computed_sig = hmac.new(
+                                settings.ARTIFACT_SIGNING_KEY.encode("utf-8"),
+                                disk_checksum.encode("utf-8"),
+                                hashlib.sha256
+                            ).hexdigest()
+                            artifact_verified = bool(expected_sig and hmac.compare_digest(computed_sig, expected_sig))
+                        except Exception:
+                            artifact_verified = False
+                    else:
+                        # Non-production allows legacy unmanifested artifacts, production requires manifest
+                        artifact_verified = (settings.ENV.lower() != "production")
 
         # 4. Condition: lineage_complete
         # Experiment config, snapshots, and environment metadata non-null

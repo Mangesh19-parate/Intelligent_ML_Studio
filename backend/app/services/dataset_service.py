@@ -50,10 +50,12 @@ class DatasetService:
                 df = pd.read_excel(stream)
             elif suffix == ".json":
                 df = pd.read_json(stream)
+            elif suffix in [".parquet", ".pq"]:
+                df = pd.read_parquet(stream)
             else:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"Unsupported file format '{suffix}'. Allowed formats: .csv, .xlsx, .json"
+                    detail=f"Unsupported file format '{suffix}'. Allowed formats: .csv, .xlsx, .json, .parquet"
                 )
         except HTTPException:
             raise

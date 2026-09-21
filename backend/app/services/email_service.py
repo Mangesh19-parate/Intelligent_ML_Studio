@@ -76,20 +76,22 @@ class EmailService:
         greeting_name = user_name.strip() if user_name else "ML Studio User"
         masked = cls.mask_email(to_email)
 
-        # 1. Output styled notification box in server logs
-        border = "═" * 64
-        console_banner = (
-            f"\n╔{border}╗\n"
-            f"║ 🔐 [EMAIL 2FA] TWO-FACTOR VERIFICATION CODE ISSUED           ║\n"
-            f"╠{border}╣\n"
-            f"║ Recipient : {to_email:<48} ║\n"
-            f"║ Masked    : {masked:<48} ║\n"
-            f"║ OTP CODE  : >>>  {otp_code}  <<< (Valid for {expire_minutes} minutes)        ║\n"
-            f"║ Notice    : Enter this 6-digit code on the Sign In screen.     ║\n"
-            f"║             No authenticator app or QR code scan needed.       ║\n"
-            f"╚{border}╝\n"
-        )
-        print(console_banner, flush=True)
+        # 1. Output styled notification box in server logs (dev/testing only, disabled in production)
+        is_prod = getattr(settings, "ENV", "").lower() == "production"
+        if not is_prod:
+            border = "═" * 64
+            console_banner = (
+                f"\n╔{border}╗\n"
+                f"║ 🔐 [EMAIL 2FA] TWO-FACTOR VERIFICATION CODE ISSUED           ║\n"
+                f"╠{border}╣\n"
+                f"║ Recipient : {to_email:<48} ║\n"
+                f"║ Masked    : {masked:<48} ║\n"
+                f"║ OTP CODE  : >>>  {otp_code}  <<< (Valid for {expire_minutes} minutes)        ║\n"
+                f"║ Notice    : Enter this 6-digit code on the Sign In screen.     ║\n"
+                f"║             No authenticator app or QR code scan needed.       ║\n"
+                f"╚{border}╝\n"
+            )
+            print(console_banner, flush=True)
         logger.info(f"[EMAIL 2FA] Sent 6-digit OTP code to {masked} (Expires in {expire_minutes}m)")
 
         # 2. If SMTP is configured in environment, dispatch real email

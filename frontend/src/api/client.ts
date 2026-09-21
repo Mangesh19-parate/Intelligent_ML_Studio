@@ -322,7 +322,7 @@ export const adminApi = {
   updateUserStatus: (userId: string, isActive: boolean) =>
     apiClient.patch<User>(`/admin/users/${userId}`, { is_active: isActive }),
   resetUserPassword: (userId: string) =>
-    apiClient.post(`/admin/users/${userId}/reset-password`).catch(() => Promise.resolve({ data: { message: 'Reset link sent' } })),
+    apiClient.post<{ message: string; temporary_password?: string; email?: string }>(`/admin/users/${userId}/reset-password`),
   setPermissionOverride: (userId: string, permissionKey: string, isGranted: boolean) =>
     apiClient.put(`/admin/users/${userId}/overrides`, { permission_key: permissionKey, is_granted: isGranted }),
   deletePermissionOverride: (userId: string, permissionKey: string) =>

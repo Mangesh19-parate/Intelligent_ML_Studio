@@ -9,7 +9,7 @@
 [![React](https://img.shields.io/badge/React-18.2-61dafb.svg)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-3178c6.svg)](https://www.typescriptlang.org/)
 [![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-2.0+-red.svg)](https://www.sqlalchemy.org/)
-[![Tests](https://img.shields.io/badge/Automated%20Tests-424%20Passed-brightgreen.svg)]()
+[![Tests](https://img.shields.io/badge/Automated%20Tests-486%20Passed-brightgreen.svg)]()
 [![Typecheck](https://img.shields.io/badge/TypeScript%20Typecheck-0%20Errors-success.svg)]()
 
 ---
@@ -19,7 +19,7 @@
 In tabular machine learning, subtle data leakage, undocumented transformation drift, and untested holdout reuse consistently inflate offline metrics while causing silent failures upon deployment.
 
 **Intelligent ML Studio** eliminates these failure modes by architectural enforcement:
-1. **Dataset Profiling & Quality Inspection**: Ingest tabular data (CSV) and automatically compute statistical summaries, missingness distributions, cardinality, and data quality indices.
+1. **Dataset Profiling & Quality Inspection**: Ingest tabular data (CSV, Excel, JSON, Parquet) and automatically compute statistical summaries, missingness distributions, cardinality, and data quality indices.
 2. **Immutable Partition Isolation**: Deterministic 80/20 train/holdout splitting with row hash verification. Model training and preprocessing estimators never fit on locked holdout data.
 3. **Fold-Isolated Feature Engineering**: Imputation, scaling, encoding, and ranking-based feature selection run strictly within cross-validation training folds.
 4. **Canonical Multi-Algorithm Tournament**: Train and benchmark a curated 6-algorithm catalog (Linear Regression, Random Forest Regressor, Gradient Boosting Regressor, Logistic Regression, Random Forest Classifier, Gradient Boosting Classifier) across cross-validation folds with standardized metric tracking.
@@ -88,7 +88,7 @@ To ensure complete transparency, every architectural capability is documented ac
 docker compose -f docker-compose.dev.yml up --build -d
 
 # Production-Hardened Stack (Internal database, secret enforcement, least-privilege)
-POSTGRES_PASSWORD=your_secure_password JWT_SECRET=your_32char_secret docker compose -f docker-compose.prod.yml up --build -d
+POSTGRES_PASSWORD=your_secure_password JWT_SECRET=your_32char_secret ARTIFACT_SIGNING_KEY=your_signing_key docker compose -f docker-compose.prod.yml up --build -d
 ```
 Access the application:
 - **Frontend Application**: `http://localhost:3000`

@@ -66,6 +66,20 @@ def update_user(
     return service.update_user(user_id, payload)
 
 
+@router.post(
+    "/users/{user_id}/reset-password",
+    status_code=status.HTTP_200_OK,
+    summary="Admin reset of a user password, generating a secure temporary password",
+)
+def reset_user_password(
+    user_id: PyUUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("MANAGE_USERS")),
+):
+    service = AdminService(db)
+    return service.reset_user_password(user_id)
+
+
 @router.put(
     "/users/{user_id}/overrides",
     response_model=UserAdminResponse,

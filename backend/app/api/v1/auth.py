@@ -204,9 +204,18 @@ def refresh(
 @router.post(
     "/logout",
     status_code=status.HTTP_200_OK,
-    summary="Logout and clear HttpOnly refresh cookie"
+    summary="Logout, revoke refresh token server-side, and clear HttpOnly refresh cookie"
 )
-def logout(response: Response):
+def logout(
+    request: Request,
+    response: Response,
+    payload: RefreshTokenRequest | None = None,
+    db: Session = Depends(get_db)
+):
+    token_str = (payload.refresh_token if payload and payload.refresh_token else None) or request.cookies.get("refresh_token")
+    if token_str:
+        service = AuthService(db)
+        service.revoke_refresh_token(token_str)
     response.delete_cookie(key="refresh_token", path="/")
     return {"message": "Logged out successfully"}
 

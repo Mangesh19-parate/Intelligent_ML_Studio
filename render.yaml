@@ -30,6 +30,35 @@ services:
         sync: false
         # Example: https://your-frontend.vercel.app,http://localhost:3000
 
+  # ML Studio Durable Task Background Worker Service
+  - type: worker
+    name: ml-studio-worker
+    runtime: python
+    rootDir: backend
+    plan: starter
+    buildCommand: pip install -r requirements.txt
+    startCommand: python -m app.tasks.worker
+    autoDeploy: true
+    envVars:
+      - key: ENV
+        value: production
+      - key: STORAGE_LOCAL_DIR
+        value: "/data"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: ml-studio-db
+          property: connectionString
+      - key: JWT_SECRET
+        fromService:
+          type: web
+          name: ml-studio-api
+          envVarKey: JWT_SECRET
+      - key: ARTIFACT_SIGNING_KEY
+        fromService:
+          type: web
+          name: ml-studio-api
+          envVarKey: ARTIFACT_SIGNING_KEY
+
 databases:
   # Managed PostgreSQL Instance
   - name: ml-studio-db

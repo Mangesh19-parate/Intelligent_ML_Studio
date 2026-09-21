@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends, Body, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
+from app.core.rate_limiter import rate_limit_auth
 from app.schemas.deployment import PredictResponse, PredictExplainResponse
 from app.services.prediction_service import PredictionService
 
@@ -14,6 +15,7 @@ router = APIRouter(prefix="/predict", tags=["Model Serving & Inference"])
     response_model=PredictResponse,
     status_code=status.HTTP_200_OK,
     summary="Execute low-latency prediction against a LIVE deployment endpoint",
+    dependencies=[Depends(rate_limit_auth(max_requests=60, window_seconds=60))]
 )
 def predict(
     deployment_id: UUID,

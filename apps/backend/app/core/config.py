@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     
     # Database configuration
     DATABASE_URL: str = Field(
-        default="sqlite:///./backend/ml_studio.db" if (_BACKEND_DIR / "ml_studio.db").exists() else "sqlite:///./ml_studio.db",
+        default=f"sqlite:///{(_BACKEND_DIR / 'ml_studio.db').as_posix()}",
         description="Database connection string"
     )
     

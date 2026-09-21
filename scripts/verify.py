@@ -20,8 +20,8 @@ if sys.stdout.encoding != 'utf-8':
         pass
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
-FRONTEND_DIR = ROOT_DIR / "frontend"
-BACKEND_DIR = ROOT_DIR / "backend"
+FRONTEND_DIR = ROOT_DIR / "apps" / "frontend"
+BACKEND_DIR = ROOT_DIR / "apps" / "backend"
 
 def run_step(step_name: str, cmd: list[str], cwd: Path) -> tuple[bool, str, float]:
     print(f"\n[{step_name}] Running: {' '.join(cmd)}", flush=True)
@@ -100,7 +100,7 @@ def main():
     # Stage 2: Backend Test Suite (Pytest)
     s2_success, s2_out, s2_dur = run_step(
         "2. Backend Pytest Suite",
-        [sys.executable, "-m", "pytest", "backend/tests", "-q"],
+        [sys.executable, "-m", "pytest", "apps/backend/tests", "-q"],
         ROOT_DIR
     )
     match = re.search(r"(\d+)\s+passed", s2_out)

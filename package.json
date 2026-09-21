@@ -3,10 +3,12 @@
   "private": true,
   "version": "1.0.0",
   "scripts": {
-    "dev": "npm --prefix frontend run dev",
-    "start": "npm --prefix frontend run dev",
-    "build": "npm --prefix frontend run build",
-    "preview": "npm --prefix frontend run preview",
-    "install": "npm --prefix frontend install"
+    "dev": "npm --prefix apps/frontend run dev",
+    "start": "npm --prefix apps/frontend run dev",
+    "build": "npm --prefix apps/frontend run build",
+    "preview": "npm --prefix apps/frontend run preview",
+    "test": "npm --prefix apps/frontend run test",
+    "typecheck": "npm --prefix apps/frontend run typecheck",
+    "install:frontend": "npm --prefix apps/frontend install"
   }
 }

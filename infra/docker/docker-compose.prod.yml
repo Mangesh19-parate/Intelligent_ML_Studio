@@ -1,0 +1,98 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: ml_studio_postgres_prod
+    restart: always
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-ml_studio_prod}
+      POSTGRES_USER: ${POSTGRES_USER:-ml_admin}
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?Error: POSTGRES_PASSWORD must be explicitly set for production}"
+    # Security: Database is internal-only, NOT exposed to host interface
+    expose:
+      - "5432"
+    volumes:
+      - postgres_prod_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-ml_admin} -d ${POSTGRES_DB:-ml_studio_prod}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    security_opt:
+      - no-new-privileges:true
+
+  backend:
+    build:
+      context: ../../apps/backend
+      dockerfile: Dockerfile
+    container_name: ml_studio_backend_prod
+    restart: always
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      ENV: production
+      AUTO_CREATE_TABLES: "false"
+      DATABASE_URL: postgresql://${POSTGRES_USER:-ml_admin}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-ml_studio_prod}
+      JWT_SECRET: "${JWT_SECRET:?Error: Secure JWT_SECRET must be explicitly configured in production}"
+      ARTIFACT_SIGNING_KEY: "${ARTIFACT_SIGNING_KEY:?Error: Secure ARTIFACT_SIGNING_KEY must be explicitly configured in production}"
+      JWT_ALGORITHM: HS256
+      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-60}
+      STORAGE_LOCAL_DIR: /data
+      BACKEND_CORS_ORIGINS: ${BACKEND_CORS_ORIGINS:-http://localhost:3000}
+    ports:
+      - "8000:8000"
+    volumes:
+      - datasets_prod_data:/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health/ready')"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    security_opt:
+      - no-new-privileges:true
+
+  worker:
+    build:
+      context: ../../apps/backend
+      dockerfile: Dockerfile
+    container_name: ml_studio_worker_prod
+    restart: always
+    command: python -m app.tasks.worker
+    depends_on:
+      postgres:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+    environment:
+      ENV: production
+      DATABASE_URL: postgresql://${POSTGRES_USER:-ml_admin}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-ml_studio_prod}
+      JWT_SECRET: "${JWT_SECRET:?Error: Secure JWT_SECRET must be explicitly configured in production}"
+      ARTIFACT_SIGNING_KEY: "${ARTIFACT_SIGNING_KEY:?Error: Secure ARTIFACT_SIGNING_KEY must be explicitly configured in production}"
+      STORAGE_LOCAL_DIR: /data
+    volumes:
+      - datasets_prod_data:/data
+    security_opt:
+      - no-new-privileges:true
+
+  frontend:
+    build:
+      context: ../../apps/frontend
+      dockerfile: Dockerfile
+    container_name: ml_studio_frontend_prod
+    restart: always
+    depends_on:
+      - backend
+    ports:
+      - "3000:80"
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  postgres_prod_data:
+    name: ml_studio_postgres_prod_data
+  datasets_prod_data:
+    name: ml_studio_datasets_prod_data

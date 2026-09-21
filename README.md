@@ -85,10 +85,10 @@ To ensure complete transparency, every architectural capability is documented ac
 ### Option A: Run with Docker Compose
 ```bash
 # Standard Developer Stack (Hot-reloading, dev defaults)
-docker compose -f docker-compose.dev.yml up --build -d
+docker compose -f infra/docker/docker-compose.dev.yml up --build -d
 
 # Production-Hardened Stack (Internal database, secret enforcement, least-privilege)
-POSTGRES_PASSWORD=your_secure_password JWT_SECRET=your_32char_secret ARTIFACT_SIGNING_KEY=your_signing_key docker compose -f docker-compose.prod.yml up --build -d
+POSTGRES_PASSWORD=your_secure_password JWT_SECRET=your_32char_secret ARTIFACT_SIGNING_KEY=your_signing_key docker compose -f infra/docker/docker-compose.prod.yml up --build -d
 ```
 Access the application:
 - **Frontend Application**: `http://localhost:3000`
@@ -97,7 +97,7 @@ Access the application:
 ### Option B: Local Developer Setup
 ```bash
 # 1. Backend Setup
-cd backend
+cd apps/backend
 python -m venv venv
 # On Windows: .\venv\Scripts\activate | On Linux/macOS: source venv/bin/activate
 pip install -r requirements.txt

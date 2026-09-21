@@ -1,0 +1,50 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Intelligent ML Studio API",
+    "description": "Leakage-Aware Tabular ML Experimentation, Governance & Serving API",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/api/v1/auth/login": {
+      "post": {
+        "summary": "Authenticate user and issue JWT",
+        "tags": ["Auth"]
+      }
+    },
+    "/api/v1/auth/logout": {
+      "post": {
+        "summary": "Revoke refresh token and clear cookies",
+        "tags": ["Auth"]
+      }
+    },
+    "/api/v1/projects": {
+      "get": {
+        "summary": "List projects",
+        "tags": ["Projects"]
+      },
+      "post": {
+        "summary": "Create new ML project",
+        "tags": ["Projects"]
+      }
+    },
+    "/api/v1/experiments": {
+      "post": {
+        "summary": "Dispatch ML training experiment",
+        "tags": ["Experiments"]
+      }
+    },
+    "/api/v1/predict": {
+      "post": {
+        "summary": "Execute low-latency model inference",
+        "tags": ["Inference"]
+      }
+    },
+    "/health": {
+      "get": {
+        "summary": "Health check endpoint",
+        "tags": ["System"]
+      }
+    }
+  }
+}

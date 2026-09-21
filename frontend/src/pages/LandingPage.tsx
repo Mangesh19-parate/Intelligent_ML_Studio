@@ -48,8 +48,8 @@ export const LandingPage: React.FC = () => {
   const [showAuthModal, setShowAuthModal] = useState<boolean>(false);
   const [isRegister, setIsRegister] = useState<boolean>(false);
   const [authFullName, setAuthFullName] = useState<string>('');
-  const [authEmail, setAuthEmail] = useState<string>('dev@mlstudio.io');
-  const [authPassword, setAuthPassword] = useState<string>('password123');
+  const [authEmail, setAuthEmail] = useState<string>(import.meta.env.DEV ? 'dev@mlstudio.io' : '');
+  const [authPassword, setAuthPassword] = useState<string>(import.meta.env.DEV ? 'password123' : '');
   const [authError, setAuthError] = useState<string>('');
   const [authInfoMessage, setAuthInfoMessage] = useState<string>('');
   const [authSubmitting, setAuthSubmitting] = useState<boolean>(false);
@@ -1070,8 +1070,8 @@ export const LandingPage: React.FC = () => {
               </Button>
             </form>
 
-            {/* Dev Account Quick Fill Helper */}
-            {!is2FAPrompt && (
+            {/* Dev Account Quick Fill Helper (dev mode only) */}
+            {import.meta.env.DEV && !is2FAPrompt && (
               <div className="pt-2 border-t border-[var(--color-border)] flex items-center justify-between text-xs">
                 <button
                   type="button"

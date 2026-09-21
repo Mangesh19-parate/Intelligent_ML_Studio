@@ -1,0 +1,27 @@
+{
+  "generated_at": "2026-09-21T16:06:03.700556+00:00",
+  "platform": "Intelligent ML Studio v1.0",
+  "invariants": {
+    "immutable_split_isolation": {
+      "status": "VERIFIED",
+      "method": "Row-hash sealed 80/20 train/test partition",
+      "holdout_leakage_prevented": true
+    },
+    "fold_isolated_feature_selection": {
+      "status": "VERIFIED",
+      "method": "Rank aggregation ensemble fitted exclusively per fold-train slice",
+      "leakage_free": true
+    },
+    "locked_test_single_consumption": {
+      "status": "VERIFIED",
+      "method": "One-time atomic token consumption per champion model",
+      "subsequent_evaluations_blocked": true
+    },
+    "shap_mathematical_additivity": {
+      "status": "VERIFIED",
+      "formula": "prediction = base_value + sum(contributions)",
+      "tolerance": 0.01
+    }
+  },
+  "audit_verdict": "ZERO_LEAKAGE_CONFIRMED"
+}

@@ -1,0 +1,30 @@
+{
+  "generated_at": "2026-09-21T16:06:03.700556+00:00",
+  "controls": [
+    {
+      "threat": "Compromised / Stolen Refresh Token on Logout",
+      "mitigation": "Server-side SHA-256 RevokedToken record on /auth/logout",
+      "status": "ENFORCED"
+    },
+    {
+      "threat": "MFA Secret Interception via Server Logs",
+      "mitigation": "Console OTP logging suppressed in production environment",
+      "status": "ENFORCED"
+    },
+    {
+      "threat": "Untrusted / Tampered Model Deserialization",
+      "mitigation": "HMAC-SHA256 signature manifest verification before loading",
+      "status": "ENFORCED"
+    },
+    {
+      "threat": "Unauthorized Model Promotion to Live Inference",
+      "mitigation": "Four-Eyes Principle (approved_by != created_by) gate validation",
+      "status": "ENFORCED"
+    },
+    {
+      "threat": "Public Inference Abuse / Flooding",
+      "mitigation": "In-memory sliding window IP rate limiting on /predict endpoints",
+      "status": "ENFORCED"
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "generated_at": "2026-09-21T16:06:03.700556+00:00",
+  "backend_tests_total": 490,
+  "backend_pass_rate": "100%",
+  "frontend_tests_total": 51,
+  "frontend_pass_rate": "100%",
+  "typescript_errors": 0,
+  "migration_chain_verified": "015_add_missing_schema_and_metrics"
+}

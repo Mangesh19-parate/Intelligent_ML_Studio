@@ -20,8 +20,8 @@ import axios from 'axios';
 export const Login: React.FC = () => {
   const [isRegister, setIsRegister] = useState<boolean>(false);
   const [fullName, setFullName] = useState<string>('');
-  const [email, setEmail] = useState<string>('dev@mlstudio.io');
-  const [password, setPassword] = useState<string>('password123');
+  const [email, setEmail] = useState<string>(import.meta.env.DEV ? 'dev@mlstudio.io' : '');
+  const [password, setPassword] = useState<string>(import.meta.env.DEV ? 'password123' : '');
   const [error, setError] = useState<string>('');
   const [infoMessage, setInfoMessage] = useState<string>('');
   const [submitting, setSubmitting] = useState<boolean>(false);

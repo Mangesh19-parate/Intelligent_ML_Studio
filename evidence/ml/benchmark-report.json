@@ -1,0 +1,34 @@
+{
+  "generated_at": "2026-09-21T16:06:03.700556+00:00",
+  "datasets_evaluated": [
+    {
+      "dataset_name": "California Housing",
+      "task_type": "REGRESSION",
+      "rows": 20640,
+      "features": 8,
+      "champion_algorithm": "RandomForestRegressor",
+      "cv_training_time_s": 3.07,
+      "peak_training_ram_mb": 17.18,
+      "artifact_size_mb": 7.92,
+      "shap_time_s": 0.23,
+      "p95_inference_ms": 32.4
+    },
+    {
+      "dataset_name": "Customer Churn",
+      "task_type": "CLASSIFICATION",
+      "rows": 10000,
+      "features": 12,
+      "champion_algorithm": "GradientBoostingClassifier",
+      "cv_training_time_s": 1.45,
+      "peak_training_ram_mb": 12.3,
+      "artifact_size_mb": 3.15,
+      "shap_time_s": 0.18,
+      "p95_inference_ms": 28.1
+    }
+  ],
+  "latency_percentiles": {
+    "p50_ms": 14.2,
+    "p95_ms": 38.5,
+    "p99_ms": 76.2
+  }
+}

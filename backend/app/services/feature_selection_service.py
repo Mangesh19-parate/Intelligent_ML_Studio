@@ -4,13 +4,9 @@ from typing import Any
 import warnings
 import numpy as np
 import pandas as pd
-from scipy.stats import rankdata
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 from sklearn.model_selection import KFold, StratifiedKFold
-from sklearn.linear_model import Lasso, LogisticRegression, Ridge
-from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
-from sklearn.inspection import permutation_importance
 from sklearn.compose import ColumnTransformer
 
 from app.models.project import Project

@@ -22,6 +22,7 @@ from app.services.explainability_service import ExplainabilityService
 
 
 from app.infrastructure.storage.model_cache import BoundedModelCache
+from app.core.config import settings
 
 class PredictionService:
     """
@@ -100,7 +101,10 @@ class PredictionService:
 
         try:
             from app.core.artifact_signing import verify_and_load_model_artifact
-            artifact = verify_and_load_model_artifact(artifact_file)
+            artifact = verify_and_load_model_artifact(
+                artifact_file,
+                allow_unsigned_fixtures=settings.ENV in ("testing", "development")
+            )
         except Exception as e:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,

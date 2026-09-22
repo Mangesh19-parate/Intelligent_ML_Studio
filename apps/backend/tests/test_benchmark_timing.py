@@ -3,7 +3,7 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
-from backend.scripts.run_cv_benchmark import (
+from scripts.run_cv_benchmark import (
     generate_synthetic_small,
     generate_synthetic_medium,
     load_real_stress_dataset,

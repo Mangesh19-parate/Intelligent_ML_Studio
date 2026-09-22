@@ -42,7 +42,7 @@ from sklearn.ensemble import RandomForestRegressor
 from sklearn.datasets import fetch_california_housing
 
 from app.services.transformers import OutlierCapper
-from backend.scripts.run_cv_benchmark import (
+from scripts.run_cv_benchmark import (
     generate_synthetic_small,
     generate_synthetic_medium,
     load_real_stress_dataset,

@@ -1,5 +1,5 @@
 import pytest
-from backend.scripts.run_checkpoint1_verification import run_live_checkpoint_1
+from scripts.run_checkpoint1_verification import run_live_checkpoint_1
 
 def test_checkpoint1_zero_test_leakage_and_isolation():
     """

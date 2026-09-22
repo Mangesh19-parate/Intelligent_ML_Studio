@@ -18,7 +18,7 @@ from app.models.user_permission_override import UserPermissionOverride
 from app.services.selectors import resolve_top_k, sort_features_with_tie_break, apply_top_k_percent_selection
 from app.services.deployment_service import DeploymentService
 from app.core.seeder import CANONICAL_ROLES
-from backend.scripts.run_checkpoint2_verification import QueryMutationAuditor
+from scripts.run_checkpoint2_verification import QueryMutationAuditor
 
 
 def test_stale_roles_absent_in_database(db_session: Session):
@@ -172,7 +172,7 @@ def test_global_error_envelope_consistency(client, create_test_user, auth_header
     assert len(data_422["error"]["details"]) > 0
 
 
-from backend.scripts.run_checkpoint2_verification import run_live_checkpoint_2
+from scripts.run_checkpoint2_verification import run_live_checkpoint_2
 
 def test_model_passport_zero_mutation_guarantee(client, db_session, create_test_user, auth_headers):
     """

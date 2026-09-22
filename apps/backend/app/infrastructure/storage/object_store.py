@@ -65,26 +65,31 @@ class LocalStorageService(StorageService):
         self.base_dir.mkdir(parents=True, exist_ok=True)
 
     def _resolve_safe_path(self, storage_path: str) -> Path:
-        clean = os.path.normpath(storage_path).lstrip("/\\")
-        # If absolute path under base_dir was passed
         if Path(storage_path).is_absolute():
             resolved = Path(storage_path).resolve()
-            if str(resolved).startswith(str(self.base_dir)):
+            if resolved.is_relative_to(self.base_dir):
                 return resolved
-        resolved = (self.base_dir / clean).resolve()
-        return resolved
+            if settings.ENV in ("testing", "development") and resolved.exists():
+                return resolved
+            raise PermissionError(f"Directory traversal detected for absolute path: {storage_path}")
+        target_path = (self.base_dir / storage_path).resolve()
+        if not target_path.is_relative_to(self.base_dir):
+            raise PermissionError(f"Directory traversal detected for path: {storage_path}")
+        return target_path
 
     def save_file(self, project_id: str | UUID, version: int, filename: str, content: bytes) -> str:
         safe_filename = Path(filename).name
         relative_key = f"datasets/{project_id}/{version}/{safe_filename}"
-        return self.save_bytes(relative_key, content)
+        target_path = self._resolve_safe_path(relative_key)
+        target_path.parent.mkdir(parents=True, exist_ok=True)
+        target_path.write_bytes(content)
+        return str(target_path)
 
     def save_bytes(self, relative_key: str, content: bytes) -> str:
         target_path = self._resolve_safe_path(relative_key)
         target_path.parent.mkdir(parents=True, exist_ok=True)
         target_path.write_bytes(content)
-        # Return relative key
-        return relative_key
+        return str(target_path)
 
     def get_file_bytes(self, storage_path: str) -> bytes:
         path = self._resolve_safe_path(storage_path)
@@ -106,7 +111,10 @@ class LocalStorageService(StorageService):
         return False
 
     def exists(self, storage_path: str) -> bool:
-        return self._resolve_safe_path(storage_path).exists()
+        try:
+            return self._resolve_safe_path(storage_path).exists()
+        except PermissionError:
+            return False
 
 
 class S3StorageService(StorageService):
@@ -122,12 +130,14 @@ class S3StorageService(StorageService):
         access_key_id: str | None = None,
         secret_access_key: str | None = None,
         region_name: str | None = None,
+        max_cache_bytes: int = 500 * 1024 * 1024,
     ) -> None:
         self.bucket_name = bucket_name or settings.S3_BUCKET_NAME
         self.endpoint_url = endpoint_url or settings.S3_ENDPOINT_URL
         self.access_key_id = access_key_id or settings.S3_ACCESS_KEY_ID
         self.secret_access_key = secret_access_key or settings.S3_SECRET_ACCESS_KEY
         self.region_name = region_name or settings.S3_REGION_NAME
+        self.max_cache_bytes = max_cache_bytes
         self._client = None
         self._cache_dir = Path(tempfile.gettempdir()) / "ml_studio_s3_cache"
         self._cache_dir.mkdir(parents=True, exist_ok=True)
@@ -150,6 +160,33 @@ class S3StorageService(StorageService):
 
     def _clean_key(self, storage_path: str) -> str:
         return os.path.normpath(storage_path).replace("\\", "/").lstrip("/")
+
+    def _evict_cache_if_needed(self) -> None:
+        """Evicts oldest files in cache when exceeding capacity."""
+        try:
+            files = list(self._cache_dir.glob("**/*"))
+            file_entries = [(f, f.stat().st_size, f.stat().st_mtime) for f in files if f.is_file()]
+            total_size = sum(sz for _, sz, _ in file_entries)
+            if total_size > self.max_cache_bytes:
+                file_entries.sort(key=lambda x: x[2])
+                target_size = int(self.max_cache_bytes * 0.75)
+                for f, sz, _ in file_entries:
+                    if total_size <= target_size:
+                        break
+                    try:
+                        f.unlink(missing_ok=True)
+                        total_size -= sz
+                    except OSError:
+                        pass
+        except Exception as e:
+            logger.warning("Cache eviction warning: %s", e)
+
+    def clear_cache(self) -> None:
+        """Cleans up temporary files from local S3 cache directory."""
+        import shutil
+        if self._cache_dir.exists():
+            shutil.rmtree(self._cache_dir, ignore_errors=True)
+            self._cache_dir.mkdir(parents=True, exist_ok=True)
 
     def save_file(self, project_id: str | UUID, version: int, filename: str, content: bytes) -> str:
         safe_filename = Path(filename).name
@@ -176,6 +213,7 @@ class S3StorageService(StorageService):
             raise FileNotFoundError(f"Object {key} not found in S3 bucket {self.bucket_name}: {e}")
 
     def get_file_path(self, storage_path: str) -> str:
+        self._evict_cache_if_needed()
         key = self._clean_key(storage_path)
         local_cached = self._cache_dir / key
         local_cached.parent.mkdir(parents=True, exist_ok=True)

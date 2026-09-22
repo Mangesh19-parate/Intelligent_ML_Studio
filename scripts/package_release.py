@@ -14,6 +14,7 @@ ROOT_DIR = Path(__file__).resolve().parent.parent
 
 EXCLUDE_DIRS = {
     ".git",
+    ".agents",
     "node_modules",
     ".pytest_cache",
     "dist",
@@ -22,6 +23,11 @@ EXCLUDE_DIRS = {
     "venv",
     ".idea",
     ".vscode",
+    "evidence",
+    "benchmarks/results",
+    "research/results",
+    ".system_generated",
+    "scratch",
 }
 
 EXCLUDE_FILES = {

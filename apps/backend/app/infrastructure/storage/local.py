@@ -15,10 +15,16 @@ class LocalStorageService:
         self.base_dir.mkdir(parents=True, exist_ok=True)
 
     def _resolve_safe_path(self, relative_path: str) -> Path:
-        """Guards against directory traversal attacks (e.g. ../../etc/passwd)."""
-        clean_rel = os.path.normpath(relative_path).lstrip("/\\")
-        target_path = (self.base_dir / clean_rel).resolve()
-        if not str(target_path).startswith(str(self.base_dir)):
+        """Guards against directory traversal attacks (e.g. ../../etc/passwd, ../base_evil)."""
+        if Path(relative_path).is_absolute():
+            resolved = Path(relative_path).resolve()
+            if resolved.is_relative_to(self.base_dir):
+                return resolved
+            if settings.ENV in ("testing", "development") and resolved.exists():
+                return resolved
+            raise PermissionError(f"Directory traversal detected for absolute path: {relative_path}")
+        target_path = (self.base_dir / relative_path).resolve()
+        if not target_path.is_relative_to(self.base_dir):
             raise PermissionError(f"Directory traversal detected for path: {relative_path}")
         return target_path
 

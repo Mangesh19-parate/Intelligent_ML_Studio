@@ -2,10 +2,10 @@ import sys
 from pathlib import Path
 
 # Add backend directory and workspace root to sys.path
-BASE_DIR = Path(__file__).resolve().parent.parent
-WORKSPACE_ROOT = BASE_DIR.parent
-if str(WORKSPACE_ROOT) not in sys.path:
-    sys.path.insert(0, str(WORKSPACE_ROOT))
+BASE_DIR = Path(__file__).resolve().parent.parent  # apps/backend
+REPO_ROOT = BASE_DIR.parent.parent  # Repository root (where research/ and scripts/ live)
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 if str(BASE_DIR) not in sys.path:
     sys.path.insert(0, str(BASE_DIR))
 

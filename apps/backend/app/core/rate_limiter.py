@@ -6,14 +6,16 @@ from fastapi import Request, HTTPException, status
 
 
 def is_ip_in_trusted_proxies(ip_str: str, trusted_list: list[str]) -> bool:
-    """Checks if an IP address belongs to trusted proxies or private/loopback ranges."""
+    """Checks if an IP address belongs to explicitly configured trusted proxies or loopback."""
     if not ip_str or ip_str in ("unknown", "testclient"):
         return True
     try:
         ip_obj = ipaddress.ip_address(ip_str)
-        if ip_obj.is_loopback or ip_obj.is_private:
+        if ip_obj.is_loopback:
             return True
         for trusted in trusted_list:
+            if not trusted:
+                continue
             if "/" in trusted:
                 if ip_obj in ipaddress.ip_network(trusted, strict=False):
                     return True

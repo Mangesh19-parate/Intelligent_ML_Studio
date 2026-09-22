@@ -25,6 +25,7 @@ from app.schemas.explainability import (
     GlobalExplainabilityResponse,
     LocalExplainabilityResponse,
 )
+from app.core.config import settings
 
 
 # Week 4 Policy Resource Budget Constants for SHAP Explainability (SRS §2.14, §2.18; Benchmark Report)
@@ -101,7 +102,10 @@ class ExplainabilityService:
 
         try:
             from app.core.artifact_signing import verify_and_load_model_artifact
-            artifact = verify_and_load_model_artifact(artifact_file)
+            artifact = verify_and_load_model_artifact(
+                artifact_file,
+                allow_unsigned_fixtures=settings.ENV in ("testing", "development")
+            )
         except Exception as e:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,

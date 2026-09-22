@@ -2,7 +2,7 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
-from backend.scripts.run_resource_benchmark import (
+from scripts.run_resource_benchmark import (
     profile_dataset_and_algorithm,
     run_full_resource_benchmark,
 )

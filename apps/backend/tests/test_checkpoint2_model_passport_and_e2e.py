@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from app.models.trained_model import TrainedModel
 from app.models.experiment import Experiment
 from app.models.user import User
-from backend.scripts.run_checkpoint2_verification import run_live_checkpoint_2, QueryMutationAuditor
+from scripts.run_checkpoint2_verification import run_live_checkpoint_2, QueryMutationAuditor
 
 
 def test_checkpoint2_full_pipeline_live_and_invariants(db_session):

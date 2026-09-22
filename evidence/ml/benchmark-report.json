@@ -1,5 +1,13 @@
 {
-  "generated_at": "2026-09-21T16:19:12.421353+00:00",
+  "generated_at": "2026-09-22T14:12:00.886144+00:00",
+  "fingerprint": {
+    "commit": "8aafe969bc4e891265d3410e0f35f4b8f93fe017",
+    "dirty_worktree": true,
+    "python_version": "3.13.14",
+    "platform": "win32",
+    "backend_requirements_sha256": "a1cb5031ae9563c657fd4f2280121a18cc7914ea7c8b2af51cf0493f3ab669e5",
+    "pyproject_sha256": "b32242d63996b967aa89df256d33263ee567133d964a2fa1ee6d75d3dcd678f0"
+  },
   "datasets_evaluated": [
     {
       "dataset_name": "California Housing",
@@ -7,28 +15,36 @@
       "rows": 20640,
       "features": 8,
       "champion_algorithm": "RandomForestRegressor",
-      "cv_training_time_s": 3.07,
-      "peak_training_ram_mb": 17.18,
-      "artifact_size_mb": 7.92,
-      "shap_time_s": 0.23,
-      "p95_inference_ms": 32.4
+      "cv_training_time_s": 1.411,
+      "peak_training_ram_mb": 1.46,
+      "artifact_size_mb": 17.25,
+      "measured": true,
+      "latency_percentiles": {
+        "p50_ms": 3.51,
+        "p95_ms": 5.6,
+        "p99_ms": 6.43
+      }
     },
     {
-      "dataset_name": "Customer Churn",
+      "dataset_name": "Synthetic Churn Benchmark",
       "task_type": "CLASSIFICATION",
-      "rows": 10000,
+      "rows": 2000,
       "features": 12,
       "champion_algorithm": "GradientBoostingClassifier",
-      "cv_training_time_s": 1.45,
-      "peak_training_ram_mb": 12.3,
-      "artifact_size_mb": 3.15,
-      "shap_time_s": 0.18,
-      "p95_inference_ms": 28.1
+      "cv_training_time_s": 0.234,
+      "peak_training_ram_mb": 0.27,
+      "artifact_size_mb": 0.04,
+      "measured": true,
+      "latency_percentiles": {
+        "p50_ms": 2.89,
+        "p95_ms": 4.43,
+        "p99_ms": 5.89
+      }
     }
   ],
-  "latency_percentiles": {
-    "p50_ms": 14.2,
-    "p95_ms": 38.5,
-    "p99_ms": 76.2
+  "aggregate_latency_percentiles": {
+    "p50_ms": 3.2,
+    "p95_ms": 5.01,
+    "p99_ms": 6.16
   }
 }

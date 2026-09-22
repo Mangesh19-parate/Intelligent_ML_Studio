@@ -119,7 +119,7 @@ Every resource endpoint (`/projects`, `/datasets`, `/experiments`, `/transformat
 ## Tier 3 — Compliance, Privacy & Governance
 
 ### 1. Data Retention Policy & Automated Pruning
-- Scheduled cleanup script: `python backend/scripts/cleanup_data_retention.py 90`
+- Scheduled cleanup script: `python apps/backend/scripts/cleanup_data_retention.py 90`
   - Purges prediction audit logs and durable task execution records older than retention period (default 90 days).
   - Can be scheduled via cron or Kubernetes CronJob.
 

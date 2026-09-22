@@ -1,44 +1,35 @@
 """
 Domain Experiment State Machine & Lifecycle Policies.
+Authoritative contract re-exported from app.config.state_machines.
 """
 
-from enum import Enum
+from app.config.state_machines import (
+    ExperimentState,
+    ModelState,
+    ProjectState,
+    DeploymentState,
+    EXPERIMENT_VALID_TRANSITIONS,
+    MODEL_VALID_TRANSITIONS,
+    PROJECT_VALID_TRANSITIONS,
+    DEPLOYMENT_VALID_TRANSITIONS,
+    validate_transition,
+    InvalidStateTransitionError,
+)
 
+# Alias for compatibility
+VALID_EXPERIMENT_TRANSITIONS = {k: set(v) for k, v in EXPERIMENT_VALID_TRANSITIONS.items()}
 
-class ExperimentState(str, Enum):
-    DRAFT = "DRAFT"
-    QUEUED = "QUEUED"
-    SPLITTING = "SPLITTING"
-    PROFILING = "PROFILING"
-    FEATURE_SELECTION = "FEATURE_SELECTION"
-    TRAINING = "TRAINING"
-    EVALUATING = "EVALUATING"
-    COMPLETED = "COMPLETED"
-    FAILED = "FAILED"
-    CANCELLED = "CANCELLED"
-    TRAINING_FAILED = "TRAINING_FAILED"
+__all__ = [
+    "ExperimentState",
+    "ModelState",
+    "ProjectState",
+    "DeploymentState",
+    "EXPERIMENT_VALID_TRANSITIONS",
+    "MODEL_VALID_TRANSITIONS",
+    "PROJECT_VALID_TRANSITIONS",
+    "DEPLOYMENT_VALID_TRANSITIONS",
+    "VALID_EXPERIMENT_TRANSITIONS",
+    "validate_transition",
+    "InvalidStateTransitionError",
+]
 
-
-class ModelState(str, Enum):
-    UNTRAINED = "UNTRAINED"
-    TRAINING = "TRAINING"
-    TRAINED = "TRAINED"
-    EVALUATED = "EVALUATED"
-    SELECTED_FOR_DEPLOYMENT = "SELECTED_FOR_DEPLOYMENT"
-    REJECTED = "REJECTED"
-    FAILED = "FAILED"
-
-
-VALID_EXPERIMENT_TRANSITIONS: dict[ExperimentState, set[ExperimentState]] = {
-    ExperimentState.DRAFT: {ExperimentState.QUEUED, ExperimentState.CANCELLED},
-    ExperimentState.QUEUED: {ExperimentState.SPLITTING, ExperimentState.TRAINING, ExperimentState.CANCELLED, ExperimentState.FAILED},
-    ExperimentState.SPLITTING: {ExperimentState.PROFILING, ExperimentState.FEATURE_SELECTION, ExperimentState.TRAINING, ExperimentState.FAILED},
-    ExperimentState.PROFILING: {ExperimentState.FEATURE_SELECTION, ExperimentState.TRAINING, ExperimentState.FAILED},
-    ExperimentState.FEATURE_SELECTION: {ExperimentState.TRAINING, ExperimentState.FAILED},
-    ExperimentState.TRAINING: {ExperimentState.EVALUATING, ExperimentState.COMPLETED, ExperimentState.FAILED, ExperimentState.TRAINING_FAILED},
-    ExperimentState.EVALUATING: {ExperimentState.COMPLETED, ExperimentState.FAILED},
-    ExperimentState.COMPLETED: set(),
-    ExperimentState.FAILED: {ExperimentState.QUEUED},
-    ExperimentState.TRAINING_FAILED: {ExperimentState.QUEUED},
-    ExperimentState.CANCELLED: set(),
-}

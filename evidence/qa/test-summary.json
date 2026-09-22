@@ -1,9 +1,19 @@
 {
-  "generated_at": "2026-09-21T16:19:12.421353+00:00",
-  "backend_tests_total": 490,
-  "backend_pass_rate": "100%",
-  "frontend_tests_total": 51,
-  "frontend_pass_rate": "100%",
-  "typescript_errors": 0,
-  "migration_chain_verified": "015_add_missing_schema_and_metrics"
+  "generated_at": "2026-09-22T14:12:00.886144+00:00",
+  "fingerprint": {
+    "commit": "8aafe969bc4e891265d3410e0f35f4b8f93fe017",
+    "dirty_worktree": true,
+    "python_version": "3.13.14",
+    "platform": "win32",
+    "backend_requirements_sha256": "a1cb5031ae9563c657fd4f2280121a18cc7914ea7c8b2af51cf0493f3ab669e5",
+    "pyproject_sha256": "b32242d63996b967aa89df256d33263ee567133d964a2fa1ee6d75d3dcd678f0"
+  },
+  "backend": {
+    "executed": 493,
+    "passed": 493,
+    "failed": 0,
+    "skipped": 0,
+    "pass_rate": "100.0%"
+  },
+  "all_tests_passed": true
 }

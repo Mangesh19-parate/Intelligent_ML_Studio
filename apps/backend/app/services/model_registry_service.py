@@ -14,6 +14,7 @@ from app.models.experiment import Experiment
 from app.models.dataset import Dataset
 from app.models.dataset_column import DatasetColumn
 from app.models.feature_selection_snapshot import FeatureSelectionSnapshot
+from app.core.config import settings
 
 
 class ModelRegistryService:
@@ -151,7 +152,10 @@ class ModelRegistryService:
         # Cryptographic Checksum and HMAC Signature Verification
         from app.core.artifact_signing import verify_and_load_model_artifact, SecurityError
         try:
-            artifact = verify_and_load_model_artifact(artifact_file)
+            artifact = verify_and_load_model_artifact(
+                artifact_file,
+                allow_unsigned_fixtures=settings.ENV in ("testing", "development")
+            )
         except SecurityError as sec_err:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,

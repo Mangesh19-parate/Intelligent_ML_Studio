@@ -4,7 +4,7 @@
 
 - **Repository**: `Intelligent_ML_Studio`
 - **Total Backend Tests**: 425 Passed (0 Failures, 0 Skipped, 0 Warnings)
-- **Invariant Test Suite**: 7/7 Passed (`backend/tests/test_system_integrity.py`)
+- **Invariant Test Suite**: 7/7 Passed (`apps/backend/tests/test_system_integrity.py`)
 - **Leakage Attack Lab**: 4/4 Attack Vectors Blocked & Invariants Held
 - **Research Benchmark Matrix**: 320 Cross-Validation Folds across 4 Standard Datasets
 

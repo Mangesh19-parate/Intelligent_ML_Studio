@@ -29,13 +29,13 @@ jobs:
       - name: Install Dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r backend/requirements.txt
+          pip install -r apps/backend/requirements.txt
           pip install pip-audit ruff
 
       - name: Static Code Analysis & Syntax Gate
         run: |
-          python -m compileall -q backend/app
-          ruff check backend/app
+          python -m compileall -q apps/backend/app
+          ruff check apps/backend/app
 
       - name: Dependency Security Audit (CVEs)
         run: |
@@ -48,7 +48,7 @@ jobs:
           JWT_SECRET: testing-jwt-secret-key-must-be-at-least-32-chars
           DATABASE_URL: sqlite:///./test_ci.db
         run: |
-          pytest backend/tests -v --durations=10
+          pytest apps/backend/tests -v --durations=10
 
   frontend-quality-gate:
     name: Frontend Typecheck, Vitest Suite & Production Bundle Gate
@@ -64,22 +64,22 @@ jobs:
         with:
           node-version: 20
           cache: "npm"
-          cache-dependency-path: frontend/package-lock.json
+          cache-dependency-path: apps/frontend/package-lock.json
 
       - name: Install Dependencies
-        working-directory: frontend
+        working-directory: apps/frontend
         run: npm ci
 
       - name: Strict TypeScript Compilation Gate
-        working-directory: frontend
+        working-directory: apps/frontend
         run: npm run typecheck
 
       - name: Run Vitest Frontend Unit & Component Suite
-        working-directory: frontend
+        working-directory: apps/frontend
         run: npm test
 
       - name: Build Production Web Bundle
-        working-directory: frontend
+        working-directory: apps/frontend
         run: npm run build
 
   production-promotion-gate:

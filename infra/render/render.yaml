@@ -16,8 +16,18 @@ services:
         value: "false"
       - key: SEED_DEMO_DATA
         value: "false"
-      - key: STORAGE_LOCAL_DIR
-        value: "/data"
+      - key: STORAGE_BACKEND
+        value: "s3"
+      - key: S3_BUCKET_NAME
+        sync: false
+      - key: S3_ENDPOINT_URL
+        sync: false
+      - key: S3_ACCESS_KEY_ID
+        sync: false
+      - key: S3_SECRET_ACCESS_KEY
+        sync: false
+      - key: S3_REGION_NAME
+        value: "us-east-1"
       - key: DATABASE_URL
         fromDatabase:
           name: ml-studio-db
@@ -30,7 +40,7 @@ services:
         sync: false
         # Example: https://your-frontend.vercel.app,http://localhost:3000
 
-  # ML Studio Durable Task Background Worker Service
+  # ML Studio Durable Task Background Worker Service (Shares DB & Object Store)
   - type: worker
     name: ml-studio-worker
     runtime: python
@@ -42,8 +52,30 @@ services:
     envVars:
       - key: ENV
         value: production
-      - key: STORAGE_LOCAL_DIR
-        value: "/data"
+      - key: STORAGE_BACKEND
+        value: "s3"
+      - key: S3_BUCKET_NAME
+        fromService:
+          type: web
+          name: ml-studio-api
+          envVarKey: S3_BUCKET_NAME
+      - key: S3_ENDPOINT_URL
+        fromService:
+          type: web
+          name: ml-studio-api
+          envVarKey: S3_ENDPOINT_URL
+      - key: S3_ACCESS_KEY_ID
+        fromService:
+          type: web
+          name: ml-studio-api
+          envVarKey: S3_ACCESS_KEY_ID
+      - key: S3_SECRET_ACCESS_KEY
+        fromService:
+          type: web
+          name: ml-studio-api
+          envVarKey: S3_SECRET_ACCESS_KEY
+      - key: S3_REGION_NAME
+        value: "us-east-1"
       - key: DATABASE_URL
         fromDatabase:
           name: ml-studio-db

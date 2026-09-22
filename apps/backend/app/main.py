@@ -63,24 +63,50 @@ from fastapi.responses import JSONResponse
 
 import uuid
 
+STATUS_TITLES = {
+    400: "Bad Request",
+    401: "Unauthorized",
+    403: "Forbidden",
+    404: "Resource Not Found",
+    409: "Conflict",
+    422: "Unprocessable Entity",
+    429: "Too Many Requests",
+    500: "Internal Server Error",
+    503: "Service Unavailable",
+}
+
+def get_error_type(status_code: int, code: str) -> str:
+    slug = code.lower().replace("_", "-")
+    return f"https://api.mlstudio.dev/errors/{slug}"
+
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request: Request, exc: HTTPException):
     request_id = request.headers.get("x-request-id") or str(uuid.uuid4())
     msg = exc.detail if isinstance(exc.detail, str) else str(exc.detail)
+    status_title = STATUS_TITLES.get(exc.status_code, "HTTP Error")
+    error_code = f"HTTP_{exc.status_code}"
+    timestamp = datetime.now(timezone.utc).isoformat()
+
     return JSONResponse(
         status_code=exc.status_code,
         content={
+            "type": get_error_type(exc.status_code, error_code),
+            "title": status_title,
+            "status": exc.status_code,
             "detail": exc.detail,
+            "instance": str(request.url.path),
+            "request_id": request_id,
+            "timestamp": timestamp,
             "error": {
                 "status_code": exc.status_code,
-                "code": f"HTTP_{exc.status_code}",
+                "code": error_code,
                 "message": msg,
                 "details": [
-                    {"loc": [str(request.url.path)], "message": msg, "code": f"HTTP_{exc.status_code}"}
+                    {"loc": [str(request.url.path)], "message": msg, "code": error_code}
                 ],
                 "path": str(request.url.path),
                 "request_id": request_id,
-                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "timestamp": timestamp,
             },
         },
         headers=getattr(exc, "headers", None),
@@ -92,6 +118,7 @@ from fastapi.encoders import jsonable_encoder
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
     request_id = request.headers.get("x-request-id") or str(uuid.uuid4())
     safe_errors = jsonable_encoder(exc.errors())
+    timestamp = datetime.now(timezone.utc).isoformat()
     formatted_details = [
         {
             "loc": [str(x) for x in err.get("loc", [])],
@@ -103,7 +130,13 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     return JSONResponse(
         status_code=422,
         content={
+            "type": "https://api.mlstudio.dev/errors/request-validation-error",
+            "title": "Unprocessable Entity",
+            "status": 422,
             "detail": safe_errors,
+            "instance": str(request.url.path),
+            "request_id": request_id,
+            "timestamp": timestamp,
             "error": {
                 "status_code": 422,
                 "code": "REQUEST_VALIDATION_ERROR",
@@ -111,7 +144,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
                 "details": formatted_details,
                 "path": str(request.url.path),
                 "request_id": request_id,
-                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "timestamp": timestamp,
             },
         },
     )

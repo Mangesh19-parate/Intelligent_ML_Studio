@@ -21,6 +21,8 @@ from app.services.model_registry_service import ModelRegistryService
 from app.services.explainability_service import ExplainabilityService
 
 
+from app.infrastructure.storage.model_cache import BoundedModelCache
+
 class PredictionService:
     """
     Decoupled Fast & Explainable Prediction Service (SRS §2.14 / §2.15 / Day 10).
@@ -31,13 +33,14 @@ class PredictionService:
        and logs distinct, separate latency metrics.
     2. In-memory Model Caching: First/cold load verifies SHA-256 artifact checksum.
        Warm-cache hits bypass disk I/O for ultra-fast serving.
-    3. Audit Logging: Every inference attempt (including validation errors) is logged
+    3. Bounded LRU/TTL: Model cache is bounded (20 models, 30m TTL) to prevent memory leaks.
+    4. Audit Logging: Every inference attempt (including validation errors) is logged
        to `prediction_logs` respecting the configured `payload_mode` ('HASHED' by default).
-    4. Strict Validation: Missing or wrong-typed payload features return HTTP 422.
+    5. Strict Validation: Missing or wrong-typed payload features return HTTP 422.
     """
 
-    # In-memory artifact cache: {deployment_id_str: (artifact_checksum, artifact_dict)}
-    _model_cache: dict[str, tuple[str, dict[str, Any]]] = {}
+    # In-memory bounded LRU/TTL artifact cache: {deployment_id_str: (artifact_checksum, artifact_dict)}
+    _model_cache: BoundedModelCache = BoundedModelCache(max_entries=20, ttl_seconds=1800.0)
 
     def __init__(self, db: Session):
         self.db = db

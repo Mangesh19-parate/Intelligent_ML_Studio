@@ -43,6 +43,7 @@ def predict(
     response_model=PredictExplainResponse,
     status_code=status.HTTP_200_OK,
     summary="Execute prediction with instance-level SHAP explanation breakdown",
+    dependencies=[Depends(rate_limit_auth(max_requests=10, window_seconds=60))]
 )
 def predict_with_explanation(
     deployment_id: UUID,

@@ -73,11 +73,12 @@ def save_signed_model_artifact(
 
 def verify_and_load_model_artifact(
     file_path: Path | str,
-    secret: str | None = None
+    secret: str | None = None,
+    allow_unsigned_fixtures: bool = False,
 ) -> Any:
     """
     Verifies the HMAC signature and hash of an artifact manifest before deserialization.
-    Explicitly blocks arbitrary or untrusted model deserialization paths.
+    Explicitly blocks arbitrary or untrusted model deserialization paths across all environments.
     """
     path = Path(file_path)
     if not path.exists():
@@ -85,12 +86,11 @@ def verify_and_load_model_artifact(
 
     manifest_path = path.with_suffix(".manifest.json")
     if not manifest_path.exists():
-        # Fallback: if manifest missing in dev/test, verify file integrity or raise
-        if settings.ENV.lower() == "production":
+        if not allow_unsigned_fixtures:
             raise SecurityError(
-                f"Untrusted artifact: missing cryptographic signature manifest for {path.name} in production."
+                f"Untrusted artifact: missing cryptographic signature manifest for {path.name}. "
+                "Runtime model loader strictly requires an authenticated HMAC manifest."
             )
-        # In non-production, auto-sign or allow legacy read with warning
         return joblib.load(path)
 
     with open(manifest_path, "r", encoding="utf-8") as f:
@@ -112,3 +112,8 @@ def verify_and_load_model_artifact(
         )
 
     return joblib.load(path)
+
+
+def load_dev_fixture_artifact(file_path: Path | str) -> Any:
+    """Explicit loader helper strictly reserved for development fixtures / testing."""
+    return verify_and_load_model_artifact(file_path, allow_unsigned_fixtures=True)

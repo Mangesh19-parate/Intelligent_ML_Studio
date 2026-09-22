@@ -58,10 +58,63 @@ class Settings(BaseSettings):
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
     
     # Object Storage configuration
+    STORAGE_BACKEND: str = Field(
+        default="local",
+        description="Object storage backend: 'local' or 's3'"
+    )
     STORAGE_LOCAL_DIR: str = Field(
         default="./data",
         description="Base directory for local object storage"
     )
+    S3_BUCKET_NAME: str = Field(
+        default="ml-studio-artifacts",
+        description="S3 bucket name for shared object storage"
+    )
+    S3_ENDPOINT_URL: str | None = Field(
+        default=None,
+        description="Custom S3 endpoint URL (MinIO, Cloudflare R2, LocalStack)"
+    )
+    S3_ACCESS_KEY_ID: str | None = Field(
+        default=None,
+        description="S3 Access Key ID"
+    )
+    S3_SECRET_ACCESS_KEY: str | None = Field(
+        default=None,
+        description="S3 Secret Access Key"
+    )
+    S3_REGION_NAME: str = Field(
+        default="us-east-1",
+        description="S3 Region Name"
+    )
+    
+    # Trusted Proxies for Secure Rate Limiting & Client IP Extraction
+    TRUSTED_PROXIES: str | list[str] = [
+        "127.0.0.1",
+        "::1",
+        "localhost",
+        "10.0.0.0/8",
+        "172.16.0.0/12",
+        "192.168.0.0/16",
+    ]
+    
+    @field_validator("TRUSTED_PROXIES", mode="after")
+    @classmethod
+    def assemble_trusted_proxies(cls, v: str | list[str] | None) -> list[str]:
+        if not v:
+            return ["127.0.0.1", "::1"]
+        if isinstance(v, str):
+            v_trimmed = v.strip()
+            if v_trimmed.startswith("[") and v_trimmed.endswith("]"):
+                try:
+                    parsed = json.loads(v_trimmed)
+                    if isinstance(parsed, list):
+                        return [str(item).strip() for item in parsed if str(item).strip()]
+                except Exception:
+                    pass
+            return [item.strip() for item in v_trimmed.split(",") if item.strip()]
+        if isinstance(v, list):
+            return [str(item).strip() for item in v if str(item).strip()]
+        return ["127.0.0.1", "::1"]
     
     # Git versioning
     GIT_COMMIT_HASH: str | None = None

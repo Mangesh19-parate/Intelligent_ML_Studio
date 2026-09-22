@@ -31,10 +31,12 @@ class UserResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
 
+from app.core.security.password_policy import validate_password_strength, MIN_PASSWORD_LENGTH
+
 class SignupRequest(BaseModel):
     full_name: str = Field(..., min_length=2, max_length=150)
     email: str = Field(..., min_length=3, max_length=150)
-    password: str = Field(..., min_length=8)
+    password: str = Field(..., min_length=MIN_PASSWORD_LENGTH)
 
     @field_validator("email")
     @classmethod
@@ -43,6 +45,11 @@ class SignupRequest(BaseModel):
         if not EMAIL_REGEX.match(clean):
             raise ValueError("Invalid email address format. Please enter a valid email address.")
         return clean
+
+    @field_validator("password")
+    @classmethod
+    def validate_password(cls, v: str) -> str:
+        return validate_password_strength(v)
 
 class LoginRequest(BaseModel):
     email: str

@@ -1,12 +1,51 @@
 import time
+import ipaddress
 import threading
 from collections import defaultdict
 from fastapi import Request, HTTPException, status
 
+
+def is_ip_in_trusted_proxies(ip_str: str, trusted_list: list[str]) -> bool:
+    """Checks if an IP address belongs to trusted proxies or private/loopback ranges."""
+    if not ip_str or ip_str in ("unknown", "testclient"):
+        return True
+    try:
+        ip_obj = ipaddress.ip_address(ip_str)
+        if ip_obj.is_loopback or ip_obj.is_private:
+            return True
+        for trusted in trusted_list:
+            if "/" in trusted:
+                if ip_obj in ipaddress.ip_network(trusted, strict=False):
+                    return True
+            elif ip_str == trusted:
+                return True
+    except ValueError:
+        if ip_str in ("localhost", "127.0.0.1", "::1"):
+            return True
+    return False
+
+
+def get_trusted_client_ip(request: Request, trusted_proxies: list[str]) -> str:
+    """
+    Derives real client IP safely.
+    Only trusts X-Forwarded-For headers if the immediate upstream client connection
+    originates from a verified trusted proxy / local proxy network.
+    """
+    direct_host = request.client.host if request.client else "127.0.0.1"
+    
+    if is_ip_in_trusted_proxies(direct_host, trusted_proxies):
+        xff = request.headers.get("x-forwarded-for")
+        if xff:
+            ips = [ip.strip() for ip in xff.split(",") if ip.strip()]
+            if ips:
+                return ips[0]
+    return direct_host
+
+
 class SlidingWindowRateLimiter:
     """
-    Thread-safe in-memory sliding-window rate limiter for sensitive authentication endpoints.
-    Protects against brute-force attacks and credential stuffing.
+    Thread-safe in-memory sliding-window rate limiter.
+    Protects auth and inference endpoints against brute-force attacks and volumetric floods.
     """
     def __init__(self):
         self._lock = threading.Lock()
@@ -53,12 +92,13 @@ class SlidingWindowRateLimiter:
 # Global singleton instance
 auth_rate_limiter = SlidingWindowRateLimiter()
 
+
 def rate_limit_auth(
     max_requests: int = 5,
     window_seconds: int = 60,
 ):
     """
-    FastAPI dependency for rate-limiting authentication requests per client IP.
+    FastAPI dependency for rate-limiting requests per verified client IP.
     Automatically bypasses in testing environment unless 'x-enforce-rate-limit' header is set.
     """
     from app.core.config import settings
@@ -67,12 +107,8 @@ def rate_limit_auth(
         if settings.ENV.lower() == "testing" and not request.headers.get("x-enforce-rate-limit"):
             return
 
-        client_ip = (
-            request.headers.get("x-forwarded-for", "").split(",")[0].strip()
-            or request.client.host
-            if request.client
-            else "unknown"
-        )
+        trusted_proxies = settings.TRUSTED_PROXIES if isinstance(settings.TRUSTED_PROXIES, list) else ["127.0.0.1", "::1"]
+        client_ip = get_trusted_client_ip(request, trusted_proxies)
         endpoint = request.url.path
         key = f"{client_ip}:{endpoint}"
         auth_rate_limiter.check_rate_limit(
@@ -81,4 +117,3 @@ def rate_limit_auth(
             window_seconds=window_seconds,
         )
     return dependency
-

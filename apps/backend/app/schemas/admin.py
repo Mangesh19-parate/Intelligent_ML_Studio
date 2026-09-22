@@ -22,11 +22,19 @@ class UserAdminResponse(BaseModel):
     permission_overrides: list[PermissionOverrideDetail] = Field(default_factory=list)
 
 
+from app.core.security.password_policy import validate_password_strength, MIN_PASSWORD_LENGTH
+from pydantic import field_validator
+
 class UserCreateRequest(BaseModel):
     full_name: str = Field(..., min_length=2, max_length=150)
     email: str
-    password: str = Field(..., min_length=6)
+    password: str = Field(..., min_length=MIN_PASSWORD_LENGTH)
     role_name: str = Field(default="USER")
+
+    @field_validator("password")
+    @classmethod
+    def validate_password(cls, v: str) -> str:
+        return validate_password_strength(v)
 
 
 class UserUpdateRequest(BaseModel):

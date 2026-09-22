@@ -28,12 +28,15 @@ EXCLUDE_DIRS = {
     "research/results",
     ".system_generated",
     "scratch",
+    "data",
 }
 
 EXCLUDE_FILES = {
     ".env",
     "ml_studio.db",
+    "test_ci.db",
     ".DS_Store",
+    "runs.parquet",
 }
 
 EXCLUDE_EXTENSIONS = {
@@ -43,6 +46,10 @@ EXCLUDE_EXTENSIONS = {
     ".db",
     ".sqlite",
     ".sqlite3",
+    ".parquet",
+    ".joblib",
+    ".pkl",
+    ".tmp",
 }
 
 
@@ -56,6 +63,7 @@ def should_exclude(file_path: Path) -> bool:
     if file_path.suffix.lower() in EXCLUDE_EXTENSIONS:
         return True
     return False
+
 
 
 def build_release_archive(output_zip: Path) -> tuple[int, int]:

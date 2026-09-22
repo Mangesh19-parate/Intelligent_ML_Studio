@@ -75,6 +75,42 @@ class HealthService:
 
     def check_storage(self) -> SubsystemHealth:
         start = time.perf_counter()
+        backend_type = settings.STORAGE_BACKEND.lower()
+
+        if backend_type == "s3":
+            try:
+                from app.infrastructure.storage.object_store import get_storage_service, S3StorageService
+                storage_svc = get_storage_service()
+                if isinstance(storage_svc, S3StorageService):
+                    client = storage_svc._get_client()
+                    # Perform lightweight bucket head probe
+                    client.head_bucket(Bucket=storage_svc.bucket_name)
+                    latency_ms = round((time.perf_counter() - start) * 1000, 2)
+                    return SubsystemHealth(
+                        status="UP",
+                        latency_ms=latency_ms,
+                        details={
+                            "backend": "s3",
+                            "bucket": storage_svc.bucket_name,
+                            "region": storage_svc.region_name,
+                        },
+                    )
+                else:
+                    latency_ms = round((time.perf_counter() - start) * 1000, 2)
+                    return SubsystemHealth(
+                        status="UP",
+                        latency_ms=latency_ms,
+                        details={"backend": "s3_emulated"},
+                    )
+            except Exception as e:
+                latency_ms = round((time.perf_counter() - start) * 1000, 2)
+                return SubsystemHealth(
+                    status="DOWN",
+                    latency_ms=latency_ms,
+                    details={"backend": "s3", "error": str(e)},
+                )
+
+        # Local storage check
         storage_dir = Path(settings.STORAGE_LOCAL_DIR)
         try:
             storage_dir.mkdir(parents=True, exist_ok=True)
@@ -97,6 +133,7 @@ class HealthService:
                 status="UP",
                 latency_ms=latency_ms,
                 details={
+                    "backend": "local",
                     "path": str(storage_dir),
                     "writeable": True,
                     "total_gb": round(disk.total / (1024 ** 3), 2),
@@ -110,11 +147,13 @@ class HealthService:
                 status="DOWN",
                 latency_ms=latency_ms,
                 details={
+                    "backend": "local",
                     "path": str(storage_dir),
                     "writeable": False,
                     "error": str(e),
                 },
             )
+
 
     def check_task_queue(self, db: Session | None = None) -> SubsystemHealth:
         session = db or self.db

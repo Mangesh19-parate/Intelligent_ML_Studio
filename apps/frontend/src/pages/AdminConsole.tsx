@@ -109,12 +109,18 @@ export const AdminConsole: React.FC = () => {
   const handleResetPassword = async (userId: string) => {
     try {
       setUserError('');
-      await adminApi.resetUserPassword(userId);
-      setUserSuccess('Password reset link sent to user email.');
+      const res = await adminApi.resetUserPassword(userId);
+      const tempPass = res.data?.temporary_password;
+      setUserSuccess(
+        tempPass
+          ? `Password reset successfully. Temporary password: ${tempPass}`
+          : 'Password reset successfully.'
+      );
     } catch (err: any) {
       setUserError(err.response?.data?.detail || 'Failed to reset password');
     }
   };
+
 
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -7,8 +7,9 @@ services:
     plan: starter
     buildCommand: pip install -r requirements.txt
     startCommand: ./start.sh
-    healthCheckPath: /health
+    healthCheckPath: /health/ready
     autoDeploy: true
+
     envVars:
       - key: ENV
         value: production

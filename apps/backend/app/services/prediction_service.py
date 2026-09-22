@@ -79,12 +79,22 @@ class PredictionService:
                 detail="Model artifact path is missing or inaccessible.",
             )
 
-        artifact_file = Path(model.artifact_path)
+        from app.infrastructure.storage.object_store import get_storage_service
+        storage = get_storage_service()
+        try:
+            artifact_file = Path(storage.get_file_path(model.artifact_path))
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"Model artifact file not found for '{model.artifact_path}': {e}",
+            )
+
         if not artifact_file.exists():
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail=f"Model artifact file not found at '{model.artifact_path}'.",
             )
+
 
         # Cryptographic Checksum Verification on cold load
         hasher = hashlib.sha256()

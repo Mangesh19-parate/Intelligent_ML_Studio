@@ -11,6 +11,8 @@ from app.infrastructure.security.artifact_signing import (
     verify_artifact_manifest,
     save_signed_model_artifact,
     verify_and_load_model_artifact,
+    save_signed_model_to_storage,
+    load_signed_model_from_storage,
     load_dev_fixture_artifact,
 )
 
@@ -22,5 +24,8 @@ __all__ = [
     "verify_artifact_manifest",
     "save_signed_model_artifact",
     "verify_and_load_model_artifact",
+    "save_signed_model_to_storage",
+    "load_signed_model_from_storage",
     "load_dev_fixture_artifact",
 ]
+

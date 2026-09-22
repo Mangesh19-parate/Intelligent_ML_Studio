@@ -131,6 +131,93 @@ def verify_and_load_model_artifact(
     return joblib.load(path)
 
 
+import io
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from app.infrastructure.storage.object_store import StorageService
+
+def save_signed_model_to_storage(
+    artifact: Any,
+    storage_key: str,
+    storage: Any | None = None,
+    secret: str | None = None,
+    metadata: dict[str, Any] | None = None,
+) -> tuple[str, str, str]:
+    """
+    Serializes a model artifact and stores both the model binary and HMAC manifest
+    into the configured StorageService (Local or S3/R2).
+    Returns (storage_key, sha256_hash, hmac_signature).
+    """
+    from app.infrastructure.storage.object_store import get_storage_service
+    storage_svc = storage or get_storage_service()
+
+    # 1. Serialize to buffer
+    buf = io.BytesIO()
+    joblib.dump(artifact, buf)
+    model_bytes = buf.getvalue()
+
+    # 2. Compute SHA-256 and HMAC
+    file_hash = hashlib.sha256(model_bytes).hexdigest()
+    signature = compute_hmac_signature(file_hash, secret)
+
+    # 3. Save model binary to storage
+    clean_key = storage_key.replace("\\", "/").lstrip("/")
+    _ = storage_svc.save_bytes(clean_key, model_bytes)
+
+    # 4. Save manifest to storage
+    manifest_key = str(Path(clean_key).with_suffix(".manifest.json")).replace("\\", "/")
+    manifest_data = {
+        "artifact_file": Path(clean_key).name,
+        "sha256": file_hash,
+        "signature": signature,
+        "signed_at": datetime.now(timezone.utc).isoformat(),
+        "metadata": metadata or {},
+    }
+    manifest_bytes = json.dumps(manifest_data, indent=2).encode("utf-8")
+    storage_svc.save_bytes(manifest_key, manifest_bytes)
+
+    return clean_key, file_hash, signature
+
+
+def load_signed_model_from_storage(
+    storage_key: str,
+    storage: Any | None = None,
+    secret: str | None = None,
+    allow_unsigned_fixtures: bool = False,
+) -> Any:
+    """
+    Loads and cryptographically verifies a model artifact from StorageService (Local or S3).
+    Ensures both the model binary and manifest are retrieved and authenticated before deserialization.
+    """
+    from app.infrastructure.storage.object_store import get_storage_service
+    storage_svc = storage or get_storage_service()
+
+    # If storage_key is an existing local absolute path, load directly
+    if Path(storage_key).is_absolute() and Path(storage_key).exists():
+        return verify_and_load_model_artifact(
+            storage_key,
+            secret=secret,
+            allow_unsigned_fixtures=allow_unsigned_fixtures
+        )
+
+    clean_key = storage_key.replace("\\", "/").lstrip("/")
+    manifest_key = str(Path(clean_key).with_suffix(".manifest.json")).replace("\\", "/")
+
+    # Ensure local path is cached and accessible for both manifest and model
+    try:
+        manifest_local_path = storage_svc.get_file_path(manifest_key)
+    except Exception:
+        manifest_local_path = None
+
+    model_local_path = storage_svc.get_file_path(clean_key)
+    return verify_and_load_model_artifact(
+        model_local_path,
+        secret=secret,
+        allow_unsigned_fixtures=allow_unsigned_fixtures
+    )
+
+
 def load_dev_fixture_artifact(file_path: Path | str) -> Any:
     """Explicit loader helper strictly reserved for development fixtures / testing."""
     return verify_and_load_model_artifact(file_path, allow_unsigned_fixtures=True)
+

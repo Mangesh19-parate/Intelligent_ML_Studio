@@ -65,17 +65,19 @@ class LocalStorageService(StorageService):
         self.base_dir.mkdir(parents=True, exist_ok=True)
 
     def _resolve_safe_path(self, storage_path: str) -> Path:
-        if Path(storage_path).is_absolute():
-            resolved = Path(storage_path).resolve()
-            if resolved.is_relative_to(self.base_dir):
-                return resolved
-            if settings.ENV in ("testing", "development") and resolved.exists():
+        p = Path(storage_path)
+        if p.is_absolute():
+            resolved = p.resolve()
+            temp_dir = Path(tempfile.gettempdir()).resolve()
+            if resolved.is_relative_to(self.base_dir) or resolved.is_relative_to(temp_dir):
                 return resolved
             raise PermissionError(f"Directory traversal detected for absolute path: {storage_path}")
         target_path = (self.base_dir / storage_path).resolve()
         if not target_path.is_relative_to(self.base_dir):
             raise PermissionError(f"Directory traversal detected for path: {storage_path}")
         return target_path
+
+
 
     def save_file(self, project_id: str | UUID, version: int, filename: str, content: bytes) -> str:
         safe_filename = Path(filename).name
@@ -159,7 +161,10 @@ class S3StorageService(StorageService):
         return self._client
 
     def _clean_key(self, storage_path: str) -> str:
-        return os.path.normpath(storage_path).replace("\\", "/").lstrip("/")
+        clean = os.path.normpath(str(storage_path)).replace("\\", "/").lstrip("/")
+        if clean == ".." or clean.startswith("../") or "/../" in clean or clean.endswith("/.."):
+            raise PermissionError(f"Directory traversal detected in S3 object key: {storage_path}")
+        return clean
 
     def _evict_cache_if_needed(self) -> None:
         """Evicts oldest files in cache when exceeding capacity."""
@@ -215,11 +220,15 @@ class S3StorageService(StorageService):
     def get_file_path(self, storage_path: str) -> str:
         self._evict_cache_if_needed()
         key = self._clean_key(storage_path)
-        local_cached = self._cache_dir / key
-        local_cached.parent.mkdir(parents=True, exist_ok=True)
-        content = self.get_file_bytes(key)
-        local_cached.write_bytes(content)
+        local_cached = (self._cache_dir / key).resolve()
+        if not local_cached.is_relative_to(self._cache_dir.resolve()):
+            raise PermissionError(f"Cache traversal detected for S3 key: {storage_path}")
+        if not local_cached.exists():
+            local_cached.parent.mkdir(parents=True, exist_ok=True)
+            content = self.get_file_bytes(key)
+            local_cached.write_bytes(content)
         return str(local_cached)
+
 
     def delete_file(self, storage_path: str) -> bool:
         key = self._clean_key(storage_path)

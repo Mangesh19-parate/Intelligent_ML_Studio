@@ -20,9 +20,11 @@ import sys
 import os
 import re
 import json
+import argparse
 import subprocess
 import time
 from pathlib import Path
+
 from datetime import datetime, timezone
 
 # Ensure UTF-8 output on all platforms including Windows CP1252 consoles
@@ -106,13 +108,44 @@ def run_step(step_name: str, cmd: list[str], cwd: Path) -> tuple[bool, str, floa
         return False, str(e), duration
 
 
+def check_worktree_clean() -> tuple[bool, str]:
+    try:
+        status = subprocess.check_output(["git", "status", "--porcelain"], cwd=str(ROOT_DIR), text=True).strip()
+        # Filter out transient untracked evidence / certificate files if any
+        lines = [l for l in status.splitlines() if l.strip() and not l.strip().endswith(".tmp")]
+        if lines:
+            return False, f"Working tree is dirty ({len(lines)} uncommitted changes):\n" + "\n".join(lines[:10])
+        return True, "Working tree is clean."
+    except Exception as e:
+        return False, f"Git status check failed: {e}"
+
+
 def main():
+    parser = argparse.ArgumentParser(description="Zero-Known-Defect Verification Gate")
+    parser.add_argument("--allow-dirty", action="store_true", help="Allow dirty working tree for dev iterations")
+    args = parser.parse_args()
+
     print("=" * 80, flush=True)
     print(" INTELLIGENT ML STUDIO — ZERO-KNOWN-DEFECT RELEASE VERIFICATION GATE", flush=True)
     print("=" * 80, flush=True)
     
     stages_record = {}
     results = []
+
+    # 0. Working Tree Hygiene Gate
+    print("\n[0. Working Tree Hygiene Gate] Checking git status...", flush=True)
+    t0_start = time.time()
+    is_clean, clean_msg = check_worktree_clean()
+    t0_dur = time.time() - t0_start
+    if not is_clean and not args.allow_dirty:
+        print(f"[0. Working Tree Hygiene Gate] FAILED ({t0_dur:.2f}s)\n  > {clean_msg}", flush=True)
+        print("\n>>> VERIFICATION FAILED: DIRTY WORKTREE - RELEASE BLOCKED <<<\n", flush=True)
+        sys.exit(1)
+    else:
+        status_label = "PASSED" if is_clean else "SKIPPED (allow-dirty)"
+        print(f"[0. Working Tree Hygiene Gate] {status_label} ({t0_dur:.2f}s)", flush=True)
+        results.append(("0. Working Tree Hygiene", True, t0_dur))
+        stages_record["worktree_hygiene"] = {"status": "PASSED" if is_clean else "DIRTY_ALLOWED", "duration_s": round(t0_dur, 2)}
     
     # 1. Python Environment Check
     s1_success, s1_out, s1_dur = run_step(
@@ -124,6 +157,7 @@ def main():
     stages_record["dependencies"] = {"status": "PASSED" if s1_success else "FAILED", "duration_s": round(s1_dur, 2)}
     if not s1_success:
         sys.exit(1)
+
 
     # 2. Syntax & Compilation Gate
     s2_success, s2_out, s2_dur = run_step(

@@ -81,3 +81,20 @@ def test_s3_storage_cache_eviction(tmp_path):
     s3_storage.clear_cache()
     assert s3_storage._cache_dir.exists()
     assert len(list(s3_storage._cache_dir.glob("*"))) == 0
+
+
+def test_s3_storage_cache_traversal_blocked(tmp_path):
+    """
+    INVARIANT: S3 object keys containing traversal sequences ('..') must be rejected
+    before filesystem cache path construction.
+    """
+    s3_storage = S3StorageService(bucket_name="test-bucket")
+    s3_storage._cache_dir = tmp_path / "s3_cache"
+    s3_storage._cache_dir.mkdir()
+
+    with pytest.raises(PermissionError, match="Directory traversal detected in S3 object key"):
+        s3_storage._clean_key("../escape.bin")
+
+    with pytest.raises(PermissionError, match="Directory traversal detected in S3 object key"):
+        s3_storage._clean_key("datasets/../../etc/passwd")
+

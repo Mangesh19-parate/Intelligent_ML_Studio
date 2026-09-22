@@ -1,0 +1,48 @@
+{
+  "platform": "Intelligent ML Studio",
+  "version": "1.0.0",
+  "git_commit": "e4b1c439a0fbe1e03ad51c075f8519c2feb2a104",
+  "verified_at": "2026-09-22T15:04:55.960712+00:00",
+  "total_duration_seconds": 539.61,
+  "stages": {
+    "dependencies": {
+      "status": "PASSED",
+      "duration_s": 2.59
+    },
+    "compilation": {
+      "status": "PASSED",
+      "duration_s": 0.17
+    },
+    "backend_tests": {
+      "status": "PASSED",
+      "passed": 493,
+      "failed": 0,
+      "duration_s": 240.55
+    },
+    "storage_security": {
+      "status": "PASSED",
+      "duration_s": 5.08
+    },
+    "evidence_generation": {
+      "status": "PASSED",
+      "duration_s": 254.61
+    },
+    "frontend_typecheck": {
+      "status": "PASSED",
+      "duration_s": 5.95
+    },
+    "frontend_tests": {
+      "status": "PASSED",
+      "duration_s": 7.24
+    },
+    "frontend_build": {
+      "status": "PASSED",
+      "duration_s": 22.26
+    },
+    "release_hygiene": {
+      "status": "PASSED",
+      "duration_s": 1.16
+    }
+  },
+  "release_verdict": "ZERO_KNOWN_DEFECT_CERTIFIED"
+}

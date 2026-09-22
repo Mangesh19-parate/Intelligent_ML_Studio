@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-09-22T15:23:48.547014+00:00",
+  "generated_at": "2026-09-22T15:41:47.024740+00:00",
   "fingerprint": {
-    "commit": "ca9cd29124c2727d7ecca008f46fceb82e8508e1",
+    "commit": "bf25f1de2716f98009491a5f4125efe0cdaaface",
     "dirty_worktree": true,
     "python_version": "3.13.14",
     "platform": "win32",
@@ -15,14 +15,14 @@
       "rows": 20640,
       "features": 8,
       "champion_algorithm": "RandomForestRegressor",
-      "cv_training_time_s": 0.787,
+      "cv_training_time_s": 0.792,
       "peak_training_ram_mb": 1.46,
       "artifact_size_mb": 17.25,
       "measured": true,
       "latency_percentiles": {
         "p50_ms": 0.97,
-        "p95_ms": 1.03,
-        "p99_ms": 1.29
+        "p95_ms": 1.21,
+        "p99_ms": 1.83
       }
     },
     {
@@ -31,20 +31,20 @@
       "rows": 2000,
       "features": 12,
       "champion_algorithm": "GradientBoostingClassifier",
-      "cv_training_time_s": 0.086,
+      "cv_training_time_s": 0.082,
       "peak_training_ram_mb": 0.27,
       "artifact_size_mb": 0.04,
       "measured": true,
       "latency_percentiles": {
-        "p50_ms": 0.61,
+        "p50_ms": 0.62,
         "p95_ms": 0.68,
-        "p99_ms": 0.86
+        "p99_ms": 0.85
       }
     }
   ],
   "aggregate_latency_percentiles": {
     "p50_ms": 0.79,
-    "p95_ms": 0.85,
-    "p99_ms": 1.07
+    "p95_ms": 0.95,
+    "p99_ms": 1.34
   }
 }

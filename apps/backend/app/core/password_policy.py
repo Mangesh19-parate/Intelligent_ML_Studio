@@ -3,8 +3,6 @@ Canonical Password Policy for Intelligent ML Studio.
 Enforces consistent password complexity rules across Auth and Admin modules.
 """
 
-import re
-
 MIN_PASSWORD_LENGTH = 8
 MAX_PASSWORD_LENGTH = 128
 

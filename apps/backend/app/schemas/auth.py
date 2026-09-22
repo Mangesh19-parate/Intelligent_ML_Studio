@@ -31,7 +31,7 @@ class UserResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
 
-from app.core.security.password_policy import validate_password_strength, MIN_PASSWORD_LENGTH
+from app.core.password_policy import validate_password_strength, MIN_PASSWORD_LENGTH
 
 class SignupRequest(BaseModel):
     full_name: str = Field(..., min_length=2, max_length=150)

@@ -7,7 +7,7 @@ from uuid import UUID
 from typing import Any
 from sqlalchemy.orm import Session
 from app.repositories.experiment_repository import ExperimentRepository
-from app.tasks.experiment_tasks import enqueue_experiment_task
+from app.tasks.experiment_tasks import submit_experiment_task
 from app.domain.experiment.state import ExperimentState
 from app.domain.experiment.policies import validate_transition
 
@@ -38,17 +38,25 @@ def start_experiment_use_case(
     if curr_status in ("COMPLETED", "RUNNING"):
         raise ValueError(f"Cannot start experiment in '{curr_status}' state.")
 
-    # Enqueue task in DB
-    task_id = enqueue_experiment_task(
-        db=db,
-        experiment_id=exp.id,
+    # Submit task in DB
+    cfg = exp.experiment_config or {}
+    record = submit_experiment_task(
+        project_id=str(exp.project_id),
+        experiment_id=str(exp.id),
+        algorithms=algorithms or cfg.get("algorithms", []),
+        folds=folds or exp.fold_count or 5,
+        seed=seed or exp.cv_seed or 42,
+        selection_metric=selection_metric or exp.selection_metric,
+        selection_direction=selection_direction or exp.selection_direction,
+        deployment_threshold=deployment_threshold or cfg.get("deployment_threshold"),
         timeout_seconds=timeout_seconds,
+        db=db,
     )
 
     exp_repo.update_status(exp.id, "QUEUED")
 
     return {
         "experiment_id": str(exp.id),
-        "task_id": str(task_id),
+        "task_id": str(record.task_id),
         "status": "QUEUED",
     }

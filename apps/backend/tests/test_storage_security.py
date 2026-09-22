@@ -5,8 +5,7 @@ Storage Containment and S3 Cache Eviction Security Invariant Tests.
 import os
 import pytest
 from pathlib import Path
-from app.infrastructure.storage.local import LocalStorageService as InfLocalStorageService
-from app.infrastructure.storage.object_store import LocalStorageService as ObjLocalStorageService, S3StorageService
+from app.infrastructure.storage.object_store import LocalStorageService, S3StorageService
 
 
 def test_local_storage_traversal_subpath_escape_blocked(tmp_path):
@@ -21,25 +20,27 @@ def test_local_storage_traversal_subpath_escape_blocked(tmp_path):
     evil_sibling.mkdir()
     (evil_sibling / "pwned.txt").write_text("compromised")
 
-    storage = InfLocalStorageService(base_dir=str(base_dir))
+    storage = LocalStorageService(base_dir=str(base_dir))
 
     # Test parent directory escape
     with pytest.raises(PermissionError, match="Directory traversal detected"):
-        storage.load_file("../base_evil/pwned.txt")
+        storage.get_file_bytes("../base_evil/pwned.txt")
 
     with pytest.raises(PermissionError, match="Directory traversal detected"):
-        storage.save_file("../base_evil/attack.txt", b"evil")
+        storage.save_bytes("../base_evil/attack.txt", b"evil")
 
     # Test root directory escape
     with pytest.raises(PermissionError, match="Directory traversal detected"):
-        storage.load_file("../../etc/passwd")
+        storage.get_file_bytes("../../etc/passwd")
+
 
 
 def test_object_store_local_traversal_blocked(tmp_path):
     base_dir = tmp_path / "data"
     base_dir.mkdir()
     
-    storage = ObjLocalStorageService(base_dir=str(base_dir))
+    storage = LocalStorageService(base_dir=str(base_dir))
+
     
     with pytest.raises(PermissionError, match="Directory traversal detected"):
         storage.get_file_bytes("../outside.txt")

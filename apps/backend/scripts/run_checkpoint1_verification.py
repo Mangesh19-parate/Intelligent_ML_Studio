@@ -316,11 +316,13 @@ def run_live_checkpoint_1():
     }
 
     # Save verification metrics to JSON artifact
-    workspace_root = BASE_DIR.parent
-    artifact_path = workspace_root / "week-04" / "artifacts" / "checkpoint1-verification.json"
+    workspace_root = BASE_DIR.parent.parent
+    artifact_path = workspace_root / "evidence" / "ml" / "checkpoint1-verification.json"
     artifact_path.parent.mkdir(parents=True, exist_ok=True)
     with open(artifact_path, "w", encoding="utf-8") as f:
         json.dump(results, f, indent=2)
+
+
 
     print(f"\nSaved checkpoint 1 JSON verification report to: {artifact_path}")
     return results

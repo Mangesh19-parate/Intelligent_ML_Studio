@@ -265,8 +265,9 @@ def run_attack_lab():
     print("  -> Studio Control: Locked Test consumed on first evaluation. Repeat evaluation labeled TEST_REUSED_DIAGNOSTIC.")
 
     # Save artifacts
-    artifacts_dir = backend_dir.parent / "week-10" / "artifacts"
+    artifacts_dir = backend_dir.parent.parent / "evidence" / "security"
     artifacts_dir.mkdir(parents=True, exist_ok=True)
+
 
     manifest_path = artifacts_dir / "attack_lab_manifest.json"
     manifest_path.write_text(json.dumps(manifest, indent=2))

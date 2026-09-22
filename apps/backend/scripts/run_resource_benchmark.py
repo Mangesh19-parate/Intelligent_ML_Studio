@@ -156,8 +156,9 @@ def profile_dataset_and_algorithm(
 def run_full_resource_benchmark(output_dir: str | Path | None = None) -> pd.DataFrame:
     """Executes resource benchmarking and writes CSV + Markdown reports."""
     if output_dir is None:
-        root_dir = Path(__file__).resolve().parent.parent.parent
-        output_dir = root_dir / "week-04" / "artifacts"
+        root_dir = Path(__file__).resolve().parent.parent.parent.parent
+        output_dir = root_dir / "evidence" / "ml"
+
 
     output_path = Path(output_dir)
     output_path.mkdir(parents=True, exist_ok=True)

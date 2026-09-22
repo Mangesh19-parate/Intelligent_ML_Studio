@@ -44,9 +44,10 @@ def test_attack_lab_execution_and_manifest_fidelity():
         assert "control" in atk
 
     # Verify generated artifact files on disk
-    artifacts_dir = Path(__file__).resolve().parent.parent.parent / "week-10" / "artifacts"
+    artifacts_dir = Path(__file__).resolve().parent.parent.parent.parent / "evidence" / "security"
     manifest_file = artifacts_dir / "attack_lab_manifest.json"
     results_file = artifacts_dir / "attack_lab_results.json"
+
 
     assert manifest_file.exists()
     assert results_file.exists()

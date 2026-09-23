@@ -12,34 +12,35 @@ def test_local_storage_service_unit(tmp_path):
     content = b"col1,col2\n1,2\n3,4\n"
     
     # 1. Save file
-    saved_path = storage.save_file(project_id, 1, "data.csv", content)
-    assert Path(saved_path).exists()
-    assert storage.exists(saved_path)
+    saved_key = storage.save_file(project_id, 1, "data.csv", content)
+    assert storage.exists(saved_key)
+    resolved_path = storage.get_file_path(saved_key)
+    assert Path(resolved_path).exists()
     
     # 2. Path resolution
-    resolved_path = storage.get_file_path(saved_path)
-    assert resolved_path == saved_path
+    assert resolved_path == str((tmp_path / saved_key).resolve())
     
     # 3. Read bytes
-    retrieved_bytes = storage.get_file_bytes(saved_path)
+    retrieved_bytes = storage.get_file_bytes(saved_key)
     assert retrieved_bytes == content
     
     # 4. Path traversal protection
-    traversal_path = storage.save_file(project_id, 1, "../../../malicious.csv", content)
-    assert ".." not in Path(traversal_path).name
-    assert Path(traversal_path).name == "malicious.csv"
-    assert Path(traversal_path).parent.resolve() == (tmp_path / "datasets" / str(project_id) / "1").resolve()
+    traversal_key = storage.save_file(project_id, 1, "../../../malicious.csv", content)
+    assert ".." not in Path(traversal_key).name
+    assert Path(traversal_key).name == "malicious.csv"
+    resolved_traversal = storage.get_file_path(traversal_key)
+    assert Path(resolved_traversal).parent.resolve() == (tmp_path / "datasets" / str(project_id) / "1").resolve()
     
     # 5. Delete file
-    assert storage.delete_file(saved_path) is True
-    assert not storage.exists(saved_path)
-    assert storage.delete_file(saved_path) is False
+    assert storage.delete_file(saved_key) is True
+    assert not storage.exists(saved_key)
+    assert storage.delete_file(saved_key) is False
     
     # 6. Non-existent file raises FileNotFoundError
     with pytest.raises(FileNotFoundError):
-        storage.get_file_bytes(saved_path)
+        storage.get_file_bytes(saved_key)
     with pytest.raises(FileNotFoundError):
-        storage.get_file_path(saved_path)
+        storage.get_file_path(saved_key)
 
 def test_storage_service_singleton():
     storage = get_storage_service()

@@ -38,22 +38,26 @@ def start_experiment_use_case(
     if curr_status in ("COMPLETED", "RUNNING"):
         raise ValueError(f"Cannot start experiment in '{curr_status}' state.")
 
-    # Submit task in DB
-    cfg = exp.experiment_config or {}
-    record = submit_experiment_task(
-        project_id=str(exp.project_id),
-        experiment_id=str(exp.id),
-        algorithms=algorithms or cfg.get("algorithms", []),
-        folds=folds or exp.fold_count or 5,
-        seed=seed or exp.cv_seed or 42,
-        selection_metric=selection_metric or exp.selection_metric,
-        selection_direction=selection_direction or exp.selection_direction,
-        deployment_threshold=deployment_threshold or cfg.get("deployment_threshold"),
-        timeout_seconds=timeout_seconds,
-        db=db,
-    )
+    try:
+        # Submit task in DB
+        cfg = exp.experiment_config or {}
+        record = submit_experiment_task(
+            project_id=str(exp.project_id),
+            experiment_id=str(exp.id),
+            algorithms=algorithms or cfg.get("algorithms", []),
+            folds=folds or exp.fold_count or 5,
+            seed=seed or exp.cv_seed or 42,
+            selection_metric=selection_metric or exp.selection_metric,
+            selection_direction=selection_direction or exp.selection_direction,
+            deployment_threshold=deployment_threshold or cfg.get("deployment_threshold"),
+            timeout_seconds=timeout_seconds,
+            db=db,
+        )
 
-    exp_repo.update_status(exp.id, ExperimentState.TRAINING.value)
+        exp_repo.update_status(exp.id, ExperimentState.TRAINING.value)
+    except Exception:
+        db.rollback()
+        raise
 
     return {
         "experiment_id": str(exp.id),

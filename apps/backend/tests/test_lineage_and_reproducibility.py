@@ -19,6 +19,7 @@ from app.models.trained_model import TrainedModel
 from app.services.experiment_service import ExperimentService
 from app.services.dataset_split_service import DatasetSplitService
 from app.services.environment_capture_service import EnvironmentCaptureService
+from app.infrastructure.storage.object_store import get_storage_service
 from scripts.backfill_pre_day8_lineage import backfill_experiments
 
 
@@ -211,19 +212,22 @@ def test_acceptance_check_b_artifact_checksum_and_tamper_detection(db_session, r
     db_checksum = winning_model.artifact_checksum
 
     assert artifact_path is not None
-    assert os.path.exists(artifact_path)
+    storage = get_storage_service()
+    assert storage.exists(artifact_path)
+    real_path = storage.get_file_path(artifact_path)
+    assert os.path.exists(real_path)
     assert db_checksum is not None and len(db_checksum) == 64
 
     # Independently recompute SHA-256 from disk file
     hasher = hashlib.sha256()
-    with open(artifact_path, "rb") as f:
+    with open(real_path, "rb") as f:
         hasher.update(f.read())
     disk_checksum = hasher.hexdigest()
 
     assert disk_checksum == db_checksum, "Disk SHA-256 must match database artifact_checksum exactly."
 
     # Adversarial test: Mutate 1 byte on disk
-    with open(artifact_path, "r+b") as f:
+    with open(real_path, "r+b") as f:
         content = bytearray(f.read())
         # Flip the first byte
         content[0] = (content[0] ^ 0xFF)
@@ -232,7 +236,7 @@ def test_acceptance_check_b_artifact_checksum_and_tamper_detection(db_session, r
 
     # Recompute SHA-256 after byte mutation
     tampered_hasher = hashlib.sha256()
-    with open(artifact_path, "rb") as f:
+    with open(real_path, "rb") as f:
         tampered_hasher.update(f.read())
     tampered_checksum = tampered_hasher.hexdigest()
 
@@ -315,7 +319,9 @@ def test_acceptance_check_d_feature_selection_snapshot_matches_full_dev_refit(db
     # Cross-check against the winning model's serialized artifact
     winning_model = exp.selected_model
     import joblib
-    artifact = joblib.load(winning_model.artifact_path)
+    storage = get_storage_service()
+    real_artifact_path = storage.get_file_path(winning_model.artifact_path)
+    artifact = joblib.load(real_artifact_path)
 
     assert artifact["selected_feature_names"] == fs_snap.final_selected_features
     assert winning_model.feature_selection_snapshot_id == fs_snap.id
@@ -540,12 +546,15 @@ def test_artifact_write_then_commit_lifecycle(db_session, regression_setup):
     # Transitioned from TRAINED -> ARTIFACT_VERIFIED and then DEPLOYABLE after locked test evaluation
     assert winning_model.status in ("ARTIFACT_VERIFIED", "DEPLOYABLE")
     assert winning_model.artifact_path is not None
-    assert os.path.exists(winning_model.artifact_path)
+    storage = get_storage_service()
+    assert storage.exists(winning_model.artifact_path)
+    real_artifact_path = storage.get_file_path(winning_model.artifact_path)
+    assert os.path.exists(real_artifact_path)
     assert winning_model.artifact_checksum is not None
     assert len(winning_model.artifact_checksum) == 64
 
     # Independently compute checksum from disk and verify exact match
-    with open(winning_model.artifact_path, "rb") as f:
+    with open(real_artifact_path, "rb") as f:
         actual_hash = hashlib.sha256(f.read()).hexdigest()
     assert actual_hash == winning_model.artifact_checksum
 

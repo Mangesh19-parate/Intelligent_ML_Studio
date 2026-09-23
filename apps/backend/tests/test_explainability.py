@@ -22,6 +22,7 @@ from app.models.explainability_summary import ExplainabilitySummary
 from app.services.experiment_service import ExperimentService
 from app.services.explainability_service import ExplainabilityService
 from app.services.dataset_split_service import DatasetSplitService
+from app.infrastructure.storage.object_store import get_storage_service
 
 
 @pytest.fixture
@@ -492,11 +493,13 @@ def test_acceptance_check_f_tampered_artifact_rejection(db_session, regression_s
     winning_model_id = exp_res["selected_model_id"]
 
     winning_model = db_session.query(TrainedModel).filter(TrainedModel.id == winning_model_id).first()
-    artifact_path = winning_model.artifact_path
-    assert os.path.exists(artifact_path)
+    storage = get_storage_service()
+    assert storage.exists(winning_model.artifact_path)
+    real_artifact_path = storage.get_file_path(winning_model.artifact_path)
+    assert os.path.exists(real_artifact_path)
 
     # Deliberately corrupt 1 byte in the file
-    with open(artifact_path, "r+b") as f:
+    with open(real_artifact_path, "r+b") as f:
         f.seek(15)
         current_byte = f.read(1)
         # Flip the byte

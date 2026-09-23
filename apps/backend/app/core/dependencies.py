@@ -40,6 +40,15 @@ def get_current_user(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Inactive user account"
         )
+    
+    token_session_version = payload.get("session_version")
+    if token_session_version is not None and getattr(user, "session_version", None) is not None:
+        if token_session_version < user.session_version:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Session has been revoked. Please log in again.",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
     return user
 
 

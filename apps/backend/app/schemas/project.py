@@ -9,6 +9,7 @@ TaskType = Literal["REGRESSION", "CLASSIFICATION", "UNDETERMINED"]
 class ProjectCreate(BaseModel):
     project_name: str = Field(..., min_length=1, max_length=200)
     target_column: str | None = Field(default=None, max_length=150)
+    task_type: TaskType | None = Field(default="UNDETERMINED")
 
 class ProjectUpdate(BaseModel):
     project_name: str | None = Field(default=None, min_length=1, max_length=200)

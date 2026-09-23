@@ -1,6 +1,6 @@
 {
-  "timestamp": "2026-09-23T15:07:20.369504+00:00",
-  "dataset_id": "d23fdaec-7bcd-4ee4-bd0d-05f6598635f1",
+  "timestamp": "2026-09-23T15:49:23.841975+00:00",
+  "dataset_id": "f3728d2d-4661-497b-81d1-a56cbe1b826c",
   "content_hash": "7d0c3bf43b7d43fdffddd69163664c8f7bdb9fba97f03f0e84b98a3a3007a2ad",
   "total_rows": 1000,
   "development_rows": 800,
@@ -8,7 +8,7 @@
   "split_seed": 42,
   "stratified": true,
   "audit": {
-    "get_development_data_calls": 9,
+    "get_development_data_calls": 10,
     "get_locked_test_data_calls": 0,
     "accessed_rows_count": 800,
     "accessed_test_rows_count": 0,

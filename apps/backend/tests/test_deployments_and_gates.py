@@ -24,6 +24,7 @@ from app.services.deployment_gate_service import DeploymentGateService
 from app.services.deployment_service import DeploymentService
 from app.services.prediction_service import PredictionService
 from app.services.model_registry_service import ModelRegistryService
+from app.infrastructure.storage.object_store import get_storage_service
 
 
 @pytest.fixture
@@ -387,7 +388,9 @@ def test_check_c_d_e_f_g_h_full_roundtrip_and_edge_cases(deployed_regression_set
 
     # Tamper with the artifact file on disk
     model_obj = db_session.query(TrainedModel).filter(TrainedModel.id == new_model_id).first()
-    with open(model_obj.artifact_path, "wb") as f:
+    storage = get_storage_service()
+    real_artifact_path = storage.get_file_path(model_obj.artifact_path)
+    with open(real_artifact_path, "wb") as f:
         f.write(b"CORRUPTED_MALICIOUS_BYTES_DAY_10")
 
     corrupted_pred_res = client.post(f"/api/v1/predict/{fresh_dep_id}", json=valid_payload)

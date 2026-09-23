@@ -209,6 +209,7 @@ export const projectApi = {
     return apiClient.post<Project>('/projects', {
       project_name: payloadOrName.project_name,
       target_column: payloadOrName.target_column ?? null,
+      task_type: payloadOrName.task_type ?? 'UNDETERMINED',
     });
   },
   update: (id: string, payload: Partial<Project>) => apiClient.put<Project>(`/projects/${id}`, payload),

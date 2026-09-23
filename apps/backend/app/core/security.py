@@ -18,6 +18,7 @@ def create_access_token(
     subject: str | Any,
     expires_delta: timedelta | None = None,
     extra_claims: dict[str, Any] | None = None,
+    session_version: int = 1,
 ) -> str:
     now = datetime.now(timezone.utc)
     if expires_delta:
@@ -31,12 +32,17 @@ def create_access_token(
         "sub": str(subject),
         "type": "access",
         "jti": str(uuid.uuid4()),
+        "session_version": session_version,
     }
     if extra_claims:
         to_encode.update(extra_claims)
     return jwt.encode(to_encode, settings.JWT_SECRET, algorithm=settings.JWT_ALGORITHM)
 
-def create_refresh_token(subject: str | Any, expires_delta: timedelta | None = None) -> str:
+def create_refresh_token(
+    subject: str | Any,
+    expires_delta: timedelta | None = None,
+    session_version: int = 1,
+) -> str:
     now = datetime.now(timezone.utc)
     if expires_delta:
         expire = now + expires_delta
@@ -49,6 +55,7 @@ def create_refresh_token(subject: str | Any, expires_delta: timedelta | None = N
         "sub": str(subject),
         "type": "refresh",
         "jti": str(uuid.uuid4()),
+        "session_version": session_version,
     }
     return jwt.encode(to_encode, settings.JWT_SECRET, algorithm=settings.JWT_ALGORITHM)
 

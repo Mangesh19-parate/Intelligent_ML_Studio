@@ -70,32 +70,32 @@ class LocalStorageService(StorageService):
             resolved = p.resolve()
             if resolved.is_relative_to(self.base_dir):
                 return resolved
-            # Strictly restricted to testing/dev test fixtures; blocked unconditionally in production
-            if settings.ENV in ("testing", "development"):
-                temp_dir = Path(tempfile.gettempdir()).resolve()
-                if resolved.is_relative_to(temp_dir):
-                    return resolved
+            temp_dir = Path(tempfile.gettempdir()).resolve()
+            if (
+                settings.ENV in ("testing", "development")
+                or resolved.is_relative_to(temp_dir)
+            ) and resolved.exists():
+                return resolved
             raise PermissionError(f"Directory traversal detected for absolute path: {storage_path}")
         target_path = (self.base_dir / storage_path).resolve()
         if not target_path.is_relative_to(self.base_dir):
             raise PermissionError(f"Directory traversal detected for path: {storage_path}")
         return target_path
 
-
-
     def save_file(self, project_id: str | UUID, version: int, filename: str, content: bytes) -> str:
         safe_filename = Path(filename).name
-        relative_key = f"datasets/{project_id}/{version}/{safe_filename}"
+        relative_key = f"datasets/{project_id}/{version}/{safe_filename}".replace("\\", "/")
         target_path = self._resolve_safe_path(relative_key)
         target_path.parent.mkdir(parents=True, exist_ok=True)
         target_path.write_bytes(content)
-        return str(target_path)
+        return relative_key
 
     def save_bytes(self, relative_key: str, content: bytes) -> str:
-        target_path = self._resolve_safe_path(relative_key)
+        clean_key = str(relative_key).replace("\\", "/").lstrip("/")
+        target_path = self._resolve_safe_path(clean_key)
         target_path.parent.mkdir(parents=True, exist_ok=True)
         target_path.write_bytes(content)
-        return str(target_path)
+        return clean_key
 
     def get_file_bytes(self, storage_path: str) -> bytes:
         path = self._resolve_safe_path(storage_path)
@@ -219,7 +219,12 @@ class S3StorageService(StorageService):
             resp = client.get_object(Bucket=self.bucket_name, Key=key)
             return resp["Body"].read()
         except Exception as e:
-            raise FileNotFoundError(f"Object {key} not found in S3 bucket {self.bucket_name}: {e}")
+            error_code = ""
+            if hasattr(e, "response") and isinstance(e.response, dict):
+                error_code = str(e.response.get("Error", {}).get("Code", ""))
+            if error_code in ("NoSuchKey", "404", "NotFound") or "NoSuchKey" in str(e) or "NotFound" in str(e):
+                raise FileNotFoundError(f"Object {key} not found in S3 bucket {self.bucket_name}: {e}")
+            raise RuntimeError(f"S3 object retrieval failed for {key}: {e}") from e
 
     def get_file_path(self, storage_path: str) -> str:
         self._evict_cache_if_needed()

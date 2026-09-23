@@ -159,18 +159,24 @@ class AuthService:
             self.db.commit()
 
             # Dispatch OTP to the user's verified email address
-            EmailService.send_otp_email(
+            sent = EmailService.send_otp_email(
                 to_email=user.email,
                 otp_code=otp_code,
                 user_name=user.full_name,
                 expire_minutes=10,
             )
+            if not sent:
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail="Failed to deliver two-factor verification code via email. Please check your SMTP settings or try again.",
+                )
 
             # Issue a short-lived (10 minute) 2FA challenge token
             two_factor_token = create_access_token(
                 subject=str(user.id),
                 expires_delta=timedelta(minutes=10),
-                extra_claims={"purpose": "2fa_challenge", "email": user.email}
+                extra_claims={"purpose": "2fa_challenge", "email": user.email},
+                session_version=getattr(user, "session_version", 1) or 1,
             )
             masked_email = EmailService.mask_email(user.email)
             return LoginResponse(
@@ -182,8 +188,9 @@ class AuthService:
             )
 
         # Standard direct login if 2FA was explicitly disabled
-        access_token = create_access_token(subject=str(user.id))
-        refresh_token = create_refresh_token(subject=str(user.id))
+        sv = getattr(user, "session_version", 1) or 1
+        access_token = create_access_token(subject=str(user.id), session_version=sv)
+        refresh_token = create_refresh_token(subject=str(user.id), session_version=sv)
         user_response = self._build_user_response(user)
 
         return LoginResponse(
@@ -235,12 +242,17 @@ class AuthService:
         self.db.commit()
 
         # Dispatch fresh email
-        EmailService.send_otp_email(
+        sent = EmailService.send_otp_email(
             to_email=user.email,
             otp_code=otp_code,
             user_name=user.full_name,
             expire_minutes=10,
         )
+        if not sent:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Failed to deliver verification code via email. Please check your SMTP settings or try again.",
+            )
 
         masked_email = EmailService.mask_email(user.email)
         return {
@@ -368,8 +380,9 @@ class AuthService:
         self.db.commit()
 
         # Issue session tokens
-        access_token = create_access_token(subject=str(user.id))
-        refresh_token = create_refresh_token(subject=str(user.id))
+        sv = getattr(user, "session_version", 1) or 1
+        access_token = create_access_token(subject=str(user.id), session_version=sv)
+        refresh_token = create_refresh_token(subject=str(user.id), session_version=sv)
         user_response = self._build_user_response(user)
 
         return TokenResponse(
@@ -446,6 +459,14 @@ class AuthService:
         if not user or not user.is_active:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found or inactive.")
 
+        token_session_version = payload.get("session_version")
+        if token_session_version is not None and getattr(user, "session_version", None) is not None:
+            if token_session_version < user.session_version:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Refresh token invalidated due to password reset or session revocation."
+                )
+
         token_hash = hashlib.sha256(refresh_token_str.encode("utf-8")).hexdigest()
         
         # P1.3 REUSE DETECTION: Check if token was previously consumed
@@ -465,8 +486,9 @@ class AuthService:
         self.db.commit()
 
         # Issue rotated token pair
-        new_access = create_access_token(subject=str(user.id))
-        new_refresh = create_refresh_token(subject=str(user.id))
+        sv = getattr(user, "session_version", 1) or 1
+        new_access = create_access_token(subject=str(user.id), session_version=sv)
+        new_refresh = create_refresh_token(subject=str(user.id), session_version=sv)
         user_response = self._build_user_response(user)
 
         return TokenResponse(

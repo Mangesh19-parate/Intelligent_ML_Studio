@@ -220,8 +220,12 @@ class AdminService:
 
         temp_password = secrets.token_urlsafe(12) + "A1!"
         user.password_hash = get_password_hash(temp_password)
+        user.session_version = (user.session_version or 1) + 1
+        user.password_changed_at = datetime.now(timezone.utc)
         
         # Invalidate active sessions by adding an all-session revocation record
+        import hashlib
+        from datetime import timedelta
         from app.models.revoked_token import RevokedToken
         revocation_marker = RevokedToken(
             id=uuid4(),

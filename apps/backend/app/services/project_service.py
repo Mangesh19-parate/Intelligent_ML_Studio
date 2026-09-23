@@ -48,7 +48,7 @@ class ProjectService:
         project = Project(
             owner_id=current_user.id,
             project_name=payload.project_name.strip(),
-            task_type="UNDETERMINED",
+            task_type=payload.task_type or "UNDETERMINED",
             target_column=payload.target_column.strip() if payload.target_column else None,
             pipeline_stage="DATA",
             data_quality_index=None,  # Stays null on Day 1

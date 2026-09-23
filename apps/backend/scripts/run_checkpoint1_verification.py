@@ -193,6 +193,7 @@ def run_live_checkpoint_1():
     profiling_service = DataProfilingService(db)
     # Inject tracked split_service
     profiling_service.split_service = split_service
+    profiling_service.task_type_service.split_service = split_service
     profile_result = profiling_service.generate_report(dataset.id)
 
     print(f"[OK] Step 3: Data Profiling Complete.")

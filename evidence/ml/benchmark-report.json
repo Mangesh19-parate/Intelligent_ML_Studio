@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-09-23T14:55:10.628040+00:00",
+  "generated_at": "2026-09-23T15:48:59.738082+00:00",
   "fingerprint": {
-    "commit": "591ac2fb7304393923c4df94768d9de9204d5899",
+    "commit": "3670b11ae1c03d7de2e09a2978c682490f76cb42",
     "dirty_worktree": true,
     "python_version": "3.13.14",
     "platform": "win32",
@@ -16,15 +16,15 @@
       "rows": 20640,
       "features": 8,
       "champion_algorithm": "RandomForestRegressor",
-      "single_fit_training_time_s": 0.796,
+      "single_fit_training_time_s": 0.797,
       "peak_training_traced_ram_mb": 1.46,
-      "process_rss_mb": 248.58,
+      "process_rss_mb": 248.68,
       "artifact_size_mb": 17.25,
       "measured": true,
       "in_process_prediction_latency_ms": {
         "p50_ms": 1.01,
-        "p95_ms": 1.23,
-        "p99_ms": 1.35,
+        "p95_ms": 1.15,
+        "p99_ms": 1.4,
         "raw_observations_count": 100
       }
     },
@@ -34,23 +34,23 @@
       "rows": 2000,
       "features": 12,
       "champion_algorithm": "GradientBoostingClassifier",
-      "single_fit_training_time_s": 0.085,
+      "single_fit_training_time_s": 0.084,
       "peak_training_traced_ram_mb": 0.27,
-      "process_rss_mb": 233.77,
+      "process_rss_mb": 233.6,
       "artifact_size_mb": 0.04,
       "measured": true,
       "in_process_prediction_latency_ms": {
-        "p50_ms": 0.64,
-        "p95_ms": 0.82,
-        "p99_ms": 1.02,
+        "p50_ms": 0.63,
+        "p95_ms": 0.95,
+        "p99_ms": 1.19,
         "raw_observations_count": 100
       }
     }
   ],
   "pooled_in_process_latency_percentiles": {
-    "p50_ms": 0.94,
-    "p95_ms": 1.2,
-    "p99_ms": 1.31,
+    "p50_ms": 0.97,
+    "p95_ms": 1.14,
+    "p99_ms": 1.25,
     "total_observations": 200
   }
 }

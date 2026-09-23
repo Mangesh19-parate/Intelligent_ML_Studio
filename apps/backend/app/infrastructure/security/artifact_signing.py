@@ -187,12 +187,7 @@ def save_signed_model_to_storage(
     manifest_bytes = json.dumps(manifest_data, indent=2).encode("utf-8")
     storage_svc.save_bytes(manifest_key, manifest_bytes)
 
-    try:
-        actual_path = storage_svc.get_file_path(clean_key)
-    except Exception:
-        actual_path = clean_key
-
-    return actual_path, file_hash, signature
+    return clean_key, file_hash, signature
 
 
 def load_signed_model_from_storage(

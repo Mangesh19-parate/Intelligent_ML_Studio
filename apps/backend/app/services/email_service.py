@@ -148,6 +148,6 @@ class EmailService:
                 logger.info(f"[EMAIL 2FA] Successfully sent SMTP email to {to_email}")
             except Exception as e:
                 logger.error(f"[EMAIL 2FA] Failed to send SMTP email to {to_email}: {e}")
-                return True
+                return False
 
         return True

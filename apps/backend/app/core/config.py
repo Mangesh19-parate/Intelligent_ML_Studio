@@ -63,7 +63,7 @@ class Settings(BaseSettings):
         description="Object storage backend: 'local' or 's3'"
     )
     STORAGE_LOCAL_DIR: str = Field(
-        default="./data",
+        default=".",
         description="Base directory for local object storage"
     )
     S3_BUCKET_NAME: str = Field(

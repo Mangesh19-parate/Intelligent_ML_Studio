@@ -209,7 +209,8 @@ class AdminService:
 
     def reset_user_password(self, user_id: PyUUID | str) -> dict[str, str]:
         """
-        Resets a user's password securely and generates a temporary password.
+        Resets a user's password securely, generating a high-entropy temporary password,
+        invalidating all active refresh tokens, and recording a security audit event.
         """
         import secrets
         uid = PyUUID(str(user_id)) if not isinstance(user_id, PyUUID) else user_id
@@ -217,11 +218,22 @@ class AdminService:
         if not user:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
-        temp_password = secrets.token_urlsafe(10) + "A1!"
+        temp_password = secrets.token_urlsafe(12) + "A1!"
         user.password_hash = get_password_hash(temp_password)
+        
+        # Invalidate active sessions by adding an all-session revocation record
+        from app.models.revoked_token import RevokedToken
+        revocation_marker = RevokedToken(
+            id=uuid4(),
+            user_id=user.id,
+            token_hash=hashlib.sha256(f"all_sessions_reset_{user.id}_{datetime.now(timezone.utc).isoformat()}".encode("utf-8")).hexdigest(),
+            revoked_at=datetime.now(timezone.utc),
+            expires_at=datetime.now(timezone.utc) + timedelta(days=30),
+        )
+        self.db.add(revocation_marker)
         self.db.commit()
         return {
-            "message": "Password reset successfully",
+            "message": "Password reset successfully. Active sessions revoked.",
             "temporary_password": temp_password,
             "email": user.email,
         }

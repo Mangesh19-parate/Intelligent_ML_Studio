@@ -33,6 +33,7 @@ htmlcov/
 backend/data/
 apps/backend/data/
 research/data/
+models/
 !frontend/src/components/data/
 !frontend/src/data/
 !apps/frontend/src/components/data/

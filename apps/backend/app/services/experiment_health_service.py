@@ -125,16 +125,18 @@ class ExperimentHealthService:
                 fs_cfg = exp_cfg.get("feature_selection", {}) if isinstance(exp_cfg, dict) else {}
                 evidence_strength = fs_cfg.get("evidence_strength", "STRONG")
 
-        # 4. Verify Disk Artifact Checksum
+        # 4. Verify Storage Artifact Checksum
         checksum_status = "PENDING"
         artifact_checksum_val: str | None = None
         if champion_model:
             artifact_checksum_val = champion_model.artifact_checksum
             if champion_model.artifact_path:
-                p = Path(champion_model.artifact_path)
-                if p.exists() and p.is_file():
-                    try:
-                        computed_hash = hashlib.sha256(p.read_bytes()).hexdigest()
+                try:
+                    from app.infrastructure.storage.object_store import get_storage_service
+                    storage = get_storage_service()
+                    if storage.exists(champion_model.artifact_path):
+                        data_bytes = storage.get_file_bytes(champion_model.artifact_path)
+                        computed_hash = hashlib.sha256(data_bytes).hexdigest()
                         if artifact_checksum_val and computed_hash == artifact_checksum_val:
                             checksum_status = "VERIFIED"
                         elif not artifact_checksum_val:
@@ -142,10 +144,10 @@ class ExperimentHealthService:
                             artifact_checksum_val = computed_hash
                         else:
                             checksum_status = "MISMATCH"
-                    except Exception:
-                        checksum_status = "VERIFIED" if artifact_checksum_val else "PENDING"
-                else:
-                    checksum_status = "MISSING" if artifact_checksum_val else "PENDING"
+                    else:
+                        checksum_status = "MISSING" if artifact_checksum_val else "PENDING"
+                except Exception:
+                    checksum_status = "VERIFIED" if artifact_checksum_val else "PENDING"
             else:
                 checksum_status = "VERIFIED" if artifact_checksum_val else "PENDING"
 

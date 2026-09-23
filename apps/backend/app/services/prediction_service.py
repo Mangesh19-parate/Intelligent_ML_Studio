@@ -80,48 +80,27 @@ class PredictionService:
             )
 
         from app.infrastructure.storage.object_store import get_storage_service
+        from app.core.artifact_signing import load_signed_model_from_storage, SecurityError
         storage = get_storage_service()
-        try:
-            artifact_file = Path(storage.get_file_path(model.artifact_path))
-        except Exception as e:
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail=f"Model artifact file not found for '{model.artifact_path}': {e}",
-            )
-
-        if not artifact_file.exists():
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail=f"Model artifact file not found at '{model.artifact_path}'.",
-            )
-
-
-        # Cryptographic Checksum Verification on cold load
-        hasher = hashlib.sha256()
-        with open(artifact_file, "rb") as f:
-            while chunk := f.read(65536):
-                hasher.update(chunk)
-        disk_checksum = hasher.hexdigest()
-
-        if model.artifact_checksum and disk_checksum != model.artifact_checksum:
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail=f"Artifact integrity check failed on cold load: SHA-256 mismatch ({disk_checksum[:12]}... != {model.artifact_checksum[:12]}...).",
-            )
 
         try:
-            from app.core.artifact_signing import verify_and_load_model_artifact
-            artifact = verify_and_load_model_artifact(
-                artifact_file,
-                allow_unsigned_fixtures=settings.ENV in ("testing", "development")
+            artifact = load_signed_model_from_storage(
+                model.artifact_path,
+                storage=storage,
+                allow_unsigned_fixtures=settings.ENV in ("testing", "development"),
+            )
+        except SecurityError as sec_err:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=str(sec_err),
             )
         except Exception as e:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail=f"Cryptographic verification or deserialization failed for model artifact: {str(e)}",
+                detail=f"Model artifact file not found or load failed for '{model.artifact_path}': {e}",
             )
 
-        self._model_cache[dep_id_str] = (model.artifact_checksum or disk_checksum, artifact)
+        self._model_cache[dep_id_str] = (model.artifact_checksum or "loaded", artifact)
         return artifact
 
     def validate_schema(self, deployment: Deployment, payload: dict[str, Any]) -> dict[str, str]:
@@ -228,9 +207,12 @@ class PredictionService:
                 df_single[col] = np.nan
         df_single = df_single[feature_names_in]
 
-        X_trans = transformer.transform(df_single)
-        if hasattr(X_trans, "toarray"):
-            X_trans = X_trans.toarray()
+        if transformer is not None:
+            X_trans = transformer.transform(df_single)
+            if hasattr(X_trans, "toarray"):
+                X_trans = X_trans.toarray()
+        else:
+            X_trans = df_single.to_numpy(dtype=np.float64)
 
         if selected_indices:
             X_instance = X_trans[:, selected_indices]

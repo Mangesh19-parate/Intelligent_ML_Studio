@@ -934,28 +934,9 @@ class ExperimentService:
                 if hasattr(X_train_trans, "toarray"):
                     X_train_trans = X_train_trans.toarray()
 
-                # Robust numeric conversion for feature selection
-                if isinstance(X_train_trans, pd.DataFrame):
-                    df_num = X_train_trans.copy()
-                    for c in df_num.columns:
-                        if not pd.api.types.is_numeric_dtype(df_num[c]):
-                            df_num[c] = pd.factorize(df_num[c])[0].astype(np.float64)
-                    X_train_trans = df_num.to_numpy(dtype=np.float64)
-                else:
-                    X_arr = np.asarray(X_train_trans)
-                    if not np.issubdtype(X_arr.dtype, np.number):
-                        n_rows, n_cols = X_arr.shape
-                        num_matrix = np.zeros((n_rows, n_cols), dtype=np.float64)
-                        for j in range(n_cols):
-                            col_data = X_arr[:, j]
-                            try:
-                                num_matrix[:, j] = col_data.astype(np.float64)
-                            except (ValueError, TypeError):
-                                codes, _ = pd.factorize(col_data)
-                                num_matrix[:, j] = codes.astype(np.float64)
-                        X_train_trans = num_matrix
-                    else:
-                        X_train_trans = np.asarray(X_arr, dtype=np.float64)
+                # Robust numeric conversion for feature selection (leakage-safe encoding)
+                from app.services.transformers import safely_encode_matrix_pair
+                X_train_trans, _ = safely_encode_matrix_pair(X_train_trans)
 
                 fallback_imputer = SimpleImputer(strategy="mean")
                 X_train_trans = fallback_imputer.fit_transform(X_train_trans)
@@ -1092,30 +1073,8 @@ class ExperimentService:
 
                 # Transform fold validation slice using the fold's fitted transformer
                 X_val_trans = transformer.transform(X_val_fold)
-                if hasattr(X_val_trans, "toarray"):
-                    X_val_trans = X_val_trans.toarray()
-
-                if isinstance(X_val_trans, pd.DataFrame):
-                    df_v = X_val_trans.copy()
-                    for c in df_v.columns:
-                        if not pd.api.types.is_numeric_dtype(df_v[c]):
-                            df_v[c] = pd.factorize(df_v[c])[0].astype(np.float64)
-                    X_val_trans = df_v.to_numpy(dtype=np.float64)
-                else:
-                    X_v_arr = np.asarray(X_val_trans)
-                    if not np.issubdtype(X_v_arr.dtype, np.number):
-                        n_r, n_c = X_v_arr.shape
-                        num_m = np.zeros((n_r, n_c), dtype=np.float64)
-                        for j in range(n_c):
-                            col_d = X_v_arr[:, j]
-                            try:
-                                num_m[:, j] = col_d.astype(np.float64)
-                            except (ValueError, TypeError):
-                                codes, _ = pd.factorize(col_d)
-                                num_m[:, j] = codes.astype(np.float64)
-                        X_val_trans = num_m
-                    else:
-                        X_val_trans = np.asarray(X_v_arr, dtype=np.float64)
+                from app.services.transformers import safely_encode_matrix_pair
+                _, X_val_trans = safely_encode_matrix_pair(X_train_trans, X_val_trans)
 
                 # Strictly transform-only on validation (NO fit_transform)
                 if np.isnan(X_val_trans).any():
@@ -1487,27 +1446,8 @@ class ExperimentService:
         if hasattr(X_dev_trans, "toarray"):
             X_dev_trans = X_dev_trans.toarray()
 
-        if isinstance(X_dev_trans, pd.DataFrame):
-            df_num = X_dev_trans.copy()
-            for c in df_num.columns:
-                if not pd.api.types.is_numeric_dtype(df_num[c]):
-                    df_num[c] = pd.factorize(df_num[c])[0].astype(np.float64)
-            X_dev_trans = df_num.to_numpy(dtype=np.float64)
-        else:
-            X_arr = np.asarray(X_dev_trans)
-            if not np.issubdtype(X_arr.dtype, np.number):
-                n_rows, n_cols = X_arr.shape
-                num_matrix = np.zeros((n_rows, n_cols), dtype=np.float64)
-                for j in range(n_cols):
-                    col_data = X_arr[:, j]
-                    try:
-                        num_matrix[:, j] = col_data.astype(np.float64)
-                    except (ValueError, TypeError):
-                        codes, _ = pd.factorize(col_data)
-                        num_matrix[:, j] = codes.astype(np.float64)
-                X_dev_trans = num_matrix
-            else:
-                X_dev_trans = np.asarray(X_arr, dtype=np.float64)
+        from app.services.transformers import safely_encode_matrix_pair
+        X_dev_trans, _ = safely_encode_matrix_pair(X_dev_trans)
 
         fallback_imp = None
         if np.isnan(X_dev_trans).any():
@@ -1563,10 +1503,8 @@ class ExperimentService:
         )
         experiment.feature_selection_snapshot_id = fs_snapshot.id
 
-        # Day 8 / Day 2 (P0): Atomic Artifact Save: Write Artifact -> Verify Checksum -> Commit trained_models row
-        artifact_dir = Path(settings.STORAGE_LOCAL_DIR) / "models" / str(project.id) / str(experiment.id)
-        artifact_dir.mkdir(parents=True, exist_ok=True)
-        artifact_file = artifact_dir / f"{winning_model.algorithm_name}.joblib"
+        # Day 8 / Day 2 (P0): Atomic Artifact Save to StorageService (S3 / Object Store)
+        storage_key = f"models/{project.id}/{experiment.id}/{winning_model.id}/model.joblib"
 
         fitted_pipeline = {
             "algorithm_name": winning_model.algorithm_name,
@@ -1582,34 +1520,28 @@ class ExperimentService:
         }
 
         try:
-            # 1. WRITE & SIGN ARTIFACT (P1.4 Cryptographic Manifest)
-            from app.core.artifact_signing import save_signed_model_artifact
-            artifact_checksum = save_signed_model_artifact(
+            # 1. WRITE & SIGN ARTIFACT (P1.4 Cryptographic Manifest) via StorageService
+            from app.core.artifact_signing import save_signed_model_to_storage
+            from app.infrastructure.storage.object_store import get_storage_service
+            storage_svc = get_storage_service()
+
+            clean_key, artifact_checksum, signature = save_signed_model_to_storage(
                 artifact=fitted_pipeline,
-                file_path=artifact_file,
+                storage_key=storage_key,
+                storage=storage_svc,
                 metadata={
                     "model_id": str(winning_model.id),
                     "experiment_id": str(experiment.id),
+                    "project_id": str(project.id),
                     "algorithm": winning_model.algorithm_name,
                 }
             )
 
-            if not artifact_file.exists():
-                raise IOError(f"Artifact file '{artifact_file}' was not created on disk.")
-
             if not artifact_checksum or len(artifact_checksum) != 64:
                 raise ValueError(f"Computed invalid SHA-256 checksum: {artifact_checksum}")
 
-            # Re-read verification to guarantee disk integrity
-            verify_hasher = hashlib.sha256()
-            with open(artifact_file, "rb") as f:
-                while chunk := f.read(65536):
-                    verify_hasher.update(chunk)
-            if verify_hasher.hexdigest() != artifact_checksum:
-                raise ValueError("Artifact checksum re-verification failed immediately after write.")
-
             # 3. TRANSITION TO ARTIFACT_VERIFIED AND COMMIT TRAINED_MODELS ROW
-            winning_model.artifact_path = str(artifact_file)
+            winning_model.artifact_path = clean_key
             winning_model.artifact_checksum = artifact_checksum
             winning_model.feature_selection_snapshot_id = fs_snapshot.id
             winning_model.status = ModelState.ARTIFACT_VERIFIED.value
@@ -1640,19 +1572,25 @@ class ExperimentService:
             cleanup_failed = False
             cleanup_error_msg = None
 
-            # Attempt to clean up orphaned/partial file on disk
-            if artifact_file.exists():
-                try:
-                    artifact_file.unlink()
-                    logger.info(f"Successfully cleaned up orphaned artifact file '{artifact_file}' following DB commit failure.")
-                except Exception as cleanup_err:
-                    cleanup_failed = True
-                    cleanup_error_msg = str(cleanup_err)
-                    ORPHANED_RECOVERABLE_REGISTRY.add(str(artifact_file))
-                    logger.error(
-                        f"[ORPHANED_RECOVERABLE] Failed to delete orphaned artifact file at '{artifact_file}' "
-                        f"after DB commit failure: {cleanup_err}. File marked as ORPHANED_RECOVERABLE for background scavenger."
-                    )
+            # Attempt to clean up orphaned/partial file in storage and local mirror
+            try:
+                from app.infrastructure.storage.object_store import get_storage_service
+                get_storage_service().delete_file(storage_key)
+                manifest_key = str(Path(storage_key).with_suffix(".manifest.json")).replace("\\", "/")
+                get_storage_service().delete_file(manifest_key)
+                if Path(storage_key).exists():
+                    Path(storage_key).unlink()
+                if Path(manifest_key).exists():
+                    Path(manifest_key).unlink()
+                logger.info(f"Successfully cleaned up orphaned storage object '{storage_key}' following DB commit failure.")
+            except Exception as cleanup_err:
+                cleanup_failed = True
+                cleanup_error_msg = str(cleanup_err)
+                ORPHANED_RECOVERABLE_REGISTRY.add(storage_key)
+                logger.error(
+                    f"[ORPHANED_RECOVERABLE] Failed to delete orphaned storage object at '{storage_key}' "
+                    f"after DB commit failure: {cleanup_err}."
+                )
 
             # Mark experiment as ARTIFACT_WRITE_FAILED
             try:
@@ -1731,27 +1669,8 @@ class ExperimentService:
         if hasattr(X_test_trans, "toarray"):
             X_test_trans = X_test_trans.toarray()
 
-        if isinstance(X_test_trans, pd.DataFrame):
-            df_t = X_test_trans.copy()
-            for c in df_t.columns:
-                if not pd.api.types.is_numeric_dtype(df_t[c]):
-                    df_t[c] = pd.factorize(df_t[c])[0].astype(np.float64)
-            X_test_trans = df_t.to_numpy(dtype=np.float64)
-        else:
-            X_t_arr = np.asarray(X_test_trans)
-            if not np.issubdtype(X_t_arr.dtype, np.number):
-                n_r, n_c = X_t_arr.shape
-                num_m = np.zeros((n_r, n_c), dtype=np.float64)
-                for j in range(n_c):
-                    col_d = X_t_arr[:, j]
-                    try:
-                        num_m[:, j] = col_d.astype(np.float64)
-                    except (ValueError, TypeError):
-                        codes, _ = pd.factorize(col_d)
-                        num_m[:, j] = codes.astype(np.float64)
-                X_test_trans = num_m
-            else:
-                X_test_trans = np.asarray(X_t_arr, dtype=np.float64)
+        from app.services.transformers import safely_encode_matrix_pair
+        X_test_trans, _ = safely_encode_matrix_pair(X_test_trans)
 
         # CRITICAL P0 INVARIANT: Zero learned operations / fitting on Locked Test
         dev_fallback_imp = fitted_pipeline.get("fallback_imputer")

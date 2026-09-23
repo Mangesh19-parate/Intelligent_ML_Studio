@@ -69,21 +69,21 @@ class DeploymentService:
                 detail=f"Deployment gate check failed. Unmet conditions: {', '.join(failed_conditions)}",
             )
 
-        # Confirm artifact exists and checksum is verified on disk
-        if not model.artifact_path or not Path(model.artifact_path).exists():
+        # Confirm artifact exists and checksum is verified in storage
+        from app.infrastructure.storage.object_store import get_storage_service
+        storage = get_storage_service()
+        if not model.artifact_path or not storage.exists(model.artifact_path):
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail="Model artifact file missing from disk. Deployment rejected.",
+                detail="Model artifact file missing from storage. Deployment rejected.",
             )
 
-        hasher = hashlib.sha256()
-        with open(model.artifact_path, "rb") as f:
-            while chunk := f.read(65536):
-                hasher.update(chunk)
-        if model.artifact_checksum and hasher.hexdigest() != model.artifact_checksum:
+        model_bytes = storage.get_file_bytes(model.artifact_path)
+        actual_hash = hashlib.sha256(model_bytes).hexdigest()
+        if model.artifact_checksum and actual_hash != model.artifact_checksum:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail="Model artifact checksum mismatch on disk. Deployment rejected due to failed artifact integrity.",
+                detail="Model artifact checksum mismatch in storage. Deployment rejected due to failed artifact integrity.",
             )
 
         deployment_id = uuid.uuid4()

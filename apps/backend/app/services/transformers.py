@@ -348,3 +348,81 @@ class FoldScopedFeatureExtractor(BaseEstimator, TransformerMixin):
     def get_feature_names_out(self, input_features=None):
         check_is_fitted(self, ["n_components_"])
         return np.array([f"pca_component_{i+1}" for i in range(self.n_components_)], dtype=str)
+
+
+def safely_encode_matrix_pair(X_train: Any, X_eval: Any | None = None) -> tuple[np.ndarray, np.ndarray | None]:
+    """
+    Robust numeric conversion for feature matrices and unencoded passthrough columns.
+    Enforces categorical encoding consistency:
+    - Learns category value -> code mapping strictly from X_train.
+    - Applies mapping to X_eval with unseen categories deterministically mapped to -1.0.
+    """
+    if hasattr(X_train, "toarray"):
+        X_train = X_train.toarray()
+    if X_eval is not None and hasattr(X_eval, "toarray"):
+        X_eval = X_eval.toarray()
+
+    if isinstance(X_train, pd.DataFrame):
+        df_tr = X_train.copy()
+        df_ev = X_eval.copy() if isinstance(X_eval, pd.DataFrame) else None
+        
+        for c in df_tr.columns:
+            if not pd.api.types.is_numeric_dtype(df_tr[c]):
+                unique_vals = [x for x in df_tr[c].dropna().unique()]
+                mapping = {val: float(idx) for idx, val in enumerate(unique_vals)}
+                df_tr[c] = df_tr[c].map(mapping).fillna(-1.0).astype(np.float64)
+                if df_ev is not None and c in df_ev.columns:
+                    df_ev[c] = df_ev[c].map(mapping).fillna(-1.0).astype(np.float64)
+            else:
+                df_tr[c] = pd.to_numeric(df_tr[c], errors="coerce").fillna(0.0).astype(np.float64)
+                if df_ev is not None and c in df_ev.columns:
+                    df_ev[c] = pd.to_numeric(df_ev[c], errors="coerce").fillna(0.0).astype(np.float64)
+
+        X_tr_out = df_tr.to_numpy(dtype=np.float64)
+        X_ev_out = df_ev.to_numpy(dtype=np.float64) if df_ev is not None else None
+        return X_tr_out, X_ev_out
+
+    # Array / Matrix path
+    X_tr_arr = np.asarray(X_train)
+    X_ev_arr = np.asarray(X_eval) if X_eval is not None else None
+
+    tr_is_num = np.issubdtype(X_tr_arr.dtype, np.number)
+    ev_is_num = X_ev_arr is None or np.issubdtype(X_ev_arr.dtype, np.number)
+
+    if not tr_is_num or not ev_is_num:
+        tr_2d = X_tr_arr if X_tr_arr.ndim > 1 else X_tr_arr.reshape(-1, 1)
+        ev_2d = (X_ev_arr if X_ev_arr.ndim > 1 else X_ev_arr.reshape(-1, 1)) if X_ev_arr is not None else None
+
+        n_rows_tr, n_cols_tr = tr_2d.shape
+        num_tr = np.zeros((n_rows_tr, n_cols_tr), dtype=np.float64)
+        num_ev = np.zeros(ev_2d.shape, dtype=np.float64) if ev_2d is not None else None
+
+        for j in range(n_cols_tr):
+            col_tr = tr_2d[:, j]
+            col_ev = ev_2d[:, j] if ev_2d is not None and j < ev_2d.shape[1] else None
+
+            try:
+                num_tr[:, j] = col_tr.astype(np.float64)
+                tr_col_numeric = True
+            except (ValueError, TypeError):
+                tr_col_numeric = False
+                uniques = [x for x in pd.Series(col_tr).dropna().unique()]
+                mapping = {val: float(idx) for idx, val in enumerate(uniques)}
+                num_tr[:, j] = pd.Series(col_tr).map(mapping).fillna(-1.0).to_numpy(dtype=np.float64)
+
+            if col_ev is not None:
+                if tr_col_numeric:
+                    try:
+                        num_ev[:, j] = col_ev.astype(np.float64)
+                    except (ValueError, TypeError):
+                        num_ev[:, j] = pd.to_numeric(pd.Series(col_ev), errors="coerce").fillna(-1.0).to_numpy(dtype=np.float64)
+                else:
+                    num_ev[:, j] = pd.Series(col_ev).map(mapping).fillna(-1.0).to_numpy(dtype=np.float64)
+
+        out_tr = num_tr if X_tr_arr.ndim > 1 else num_tr.ravel()
+        out_ev = (num_ev if X_ev_arr.ndim > 1 else num_ev.ravel()) if num_ev is not None else None
+        return out_tr, out_ev
+
+    X_tr_out = np.asarray(X_tr_arr, dtype=np.float64)
+    X_ev_out = np.asarray(X_ev_arr, dtype=np.float64) if X_ev_arr is not None else None
+    return X_tr_out, X_ev_out

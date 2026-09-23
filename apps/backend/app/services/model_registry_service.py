@@ -143,28 +143,14 @@ class ModelRegistryService:
             )
 
         from app.infrastructure.storage.object_store import get_storage_service
+        from app.core.artifact_signing import load_signed_model_from_storage, SecurityError
         storage = get_storage_service()
+
         try:
-            artifact_file = Path(storage.get_file_path(model.artifact_path))
-        except Exception as e:
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail=f"Model artifact file not found for '{model.artifact_path}': {e}",
-            )
-
-        if not artifact_file.exists():
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail=f"Model artifact file not found at '{model.artifact_path}'",
-            )
-
-
-        # Cryptographic Checksum and HMAC Signature Verification
-        from app.core.artifact_signing import verify_and_load_model_artifact, SecurityError
-        try:
-            artifact = verify_and_load_model_artifact(
-                artifact_file,
-                allow_unsigned_fixtures=settings.ENV in ("testing", "development")
+            artifact = load_signed_model_from_storage(
+                model.artifact_path,
+                storage=storage,
+                allow_unsigned_fixtures=settings.ENV in ("testing", "development"),
             )
         except SecurityError as sec_err:
             raise HTTPException(
@@ -174,7 +160,7 @@ class ModelRegistryService:
         except Exception as e:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail=f"Failed to load model artifact: {str(e)}",
+                detail=f"Failed to load model artifact for '{model.artifact_path}': {str(e)}",
             )
 
         buffer = io.BytesIO()

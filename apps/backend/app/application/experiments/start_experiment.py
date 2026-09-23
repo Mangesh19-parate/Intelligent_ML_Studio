@@ -53,10 +53,11 @@ def start_experiment_use_case(
         db=db,
     )
 
-    exp_repo.update_status(exp.id, "QUEUED")
+    exp_repo.update_status(exp.id, ExperimentState.TRAINING.value)
 
     return {
         "experiment_id": str(exp.id),
         "task_id": str(record.task_id),
-        "status": "QUEUED",
+        "task_state": "QUEUED",
+        "status": ExperimentState.TRAINING.value,
     }

@@ -82,7 +82,20 @@ def create_experiment(
             "min_value": None,
         }
 
-    # Create Experiment shell record in CREATED status
+    frozen_config = {
+        "task_type": project.task_type,
+        "target": project.target_column,
+        "algorithms": canonical_algs,
+        "cv": {
+            "folds": payload.folds,
+            "seed": cv_seed,
+        },
+        "selection_metric": eff_metric,
+        "selection_direction": eff_direction,
+        "deployment_threshold": dep_threshold,
+    }
+
+    # Create Experiment shell record in CREATED status with frozen immutable configuration
     experiment = exp_repo.create_experiment(
         project_id=project.id,
         task_type=project.task_type,
@@ -91,6 +104,8 @@ def create_experiment(
         selection_metric=eff_metric,
         selection_direction=eff_direction,
         status=ExperimentState.CREATED.value,
+        experiment_config=frozen_config,
+        dataset_content_hash=getattr(project, "dataset_content_hash", None),
         deployment_threshold_frozen_at_creation=True,
     )
 

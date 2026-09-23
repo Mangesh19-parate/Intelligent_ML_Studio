@@ -78,24 +78,22 @@ class DeploymentGateService:
         schema_locked = bool(schema and len(schema) > 0)
 
         # 3. Condition: artifact_verified
-        # Live disk check: artifact exists, SHA-256 checksum matches, and HMAC signature is verified
+        # Retrieve bytes and manifest through StorageService, verify SHA-256 and HMAC
         artifact_verified = False
         if model.artifact_path and model.artifact_checksum:
-            artifact_file = Path(model.artifact_path)
-            if artifact_file.exists():
-                hasher = hashlib.sha256()
-                with open(artifact_file, "rb") as f:
-                    while chunk := f.read(65536):
-                        hasher.update(chunk)
-                disk_checksum = hasher.hexdigest()
-                if disk_checksum == model.artifact_checksum:
-                    manifest_file = artifact_file.with_suffix(".manifest.json")
-                    if manifest_file.exists():
-                        try:
+            try:
+                from app.infrastructure.storage.object_store import get_storage_service
+                storage = get_storage_service()
+                if storage.exists(model.artifact_path):
+                    model_bytes = storage.get_file_bytes(model.artifact_path)
+                    disk_checksum = hashlib.sha256(model_bytes).hexdigest()
+                    if disk_checksum == model.artifact_checksum:
+                        manifest_key = str(Path(model.artifact_path).with_suffix(".manifest.json")).replace("\\", "/")
+                        if storage.exists(manifest_key):
                             import json
                             import hmac
-                            with open(manifest_file, "r", encoding="utf-8") as mf:
-                                mdata = json.load(mf)
+                            manifest_bytes = storage.get_file_bytes(manifest_key)
+                            mdata = json.loads(manifest_bytes.decode("utf-8"))
                             expected_sig = mdata.get("signature")
                             computed_sig = hmac.new(
                                 settings.ARTIFACT_SIGNING_KEY.encode("utf-8"),
@@ -103,11 +101,12 @@ class DeploymentGateService:
                                 hashlib.sha256
                             ).hexdigest()
                             artifact_verified = bool(expected_sig and hmac.compare_digest(computed_sig, expected_sig))
-                        except Exception:
-                            artifact_verified = False
-                    else:
-                        # Non-production allows legacy unmanifested artifacts, production requires manifest
-                        artifact_verified = (settings.ENV.lower() != "production")
+                        else:
+                            # Non-production allows legacy unmanifested artifacts, production requires manifest
+                            artifact_verified = (settings.ENV.lower() != "production")
+            except Exception as e:
+                logger.warning(f"Deployment gate artifact verification failed: {e}")
+                artifact_verified = False
 
         # 4. Condition: lineage_complete
         # Experiment config, snapshots, and environment metadata non-null

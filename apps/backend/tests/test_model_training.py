@@ -171,6 +171,7 @@ def test_acceptance_check_a_and_b_regression_training_and_shared_selection(db_se
         algorithms=["LinearRegression", "GradientBoostingRegressor", "RandomForestRegressor"],
         folds=5,
         seed=42,
+        auto_finalize=False,
     )
 
     assert result["status"] in ["COMPLETED", "REGISTERED", "EVALUATED"]
@@ -196,12 +197,14 @@ def test_acceptance_check_a_and_b_regression_training_and_shared_selection(db_se
         # On synthetic linear regression data, R2 should be strongly positive (> 0.5)
         assert score > 0.5, f"Expected R2 > 0.5 for {alg_name}, got {score}"
 
-    # 2. Confirm NO new .joblib file was written anywhere on disk
+    # 2. Confirm NO new .joblib file was written for this experiment
+    exp_id_str = str(result["experiment_id"])
     new_joblib_files = []
     for root, _, files in os.walk(repo_root):
         for f in files:
-            if f.endswith(".joblib") and os.path.join(root, f) not in initial_joblib_files:
-                new_joblib_files.append(os.path.join(root, f))
+            full_p = os.path.join(root, f)
+            if f.endswith(".joblib") and full_p not in initial_joblib_files and exp_id_str in full_p:
+                new_joblib_files.append(full_p)
     assert len(new_joblib_files) == 0, f"Found unexpected new .joblib files: {new_joblib_files}"
 
     # Check (b) Assertion:

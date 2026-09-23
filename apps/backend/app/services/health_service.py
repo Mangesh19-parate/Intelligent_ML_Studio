@@ -222,6 +222,56 @@ class HealthService:
                 details={"error": str(e)},
             )
 
+    def check_worker(self, db: Session | None = None) -> SubsystemHealth:
+        start = time.perf_counter()
+        session = db or self.db
+        if not session:
+            return SubsystemHealth(
+                status="DOWN",
+                latency_ms=0.0,
+                details={"error": "Database session unavailable for worker health probe"},
+            )
+        try:
+            from app.models.durable_task import DurableTask
+            from datetime import timedelta
+            now = datetime.now(timezone.utc)
+            active_tasks = (
+                session.query(DurableTask)
+                .filter(
+                    DurableTask.state == "RUNNING",
+                    DurableTask.heartbeat_at >= (now - timedelta(seconds=60)),
+                )
+                .all()
+            )
+            stale_tasks = (
+                session.query(DurableTask)
+                .filter(
+                    DurableTask.state == "RUNNING",
+                    DurableTask.lease_expires_at < now,
+                )
+                .count()
+            )
+            latency_ms = round((time.perf_counter() - start) * 1000, 2)
+            active_worker_ids = list({t.worker_id for t in active_tasks if t.worker_id})
+
+            return SubsystemHealth(
+                status="UP",
+                latency_ms=latency_ms,
+                details={
+                    "active_worker_count": len(active_worker_ids),
+                    "active_workers": active_worker_ids,
+                    "running_tasks": len(active_tasks),
+                    "stale_tasks_pending_recovery": stale_tasks,
+                },
+            )
+        except Exception as e:
+            latency_ms = round((time.perf_counter() - start) * 1000, 2)
+            return SubsystemHealth(
+                status="DOWN",
+                latency_ms=latency_ms,
+                details={"error": str(e)},
+            )
+
     def check_readiness(self, db: Session | None = None) -> Tuple[bool, ReadinessResponse]:
         db_health = self.check_database(db)
         storage_health = self.check_storage()
@@ -250,12 +300,14 @@ class HealthService:
         db_health = self.check_database(db)
         storage_health = self.check_storage()
         task_health = self.check_task_queue(db)
+        worker_health = self.check_worker(db)
         ml_health = self.check_ml_runtime()
 
         dependencies = {
             "database": db_health,
             "storage": storage_health,
             "task_queue": task_health,
+            "worker": worker_health,
             "ml_runtime": ml_health,
         }
 

@@ -277,6 +277,13 @@ def main():
     print(f"{'Total Verification Duration':<48} | {total_time:>8.2f}s |", flush=True)
     print("=" * 80, flush=True)
     
+    if not is_clean:
+        release_verdict = "DEVELOPMENT_MODE_UNCERTIFIED"
+    elif all_passed:
+        release_verdict = "ZERO_KNOWN_DEFECT_CERTIFIED"
+    else:
+        release_verdict = "RELEASE_BLOCKED"
+
     # Save Immutable Verification Certificate
     EVIDENCE_DIR.mkdir(parents=True, exist_ok=True)
     certificate = {
@@ -285,8 +292,9 @@ def main():
         "git_commit": get_git_commit(),
         "verified_at": datetime.now(timezone.utc).isoformat(),
         "total_duration_seconds": round(total_time, 2),
+        "clean_worktree": is_clean,
         "stages": stages_record,
-        "release_verdict": "ZERO_KNOWN_DEFECT_CERTIFIED" if all_passed else "RELEASE_BLOCKED"
+        "release_verdict": release_verdict,
     }
     
     cert_path = EVIDENCE_DIR / "release_certificate.json"
@@ -294,8 +302,11 @@ def main():
         json.dump(certificate, f, indent=2)
     print(f"\n[CERTIFICATE] Saved verified release certificate to: {cert_path.relative_to(ROOT_DIR)}")
 
-    if all_passed:
-        print("\n>>> ALL 9 RELEASE GATES PASSED: ZERO-KNOWN-DEFECT RELEASE CERTIFIED <<<\n", flush=True)
+    if release_verdict == "ZERO_KNOWN_DEFECT_CERTIFIED":
+        print("\n>>> ALL 9 RELEASE GATES PASSED & CLEAN TREE: ZERO-KNOWN-DEFECT RELEASE CERTIFIED <<<\n", flush=True)
+        sys.exit(0)
+    elif release_verdict == "DEVELOPMENT_MODE_UNCERTIFIED":
+        print("\n>>> ALL VERIFICATION GATES PASSED (DEVELOPMENT MODE: UNSTAGED/DIRTY WORKTREE) <<<\n", flush=True)
         sys.exit(0)
     else:
         print("\n>>> VERIFICATION FAILED: RELEASE BLOCKED <<<\n", flush=True)

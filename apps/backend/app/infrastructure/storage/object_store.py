@@ -68,9 +68,13 @@ class LocalStorageService(StorageService):
         p = Path(storage_path)
         if p.is_absolute():
             resolved = p.resolve()
-            temp_dir = Path(tempfile.gettempdir()).resolve()
-            if resolved.is_relative_to(self.base_dir) or resolved.is_relative_to(temp_dir):
+            if resolved.is_relative_to(self.base_dir):
                 return resolved
+            # Strictly restricted to testing/dev test fixtures; blocked unconditionally in production
+            if settings.ENV in ("testing", "development"):
+                temp_dir = Path(tempfile.gettempdir()).resolve()
+                if resolved.is_relative_to(temp_dir):
+                    return resolved
             raise PermissionError(f"Directory traversal detected for absolute path: {storage_path}")
         target_path = (self.base_dir / storage_path).resolve()
         if not target_path.is_relative_to(self.base_dir):

@@ -64,26 +64,35 @@ def measure_dataset_benchmark(dataset_name: str, task_type: str, X: pd.DataFrame
     tracemalloc.start()
     t0 = time.perf_counter()
     
-    # Fit model
+    # Fit model on training set
     model = model_factory()
     model.fit(X, y)
     
-    cv_time_s = round(time.perf_counter() - t0, 3)
+    fit_time_s = round(time.perf_counter() - t0, 3)
     current_ram, peak_ram = tracemalloc.get_traced_memory()
     tracemalloc.stop()
     peak_ram_mb = round(peak_ram / (1024 * 1024), 2)
 
-    # Measure latency percentiles on single-row inferences
+    # Process RSS measurement if psutil available
+    rss_mb = peak_ram_mb
+    try:
+        import psutil
+        process = psutil.Process()
+        rss_mb = round(process.memory_info().rss / (1024 * 1024), 2)
+    except Exception:
+        pass
+
+    # Measure in-process latency on single-row inferences
     sample_rows = X.head(min(100, len(X)))
-    latencies = []
+    raw_latencies = []
     for _, row in sample_rows.iterrows():
         t_inf_start = time.perf_counter()
         _ = model.predict(pd.DataFrame([row]))
-        latencies.append((time.perf_counter() - t_inf_start) * 1000.0)
+        raw_latencies.append((time.perf_counter() - t_inf_start) * 1000.0)
 
-    p50_ms = round(float(np.percentile(latencies, 50)), 2)
-    p95_ms = round(float(np.percentile(latencies, 95)), 2)
-    p99_ms = round(float(np.percentile(latencies, 99)), 2)
+    p50_ms = round(float(np.percentile(raw_latencies, 50)), 2)
+    p95_ms = round(float(np.percentile(raw_latencies, 95)), 2)
+    p99_ms = round(float(np.percentile(raw_latencies, 99)), 2)
 
     # Serialization size
     import joblib
@@ -97,15 +106,18 @@ def measure_dataset_benchmark(dataset_name: str, task_type: str, X: pd.DataFrame
         "rows": len(X),
         "features": X.shape[1],
         "champion_algorithm": model.__class__.__name__,
-        "cv_training_time_s": cv_time_s,
-        "peak_training_ram_mb": peak_ram_mb,
+        "single_fit_training_time_s": fit_time_s,
+        "peak_training_traced_ram_mb": peak_ram_mb,
+        "process_rss_mb": rss_mb,
         "artifact_size_mb": artifact_size_mb,
         "measured": True,
-        "latency_percentiles": {
+        "in_process_prediction_latency_ms": {
             "p50_ms": p50_ms,
             "p95_ms": p95_ms,
-            "p99_ms": p99_ms
-        }
+            "p99_ms": p99_ms,
+            "raw_observations_count": len(raw_latencies),
+        },
+        "_raw_latencies": raw_latencies,
     }
 
 
@@ -186,18 +198,19 @@ def generate_live_evidence():
         model_factory=lambda: GradientBoostingClassifier(n_estimators=15, random_state=42)
     )
 
-    all_p50 = [bench_cal["latency_percentiles"]["p50_ms"], bench_syn["latency_percentiles"]["p50_ms"]]
-    all_p95 = [bench_cal["latency_percentiles"]["p95_ms"], bench_syn["latency_percentiles"]["p95_ms"]]
-    all_p99 = [bench_cal["latency_percentiles"]["p99_ms"], bench_syn["latency_percentiles"]["p99_ms"]]
+    # Compute true pooled percentiles across all raw latency observations
+    pooled_latencies = bench_cal.pop("_raw_latencies") + bench_syn.pop("_raw_latencies")
 
     benchmark_report = {
         "generated_at": timestamp,
         "fingerprint": fingerprint,
+        "measurement_scope": "in_process_model_prediction",
         "datasets_evaluated": [bench_cal, bench_syn],
-        "aggregate_latency_percentiles": {
-            "p50_ms": round(float(np.mean(all_p50)), 2),
-            "p95_ms": round(float(np.mean(all_p95)), 2),
-            "p99_ms": round(float(np.mean(all_p99)), 2)
+        "pooled_in_process_latency_percentiles": {
+            "p50_ms": round(float(np.percentile(pooled_latencies, 50)), 2),
+            "p95_ms": round(float(np.percentile(pooled_latencies, 95)), 2),
+            "p99_ms": round(float(np.percentile(pooled_latencies, 99)), 2),
+            "total_observations": len(pooled_latencies),
         }
     }
     with open(EVIDENCE_DIR / "ml" / "benchmark-report.json", "w", encoding="utf-8") as f:

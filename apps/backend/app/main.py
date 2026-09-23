@@ -154,6 +154,7 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.services.health_service import HealthService
 from app.schemas.health import (
+    SubsystemHealth,
     LivenessResponse,
     ReadinessResponse,
     DetailedHealthResponse,
@@ -184,6 +185,12 @@ def readiness_check(response: Response, db: Session = Depends(get_db)):
     if not is_ready:
         response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
     return data
+
+@app.get("/health/worker", response_model=SubsystemHealth, tags=["Health"], summary="Standalone worker health and heartbeat probe")
+@app.get("/api/v1/health/worker", response_model=SubsystemHealth, tags=["Health"], summary="Standalone worker health and heartbeat probe")
+def worker_health_check(db: Session = Depends(get_db)):
+    service = HealthService(db)
+    return service.check_worker(db)
 
 @app.get("/health/status", response_model=DetailedHealthResponse, tags=["Health"], summary="Multi-service subsystem observability and telemetry report")
 @app.get("/api/v1/health/status", response_model=DetailedHealthResponse, tags=["Health"], summary="Multi-service subsystem observability and telemetry report")

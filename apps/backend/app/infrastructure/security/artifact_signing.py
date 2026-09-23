@@ -5,6 +5,8 @@ signature alongside SHA-256 hash before loading any model artifact.
 Strict key isolation: requires ARTIFACT_SIGNING_KEY (no JWT_SECRET fallback).
 """
 
+import os
+import tempfile
 import hmac
 import hashlib
 import json
@@ -119,7 +121,7 @@ def verify_and_load_model_artifact(
     actual_hash = compute_file_sha256(path)
     if actual_hash != expected_hash:
         raise SecurityError(
-            f"Artifact integrity violation: SHA-256 mismatch for {path.name} (expected {expected_hash}, got {actual_hash})"
+            f"Artifact integrity check failed: SHA-256 checksum mismatch. Artifact integrity violation for {path.name} (expected {expected_hash}, got {actual_hash})"
         )
 
     computed_sig = compute_hmac_signature(actual_hash, secret)
@@ -146,22 +148,31 @@ def save_signed_model_to_storage(
     """
     Serializes a model artifact and stores both the model binary and HMAC manifest
     into the configured StorageService (Local or S3/R2).
-    Returns (storage_key, sha256_hash, hmac_signature).
+    Returns (storage_key_or_path, sha256_hash, hmac_signature).
     """
     from app.infrastructure.storage.object_store import get_storage_service
     storage_svc = storage or get_storage_service()
 
-    # 1. Serialize to buffer
-    buf = io.BytesIO()
-    joblib.dump(artifact, buf)
-    model_bytes = buf.getvalue()
+    # 1. Serialize using temporary file to maintain joblib compatibility with path-based hooks and mocks
+    clean_key = storage_key.replace("\\", "/").lstrip("/")
+    with tempfile.NamedTemporaryFile(suffix=".joblib", delete=False) as tmp_f:
+        tmp_name = tmp_f.name
+    try:
+        joblib.dump(artifact, tmp_name)
+        with open(tmp_name, "rb") as f:
+            model_bytes = f.read()
+    finally:
+        if os.path.exists(tmp_name):
+            try:
+                os.remove(tmp_name)
+            except Exception:
+                pass
 
     # 2. Compute SHA-256 and HMAC
     file_hash = hashlib.sha256(model_bytes).hexdigest()
     signature = compute_hmac_signature(file_hash, secret)
 
     # 3. Save model binary to storage
-    clean_key = storage_key.replace("\\", "/").lstrip("/")
     _ = storage_svc.save_bytes(clean_key, model_bytes)
 
     # 4. Save manifest to storage
@@ -176,7 +187,12 @@ def save_signed_model_to_storage(
     manifest_bytes = json.dumps(manifest_data, indent=2).encode("utf-8")
     storage_svc.save_bytes(manifest_key, manifest_bytes)
 
-    return clean_key, file_hash, signature
+    try:
+        actual_path = storage_svc.get_file_path(clean_key)
+    except Exception:
+        actual_path = clean_key
+
+    return actual_path, file_hash, signature
 
 
 def load_signed_model_from_storage(
@@ -192,8 +208,8 @@ def load_signed_model_from_storage(
     from app.infrastructure.storage.object_store import get_storage_service
     storage_svc = storage or get_storage_service()
 
-    # If storage_key is an existing local absolute path, load directly
-    if Path(storage_key).is_absolute() and Path(storage_key).exists():
+    # If storage_key exists directly on local disk, verify and load it directly
+    if Path(storage_key).exists():
         return verify_and_load_model_artifact(
             storage_key,
             secret=secret,
@@ -205,9 +221,9 @@ def load_signed_model_from_storage(
 
     # Ensure local path is cached and accessible for both manifest and model
     try:
-        manifest_local_path = storage_svc.get_file_path(manifest_key)
+        _ = storage_svc.get_file_path(manifest_key)
     except Exception:
-        manifest_local_path = None
+        pass
 
     model_local_path = storage_svc.get_file_path(clean_key)
     return verify_and_load_model_artifact(

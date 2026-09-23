@@ -379,51 +379,9 @@ class FeatureSelectionService:
                 if hasattr(X_val_trans, "toarray"):
                     X_val_trans = X_val_trans.toarray()
 
-                # Robust numeric conversion for unencoded/passthrough columns
-                if isinstance(X_train_trans, pd.DataFrame):
-                    df_num = X_train_trans.copy()
-                    for c in df_num.columns:
-                        if not pd.api.types.is_numeric_dtype(df_num[c]):
-                            df_num[c] = pd.factorize(df_num[c])[0].astype(np.float64)
-                    X_train_trans = df_num.to_numpy(dtype=np.float64)
-                else:
-                    X_arr = np.asarray(X_train_trans)
-                    if not np.issubdtype(X_arr.dtype, np.number):
-                        n_rows, n_cols = X_arr.shape
-                        num_matrix = np.zeros((n_rows, n_cols), dtype=np.float64)
-                        for j in range(n_cols):
-                            col_data = X_arr[:, j]
-                            try:
-                                num_matrix[:, j] = col_data.astype(np.float64)
-                            except (ValueError, TypeError):
-                                codes, _ = pd.factorize(col_data)
-                                num_matrix[:, j] = codes.astype(np.float64)
-                        X_train_trans = num_matrix
-                    else:
-                        X_train_trans = np.asarray(X_arr, dtype=np.float64)
-
-                # Convert X_val_trans to float matrix matching X_train_trans
-                if isinstance(X_val_trans, pd.DataFrame):
-                    df_val_num = X_val_trans.copy()
-                    for c in df_val_num.columns:
-                        if not pd.api.types.is_numeric_dtype(df_val_num[c]):
-                            df_val_num[c] = pd.factorize(df_val_num[c])[0].astype(np.float64)
-                    X_val_trans = df_val_num.to_numpy(dtype=np.float64)
-                else:
-                    X_val_arr = np.asarray(X_val_trans)
-                    if not np.issubdtype(X_val_arr.dtype, np.number):
-                        n_vrows, n_vcols = X_val_arr.shape
-                        vnum_matrix = np.zeros((n_vrows, n_vcols), dtype=np.float64)
-                        for j in range(n_vcols):
-                            vcol_data = X_val_arr[:, j]
-                            try:
-                                vnum_matrix[:, j] = vcol_data.astype(np.float64)
-                            except (ValueError, TypeError):
-                                vcodes, _ = pd.factorize(vcol_data)
-                                vnum_matrix[:, j] = vcodes.astype(np.float64)
-                        X_val_trans = vnum_matrix
-                    else:
-                        X_val_trans = np.asarray(X_val_arr, dtype=np.float64)
+                # Robust numeric conversion for unencoded/passthrough columns (fit on train, transform on val)
+                from app.services.transformers import safely_encode_matrix_pair
+                X_train_trans, X_val_trans = safely_encode_matrix_pair(X_train_trans, X_val_trans)
 
                 # Fallback imputer for unhandled NaNs during feature selection
                 if np.isnan(X_train_trans).any():

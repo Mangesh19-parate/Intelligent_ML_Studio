@@ -1,53 +1,53 @@
 {
   "platform": "Intelligent ML Studio",
   "version": "1.0.0",
-  "git_commit": "dfd98a15dd8b90aed2f9565473ef765e415dde26",
-  "verified_at": "2026-09-23T14:49:03.261808+00:00",
-  "total_duration_seconds": 547.23,
-  "clean_worktree": false,
+  "git_commit": "591ac2fb7304393923c4df94768d9de9204d5899",
+  "verified_at": "2026-09-23T15:02:30.665315+00:00",
+  "total_duration_seconds": 734.26,
+  "clean_worktree": true,
   "stages": {
     "worktree_hygiene": {
-      "status": "DIRTY_ALLOWED",
-      "duration_s": 0.08
+      "status": "PASSED",
+      "duration_s": 0.07
     },
     "dependencies": {
       "status": "PASSED",
-      "duration_s": 3.96
+      "duration_s": 2.53
     },
     "compilation": {
       "status": "PASSED",
-      "duration_s": 0.11
+      "duration_s": 0.07
     },
     "backend_tests": {
       "status": "PASSED",
       "passed": 503,
       "failed": 0,
-      "duration_s": 247.47
+      "duration_s": 285.89
     },
     "storage_security": {
       "status": "PASSED",
-      "duration_s": 4.1
+      "duration_s": 4.39
     },
     "evidence_generation": {
       "status": "PASSED",
-      "duration_s": 251.78
+      "duration_s": 405.0
     },
     "frontend_typecheck": {
       "status": "PASSED",
-      "duration_s": 6.72
+      "duration_s": 5.29
     },
     "frontend_tests": {
       "status": "PASSED",
-      "duration_s": 9.81
+      "duration_s": 6.9
     },
     "frontend_build": {
       "status": "PASSED",
-      "duration_s": 22.85
+      "duration_s": 23.74
     },
     "release_hygiene": {
       "status": "PASSED",
-      "duration_s": 0.35
+      "duration_s": 0.37
     }
   },
-  "release_verdict": "DEVELOPMENT_MODE_UNCERTIFIED"
+  "release_verdict": "ZERO_KNOWN_DEFECT_CERTIFIED"
 }

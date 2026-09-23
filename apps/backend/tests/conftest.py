@@ -20,7 +20,7 @@ from app.core.database import Base, get_db
 from app.core.security import get_password_hash
 from app.core.seeder import seed_rbac_data
 from app.core.config import settings
-from app.services.storage_service import LocalStorageService, get_storage_service
+from app.infrastructure.storage.object_store import LocalStorageService, get_storage_service
 from app.models.user import User
 from app.models.role import Role
 from app.main import app

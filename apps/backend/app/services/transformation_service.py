@@ -28,7 +28,7 @@ from app.schemas.transformation import (
     TransformationConfigUpdate,
 )
 from app.services.dataset_split_service import DatasetSplitService
-from app.services.storage_service import StorageService, get_storage_service
+from app.infrastructure.storage.object_store import StorageService, get_storage_service
 from app.services.transformers import OutlierCapper
 
 class TransformationService:

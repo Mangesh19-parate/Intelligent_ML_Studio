@@ -80,7 +80,7 @@ class PredictionService:
             )
 
         from app.infrastructure.storage.object_store import get_storage_service
-        from app.core.artifact_signing import load_signed_model_from_storage, SecurityError
+        from app.infrastructure.security.artifact_signing import load_signed_model_from_storage, SecurityError
         storage = get_storage_service()
 
         try:

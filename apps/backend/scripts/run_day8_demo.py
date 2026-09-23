@@ -78,7 +78,7 @@ def run_demo():
     csv_bytes = df.to_csv(index=False).encode("utf-8")
     content_hash = hashlib.sha256(csv_bytes).hexdigest()
 
-    from app.services.storage_service import get_storage_service
+    from app.infrastructure.storage.object_store import get_storage_service
     storage = get_storage_service()
     saved_path = storage.save_file(project.id, 1, "demo_churn.csv", csv_bytes)
 

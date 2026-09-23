@@ -10,7 +10,7 @@ if str(BASE_DIR) not in sys.path:
 from sqlalchemy.orm import Session
 from app.core.database import SessionLocal
 from app.models.dataset import Dataset
-from app.services.storage_service import get_storage_service
+from app.infrastructure.storage.object_store import get_storage_service
 
 def backfill_content_hashes(db: Session | None = None) -> int:
     """

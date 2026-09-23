@@ -3,7 +3,8 @@ Domain Validation Policies and Invariants for Experiments.
 """
 
 from typing import Any
-from app.domain.experiment.state import ExperimentState, VALID_EXPERIMENT_TRANSITIONS
+from app.config.state_machines import ExperimentState, EXPERIMENT_VALID_TRANSITIONS
+VALID_EXPERIMENT_TRANSITIONS = {k: set(v) for k, v in EXPERIMENT_VALID_TRANSITIONS.items()}
 
 
 class DomainValidationError(ValueError):

@@ -29,7 +29,7 @@ from app.models.dataset import Dataset
 from app.models.dataset_column import DatasetColumn
 from app.models.dataset_split import DatasetSplit
 from app.models.transformation_config import TransformationConfig
-from app.services.storage_service import LocalStorageService
+from app.infrastructure.storage.object_store import LocalStorageService
 from app.services.dataset_split_service import DatasetSplitService
 from app.services.data_profiling_service import DataProfilingService
 from app.services.transformation_service import TransformationService

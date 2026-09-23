@@ -44,7 +44,7 @@ from app.services.transformation_service import TransformationService
 from app.services.feature_selection_service import FeatureSelectionService
 from app.services.evaluation_service import EvaluationService
 from app.services.environment_capture_service import EnvironmentCaptureService
-from app.services.storage_service import StorageService, get_storage_service
+from app.infrastructure.storage.object_store import StorageService, get_storage_service
 from app.services.trainers import (
     RegressionTrainer,
     ClassificationTrainer,
@@ -1521,7 +1521,7 @@ class ExperimentService:
 
         try:
             # 1. WRITE & SIGN ARTIFACT (P1.4 Cryptographic Manifest) via StorageService
-            from app.core.artifact_signing import save_signed_model_to_storage
+            from app.infrastructure.security.artifact_signing import save_signed_model_to_storage
             from app.infrastructure.storage.object_store import get_storage_service
             storage_svc = get_storage_service()
 

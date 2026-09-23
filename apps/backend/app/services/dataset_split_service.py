@@ -16,7 +16,7 @@ from app.models.project import Project
 from app.repositories.dataset_repository import DatasetRepository
 from app.repositories.dataset_split_repository import DatasetSplitRepository
 from app.repositories.project_repository import ProjectRepository
-from app.services.storage_service import StorageService, get_storage_service
+from app.infrastructure.storage.object_store import StorageService, get_storage_service
 
 class DatasetSplitService:
     """

@@ -18,7 +18,7 @@ from app.models.dataset import Dataset
 from app.repositories.project_repository import ProjectRepository
 from app.repositories.dataset_repository import DatasetRepository
 from app.services.dataset_split_service import DatasetSplitService
-from app.services.storage_service import StorageService, get_storage_service
+from app.infrastructure.storage.object_store import StorageService, get_storage_service
 
 
 class FeatureConstructor:

@@ -12,7 +12,7 @@ import pytest
 from pydantic import ValidationError
 from fastapi.testclient import TestClient
 from app.core.config import Settings
-from app.core.artifact_signing import (
+from app.infrastructure.security.artifact_signing import (
     save_signed_model_artifact,
     verify_and_load_model_artifact,
     SecurityError

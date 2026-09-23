@@ -12,7 +12,7 @@ from app.models.project import Project
 from app.services.dataset_split_service import DatasetSplitService
 from app.services.data_profiling_service import DataProfilingService
 from app.services.transformation_service import TransformationService
-from app.services.storage_service import get_storage_service
+from app.infrastructure.storage.object_store import get_storage_service
 
 def generate_leakage_test_csv(n_rows: int = 100) -> bytes:
     """Generates synthetic tabular data where every row has a globally unique signature."""

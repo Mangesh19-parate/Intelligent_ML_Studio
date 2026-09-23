@@ -20,7 +20,7 @@ from app.repositories.experiment_repository import ExperimentRepository
 from app.repositories.feature_importance_repository import FeatureImportanceRepository
 from app.services.transformation_service import TransformationService
 from app.services.dataset_split_service import DatasetSplitService
-from app.services.storage_service import StorageService, get_storage_service
+from app.infrastructure.storage.object_store import StorageService, get_storage_service
 from app.services.selectors import (
     calculate_srs_rank_scores,
     aggregate_ensemble_scores,

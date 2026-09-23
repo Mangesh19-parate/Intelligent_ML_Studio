@@ -55,7 +55,7 @@ from app.services.feature_selection_service import FeatureSelectionService
 from app.services.experiment_service import ExperimentService
 from app.services.evaluation_service import EvaluationService
 from app.services.deployment_gate_service import DeploymentGateService
-from app.services.storage_service import get_storage_service
+from app.infrastructure.storage.object_store import get_storage_service
 from app.services.selectors import (
     calculate_srs_rank_scores,
     aggregate_ensemble_scores,

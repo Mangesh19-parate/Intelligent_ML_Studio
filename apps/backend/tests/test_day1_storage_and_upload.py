@@ -4,7 +4,7 @@ import pytest
 import pandas as pd
 from uuid import uuid4
 from pathlib import Path
-from app.services.storage_service import LocalStorageService, get_storage_service
+from app.infrastructure.storage.object_store import LocalStorageService, get_storage_service
 
 def test_local_storage_service_unit(tmp_path):
     storage = LocalStorageService(base_dir=str(tmp_path))

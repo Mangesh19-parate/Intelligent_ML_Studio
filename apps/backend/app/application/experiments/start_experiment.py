@@ -8,7 +8,7 @@ from typing import Any
 from sqlalchemy.orm import Session
 from app.repositories.experiment_repository import ExperimentRepository
 from app.tasks.experiment_tasks import submit_experiment_task
-from app.domain.experiment.state import ExperimentState
+from app.config.state_machines import ExperimentState
 from app.domain.experiment.policies import validate_transition
 
 

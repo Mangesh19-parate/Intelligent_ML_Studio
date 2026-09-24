@@ -228,15 +228,15 @@ def integrity_regression_setup(db_session, tmp_path, create_test_user):
 
     data_bytes = df.to_csv(index=False).encode("utf-8")
     content_hash = hashlib.sha256(data_bytes).hexdigest()
-    dataset_path = str(tmp_path / "housing_integrity.csv")
-    with open(dataset_path, "wb") as f:
-        f.write(data_bytes)
+    from app.infrastructure.storage.object_store import get_storage_service
+    storage = get_storage_service()
+    rel_path = storage.save_bytes(f"datasets/{project.id}/1/housing_integrity.csv", data_bytes)
 
     dataset = Dataset(
         id=uuid.uuid4(),
         project_id=project.id,
         version_number=1,
-        file_path=dataset_path,
+        file_path=rel_path,
         row_count=n_samples,
         column_count=4,
         content_hash=content_hash,

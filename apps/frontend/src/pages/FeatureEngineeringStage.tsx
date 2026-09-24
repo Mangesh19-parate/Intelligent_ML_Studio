@@ -296,7 +296,7 @@ export const FeatureEngineeringStage: React.FC = () => {
     );
   }
 
-  const hasMissingPrerequisites = !currentProject?.target_column || !currentProject?.task_type || currentProject?.task_type === 'UNSET';
+  const hasMissingPrerequisites = !currentProject?.target_column || !currentProject?.task_type || currentProject?.task_type === 'UNDETERMINED';
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto p-6">

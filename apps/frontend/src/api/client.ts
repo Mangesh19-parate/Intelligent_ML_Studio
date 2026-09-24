@@ -170,7 +170,7 @@ export const authApi = {
 
 export const twoFactorApi = {
   verifyLogin: async (twoFactorToken: string, code: string) => {
-    const res = await apiClient.post<{ access_token: string; refresh_token: string; token_type: string; user: User }>(
+    const res = await apiClient.post<{ access_token: string; token_type: string; user: User }>(
       '/auth/2fa/verify-login',
       { two_factor_token: twoFactorToken, code }
     );

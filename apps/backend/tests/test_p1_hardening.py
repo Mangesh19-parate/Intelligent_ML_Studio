@@ -94,13 +94,13 @@ def test_refresh_token_rotation_and_reuse_detection(db_session, create_test_user
     service = AuthService(db_session)
 
     # Authenticate user to obtain initial token pair
-    tokens = service.authenticate_user(LoginRequest(email="user_rotation@mlstudio.io", password="password123"))
-    initial_refresh = tokens.refresh_token
+    login_resp, initial_refresh = service.authenticate_user(LoginRequest(email="user_rotation@mlstudio.io", password="password123"))
+    assert initial_refresh is not None
 
     # 1. First refresh exchange -> SUCCEEDS and rotates
-    rotated = service.refresh_access_token(initial_refresh)
-    assert rotated.access_token is not None
-    assert rotated.refresh_token != initial_refresh
+    rotated_resp, new_refresh = service.refresh_access_token(initial_refresh)
+    assert rotated_resp.access_token is not None
+    assert new_refresh != initial_refresh
 
     # 2. Second exchange with the SAME initial refresh token -> REJECTED with 401 reuse detection
     with pytest.raises(Exception) as exc_info:
@@ -254,7 +254,7 @@ def test_object_level_model_and_deployment_authorization(client, db_session, cre
 
     # Authenticate User B
     auth_service = AuthService(db_session)
-    tokens_b = auth_service.authenticate_user(LoginRequest(email="attacker_b@mlstudio.io", password="password123"))
+    tokens_b, _ = auth_service.authenticate_user(LoginRequest(email="attacker_b@mlstudio.io", password="password123"))
     headers_b = {"Authorization": f"Bearer {tokens_b.access_token}"}
 
     # User B attempts to access Model A metrics -> HTTP 403 Forbidden

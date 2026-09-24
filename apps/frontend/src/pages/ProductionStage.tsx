@@ -278,7 +278,7 @@ export const ProductionStage: React.FC = () => {
             >
               {projects.map((p) => (
                 <option key={p.id} value={p.id}>
-                  {p.project_name || p.name} ({p.task_type || 'Unset'})
+                  {p.project_name || p.name} ({p.task_type || 'Undetermined'})
                 </option>
               ))}
             </select>

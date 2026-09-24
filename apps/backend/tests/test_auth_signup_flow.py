@@ -84,7 +84,10 @@ def test_login_successful_and_jwt_verification(client: TestClient, db_session):
     assert response.status_code == 200
     data = response.json()
     assert "access_token" in data
-    assert "refresh_token" in data
+    # P0-02 INVARIANT: refresh_token MUST NOT be exposed in JSON response
+    assert "refresh_token" not in data or data.get("refresh_token") is None
+    # P0-01 INVARIANT: delivered via HttpOnly cookie
+    assert "refresh_token" in response.cookies
     assert data["token_type"] == "bearer"
     assert data["user"]["email"] == "login_tester@example.com"
     assert data["user"]["role"]["role_name"] == "USER"

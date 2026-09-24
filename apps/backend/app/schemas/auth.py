@@ -65,7 +65,6 @@ class LoginRequest(BaseModel):
 
 class TokenResponse(BaseModel):
     access_token: str
-    refresh_token: str
     token_type: str = "bearer"
     user: UserResponse
 
@@ -75,7 +74,6 @@ class LoginResponse(BaseModel):
     email_masked: str | None = None
     message: str | None = None
     access_token: str | None = None
-    refresh_token: str | None = None
     token_type: str = "bearer"
     user: UserResponse | None = None
 

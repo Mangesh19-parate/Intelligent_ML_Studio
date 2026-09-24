@@ -5,7 +5,7 @@
 
 export type UUID = string;
 
-export type TaskType = 'REGRESSION' | 'CLASSIFICATION' | 'UNSET';
+export type TaskType = 'REGRESSION' | 'CLASSIFICATION' | 'UNDETERMINED';
 export type PipelineStage = 'INGESTION' | 'PROFILED' | 'SPLIT' | 'TRANSFORMED' | 'FEATURE_SELECTED' | 'EXPERIMENTATION' | 'DEPLOYED';
 
 export type UserRole = 'ADMIN' | 'USER';
@@ -423,7 +423,6 @@ export interface LoginResponse {
   email_masked?: string | null;
   message?: string | null;
   access_token?: string | null;
-  refresh_token?: string | null;
   token_type?: string;
   user?: User | null;
 }

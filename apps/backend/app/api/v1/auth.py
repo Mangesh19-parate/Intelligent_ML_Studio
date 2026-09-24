@@ -49,6 +49,23 @@ async def signup(
     service = AuthService(db)
     return service.signup_user(payload, raw_body=raw_body)
 
+def _set_refresh_cookie(response: Response, refresh_token: str) -> None:
+    is_prod = (settings.ENV.lower() == "production")
+    secure = settings.COOKIE_SECURE if settings.COOKIE_SECURE is not None else is_prod
+    samesite = settings.COOKIE_SAMESITE.lower()
+    if samesite == "none":
+        secure = True
+    response.set_cookie(
+        key="refresh_token",
+        value=refresh_token,
+        httponly=True,
+        secure=secure,
+        samesite=samesite,
+        max_age=settings.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 3600,
+        path="/",
+        domain=settings.COOKIE_DOMAIN,
+    )
+
 @router.post(
     "/login",
     response_model=LoginResponse,
@@ -62,20 +79,11 @@ def login(
     db: Session = Depends(get_db)
 ):
     service = AuthService(db)
-    login_resp = service.authenticate_user(payload)
+    login_resp, refresh_token = service.authenticate_user(payload)
     
     # Only issue refresh cookie if 2FA is not required for this user
-    if not login_resp.requires_2fa and login_resp.refresh_token:
-        is_prod = (settings.ENV.lower() == "production")
-        response.set_cookie(
-            key="refresh_token",
-            value=login_resp.refresh_token,
-            httponly=True,
-            secure=is_prod,
-            samesite="lax",
-            max_age=7 * 24 * 3600,
-            path="/"
-        )
+    if not login_resp.requires_2fa and refresh_token:
+        _set_refresh_cookie(response, refresh_token)
     return login_resp
 
 @router.post(
@@ -91,17 +99,8 @@ def verify_2fa_login(
     db: Session = Depends(get_db)
 ):
     service = AuthService(db)
-    token_resp = service.verify_two_factor_login(payload)
-    is_prod = (settings.ENV.lower() == "production")
-    response.set_cookie(
-        key="refresh_token",
-        value=token_resp.refresh_token,
-        httponly=True,
-        secure=is_prod,
-        samesite="lax",
-        max_age=7 * 24 * 3600,
-        path="/"
-    )
+    token_resp, refresh_token = service.verify_two_factor_login(payload)
+    _set_refresh_cookie(response, refresh_token)
     return token_resp
 
 @router.post(
@@ -173,7 +172,7 @@ def get_2fa_status(
     "/refresh",
     response_model=TokenResponse,
     status_code=status.HTTP_200_OK,
-    summary="Refresh access token using body or HttpOnly cookie"
+    summary="Refresh access token using HttpOnly cookie or request body fallback"
 )
 def refresh(
     request: Request,
@@ -181,24 +180,15 @@ def refresh(
     payload: RefreshTokenRequest | None = None,
     db: Session = Depends(get_db)
 ):
-    token_str = (payload.refresh_token if payload and payload.refresh_token else None) or request.cookies.get("refresh_token")
+    token_str = request.cookies.get("refresh_token") or (payload.refresh_token if payload and payload.refresh_token else None)
     if not token_str:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Refresh token required in request body or HttpOnly cookie."
+            detail="Refresh token required in HttpOnly cookie or request body."
         )
     service = AuthService(db)
-    token_resp = service.refresh_access_token(token_str)
-    is_prod = (settings.ENV.lower() == "production")
-    response.set_cookie(
-        key="refresh_token",
-        value=token_resp.refresh_token,
-        httponly=True,
-        secure=is_prod,
-        samesite="lax",
-        max_age=7 * 24 * 3600,
-        path="/"
-    )
+    token_resp, new_refresh_token = service.refresh_access_token(token_str)
+    _set_refresh_cookie(response, new_refresh_token)
     return token_resp
 
 @router.post(
@@ -212,11 +202,15 @@ def logout(
     payload: RefreshTokenRequest | None = None,
     db: Session = Depends(get_db)
 ):
-    token_str = (payload.refresh_token if payload and payload.refresh_token else None) or request.cookies.get("refresh_token")
+    token_str = request.cookies.get("refresh_token") or (payload.refresh_token if payload and payload.refresh_token else None)
     if token_str:
         service = AuthService(db)
         service.revoke_refresh_token(token_str)
-    response.delete_cookie(key="refresh_token", path="/")
+    response.delete_cookie(
+        key="refresh_token",
+        path="/",
+        domain=settings.COOKIE_DOMAIN,
+    )
     return {"message": "Logged out successfully"}
 
 @router.get(

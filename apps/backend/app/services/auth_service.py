@@ -110,7 +110,7 @@ class AuthService:
         created_user = self.user_repo.create(new_user)
         return self._build_user_response(created_user)
 
-    def authenticate_user(self, payload: LoginRequest) -> LoginResponse:
+    def authenticate_user(self, payload: LoginRequest) -> tuple[LoginResponse, str | None]:
         if not EmailService.is_valid_email(payload.email):
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -179,12 +179,15 @@ class AuthService:
                 session_version=getattr(user, "session_version", 1) or 1,
             )
             masked_email = EmailService.mask_email(user.email)
-            return LoginResponse(
-                requires_2fa=True,
-                two_factor_token=two_factor_token,
-                email_masked=masked_email,
-                message=f"A 6-digit verification code has been sent to {masked_email}.",
-                token_type="bearer",
+            return (
+                LoginResponse(
+                    requires_2fa=True,
+                    two_factor_token=two_factor_token,
+                    email_masked=masked_email,
+                    message=f"A 6-digit verification code has been sent to {masked_email}.",
+                    token_type="bearer",
+                ),
+                None
             )
 
         # Standard direct login if 2FA was explicitly disabled
@@ -193,12 +196,14 @@ class AuthService:
         refresh_token = create_refresh_token(subject=str(user.id), session_version=sv)
         user_response = self._build_user_response(user)
 
-        return LoginResponse(
-            requires_2fa=False,
-            access_token=access_token,
-            refresh_token=refresh_token,
-            token_type="bearer",
-            user=user_response,
+        return (
+            LoginResponse(
+                requires_2fa=False,
+                access_token=access_token,
+                token_type="bearer",
+                user=user_response,
+            ),
+            refresh_token
         )
 
     def resend_two_factor_otp(self, payload: TwoFactorResendRequest) -> dict:
@@ -385,11 +390,13 @@ class AuthService:
         refresh_token = create_refresh_token(subject=str(user.id), session_version=sv)
         user_response = self._build_user_response(user)
 
-        return TokenResponse(
-            access_token=access_token,
-            refresh_token=refresh_token,
-            token_type="bearer",
-            user=user_response,
+        return (
+            TokenResponse(
+                access_token=access_token,
+                token_type="bearer",
+                user=user_response,
+            ),
+            refresh_token
         )
 
     def disable_two_factor(self, user_id: UUID | str, payload: TwoFactorDisableRequest) -> dict:
@@ -443,7 +450,7 @@ class AuthService:
             remaining_backup_codes=len(hashed_codes),
         )
 
-    def refresh_access_token(self, refresh_token_str: str) -> TokenResponse:
+    def refresh_access_token(self, refresh_token_str: str) -> tuple[TokenResponse, str]:
         payload = decode_token(refresh_token_str)
         if not payload or payload.get("type") != "refresh":
             raise HTTPException(
@@ -491,11 +498,13 @@ class AuthService:
         new_refresh = create_refresh_token(subject=str(user.id), session_version=sv)
         user_response = self._build_user_response(user)
 
-        return TokenResponse(
-            access_token=new_access,
-            refresh_token=new_refresh,
-            token_type="bearer",
-            user=user_response,
+        return (
+            TokenResponse(
+                access_token=new_access,
+                token_type="bearer",
+                user=user_response,
+            ),
+            new_refresh
         )
 
     def revoke_refresh_token(self, refresh_token_str: str) -> bool:

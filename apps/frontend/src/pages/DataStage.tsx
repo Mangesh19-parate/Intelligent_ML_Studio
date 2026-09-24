@@ -48,7 +48,7 @@ export const DataStage: React.FC = () => {
   const [showCreateModal, setShowCreateModal] = useState<boolean>(false);
   const [newProjectName, setNewProjectName] = useState<string>('');
   const [newTargetCol, setNewTargetCol] = useState<string>('');
-  const [newTaskType, setNewTaskType] = useState<string>('UNSET');
+  const [newTaskType, setNewTaskType] = useState<TaskType>('UNDETERMINED');
   const [creatingProject, setCreatingProject] = useState<boolean>(false);
 
   // Sync URL project_id with ProjectContext
@@ -192,7 +192,7 @@ export const DataStage: React.FC = () => {
       setShowCreateModal(false);
       setNewProjectName('');
       setNewTargetCol('');
-      setNewTaskType('UNSET');
+      setNewTaskType('UNDETERMINED');
       await refreshProjects();
       selectProject(String(res.data.id));
       navigate(`/data?project_id=${res.data.id}`);
@@ -382,7 +382,7 @@ export const DataStage: React.FC = () => {
                   onChange={(e) => setNewTaskType(e.target.value)}
                   className="w-full px-3.5 py-2 text-xs rounded-full border border-[var(--color-border)] bg-[var(--color-bg)] text-[var(--color-text)] focus:outline-none focus:border-[var(--color-accent)] cursor-pointer"
                 >
-                  <option value="UNSET">Auto-detect / Profile Later</option>
+                  <option value="UNDETERMINED">Auto-detect / Profile Later</option>
                   <option value="CLASSIFICATION">Classification (Categorical / Labels)</option>
                   <option value="REGRESSION">Regression (Continuous Values)</option>
                 </select>

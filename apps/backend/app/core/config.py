@@ -56,6 +56,20 @@ class Settings(BaseSettings):
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24  # 1 day
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
+
+    # Cookie & Cross-Site Security
+    COOKIE_SAMESITE: str = Field(
+        default="lax",
+        description="SameSite cookie policy: 'lax', 'none', 'strict'"
+    )
+    COOKIE_SECURE: bool | None = Field(
+        default=None,
+        description="Secure cookie attribute (None = auto-detect based on ENV=='production')"
+    )
+    COOKIE_DOMAIN: str | None = Field(
+        default=None,
+        description="Cookie domain scope (e.g. '.mlstudio.io' for cross-subdomain sharing)"
+    )
     
     # Object Storage configuration
     STORAGE_BACKEND: str = Field(

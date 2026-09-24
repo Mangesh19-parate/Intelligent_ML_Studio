@@ -35,7 +35,10 @@ def test_auth_register_and_login(client):
     assert login_resp.status_code == 200
     token_data = login_resp.json()
     assert "access_token" in token_data
-    assert "refresh_token" in token_data
+    # P0-02 INVARIANT: refresh_token MUST NOT be exposed in JSON response to browser JS
+    assert "refresh_token" not in token_data or token_data.get("refresh_token") is None
+    # P0-01 INVARIANT: refresh_token is delivered via HttpOnly cookie
+    assert "refresh_token" in login_resp.cookies
 
     # 3. Get /me
     me_resp = client.get(
@@ -105,6 +108,24 @@ def test_project_crud_and_invariants(client, create_test_user):
     )
     assert update_resp.status_code == 200
     assert update_resp.json()["project_name"] == "Churn Model V2"
+
+def test_project_creation_auto_detect_task_type(client, create_test_user):
+    """P0-03 INVARIANT: Creating a project with explicit UNDETERMINED task_type succeeds with 201."""
+    user = create_test_user("autodetect@example.com", role_name="USER")
+    login_data = client.post(
+        "/api/v1/auth/login",
+        json={"email": "autodetect@example.com", "password": "password123"}
+    ).json()
+    headers = {"Authorization": f"Bearer {login_data['access_token']}"}
+
+    # Explicit UNDETERMINED task type (frontend Auto-detect flow)
+    res = client.post(
+        "/api/v1/projects",
+        json={"project_name": "Auto Detect Project", "task_type": "UNDETERMINED"},
+        headers=headers
+    )
+    assert res.status_code == 201
+    assert res.json()["task_type"] == "UNDETERMINED"
 
 def test_dataset_upload_and_structural_schema_inference(client, create_test_user):
     user = create_test_user("steward@example.com", role_name="USER")

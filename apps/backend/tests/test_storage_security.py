@@ -98,3 +98,51 @@ def test_s3_storage_cache_traversal_blocked(tmp_path):
     with pytest.raises(PermissionError, match="Directory traversal detected in S3 object key"):
         s3_storage._clean_key("datasets/../../etc/passwd")
 
+
+def test_typed_storage_exceptions_mapping():
+    """
+    P1.2 INVARIANT: Storage errors must be strongly typed:
+    - NoSuchKey -> ObjectNotFoundError (404)
+    - Connection/Endpoint -> StorageUnavailableError (503)
+    - AccessDenied -> StoragePermissionDeniedError (403/500)
+    """
+    from app.infrastructure.storage.object_store import (
+        ObjectNotFoundError,
+        StorageUnavailableError,
+        StoragePermissionDeniedError,
+        S3StorageService,
+    )
+
+    s3 = S3StorageService(bucket_name="test-bucket")
+
+    # 1. 404 / NoSuchKey
+    err_404 = Exception("An error occurred (NoSuchKey) when calling the GetObject operation")
+    mapped_404 = s3._map_s3_error(err_404, "models/proj/model.joblib")
+    assert isinstance(mapped_404, ObjectNotFoundError)
+
+    # 2. 503 / Endpoint outage
+    err_503 = Exception("Could not connect to the endpoint URL: https://s3.amazonaws.com")
+    mapped_503 = s3._map_s3_error(err_503, "models/proj/model.joblib")
+    assert isinstance(mapped_503, StorageUnavailableError)
+
+    # 3. 403 / AccessDenied
+    err_403 = Exception("An error occurred (AccessDenied) when calling the PutObject operation")
+    mapped_403 = s3._map_s3_error(err_403, "models/proj/model.joblib")
+    assert isinstance(mapped_403, StoragePermissionDeniedError)
+
+
+def test_local_storage_absolute_path_escape_blocked_in_all_envs(tmp_path):
+    """
+    P1.3 INVARIANT: Absolute path traversal outside the storage root is rejected
+    with PermissionError across all environments (no dev/testing bypass).
+    """
+    base_dir = tmp_path / "sandbox"
+    base_dir.mkdir()
+    outside_file = tmp_path / "outside_secret.txt"
+    outside_file.write_text("secret")
+
+    storage = LocalStorageService(base_dir=str(base_dir))
+
+    with pytest.raises(PermissionError, match="Directory traversal detected for absolute path"):
+        storage._resolve_safe_path(str(outside_file))
+

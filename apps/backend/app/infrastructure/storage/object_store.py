@@ -16,6 +16,36 @@ from app.core.config import settings
 logger = logging.getLogger("ml_studio.storage")
 
 
+class StorageError(Exception):
+    """Base exception for all storage layer failures."""
+    pass
+
+
+class ObjectNotFoundError(StorageError, FileNotFoundError):
+    """Raised when an object key does not exist in storage (maps to HTTP 404)."""
+    pass
+
+
+class StorageUnavailableError(StorageError):
+    """Raised on connection timeout, network failure, or S3 outage (maps to HTTP 503)."""
+    pass
+
+
+class StoragePermissionDeniedError(StorageError, PermissionError):
+    """Raised when credentials are unauthorized or lack bucket access (maps to HTTP 500/502)."""
+    pass
+
+
+class StorageTimeoutError(StorageError, TimeoutError):
+    """Raised when an object storage operation exceeds timeout threshold."""
+    pass
+
+
+class StorageConfigurationError(StorageError):
+    """Raised when object store is misconfigured or required client libraries are missing."""
+    pass
+
+
 class StorageService(ABC):
     """
     Abstract interface for shared object storage.
@@ -58,6 +88,7 @@ class StorageService(ABC):
 class LocalStorageService(StorageService):
     """
     Local filesystem implementation with strict directory traversal guards.
+    Enforces identical path containment across development, testing, and production.
     """
 
     def __init__(self, base_dir: str | Path | None = None) -> None:
@@ -70,13 +101,7 @@ class LocalStorageService(StorageService):
             resolved = p.resolve()
             if resolved.is_relative_to(self.base_dir):
                 return resolved
-            temp_dir = Path(tempfile.gettempdir()).resolve()
-            if (
-                settings.ENV in ("testing", "development")
-                or resolved.is_relative_to(temp_dir)
-            ) and resolved.exists():
-                return resolved
-            raise PermissionError(f"Directory traversal detected for absolute path: {storage_path}")
+            raise PermissionError(f"Directory traversal detected for absolute path outside storage root: {storage_path}")
         target_path = (self.base_dir / storage_path).resolve()
         if not target_path.is_relative_to(self.base_dir):
             raise PermissionError(f"Directory traversal detected for path: {storage_path}")
@@ -197,6 +222,20 @@ class S3StorageService(StorageService):
             shutil.rmtree(self._cache_dir, ignore_errors=True)
             self._cache_dir.mkdir(parents=True, exist_ok=True)
 
+    def _map_s3_error(self, e: Exception, key: str) -> Exception:
+        """Translates low-level boto3 / network errors into strongly typed domain storage exceptions."""
+        error_code = ""
+        if hasattr(e, "response") and isinstance(e.response, dict):
+            error_code = str(e.response.get("Error", {}).get("Code", ""))
+        err_str = str(e).lower()
+        if error_code in ("NoSuchKey", "404", "NotFound") or "nosuchkey" in err_str or "not found" in err_str:
+            return ObjectNotFoundError(f"Object '{key}' not found in S3 bucket '{self.bucket_name}'.")
+        if error_code in ("AccessDenied", "InvalidAccessKeyId", "SignatureDoesNotMatch", "403") or "forbidden" in err_str or "accessdenied" in err_str:
+            return StoragePermissionDeniedError(f"Access denied for S3 object '{key}' in bucket '{self.bucket_name}': {e}")
+        if error_code in ("EndpointConnectionError", "ConnectTimeoutError", "ReadTimeoutError", "500", "502", "503", "ServiceUnavailable", "SlowDown") or "timeout" in err_str or "endpoint" in err_str:
+            return StorageUnavailableError(f"Object storage unavailable / connection error for key '{key}': {e}")
+        return StorageError(f"S3 storage error for key '{key}': {e}")
+
     def save_file(self, project_id: str | UUID, version: int, filename: str, content: bytes) -> str:
         safe_filename = Path(filename).name
         relative_key = f"datasets/{project_id}/{version}/{safe_filename}"
@@ -205,12 +244,15 @@ class S3StorageService(StorageService):
     def save_bytes(self, relative_key: str, content: bytes) -> str:
         key = self._clean_key(relative_key)
         client = self._get_client()
-        client.put_object(
-            Bucket=self.bucket_name,
-            Key=key,
-            Body=content,
-        )
-        return key
+        try:
+            client.put_object(
+                Bucket=self.bucket_name,
+                Key=key,
+                Body=content,
+            )
+            return key
+        except Exception as e:
+            raise self._map_s3_error(e, key) from e
 
     def get_file_bytes(self, storage_path: str) -> bytes:
         key = self._clean_key(storage_path)
@@ -219,12 +261,7 @@ class S3StorageService(StorageService):
             resp = client.get_object(Bucket=self.bucket_name, Key=key)
             return resp["Body"].read()
         except Exception as e:
-            error_code = ""
-            if hasattr(e, "response") and isinstance(e.response, dict):
-                error_code = str(e.response.get("Error", {}).get("Code", ""))
-            if error_code in ("NoSuchKey", "404", "NotFound") or "NoSuchKey" in str(e) or "NotFound" in str(e):
-                raise FileNotFoundError(f"Object {key} not found in S3 bucket {self.bucket_name}: {e}")
-            raise RuntimeError(f"S3 object retrieval failed for {key}: {e}") from e
+            raise self._map_s3_error(e, key) from e
 
     def get_file_path(self, storage_path: str) -> str:
         self._evict_cache_if_needed()
@@ -238,14 +275,14 @@ class S3StorageService(StorageService):
             local_cached.write_bytes(content)
         return str(local_cached)
 
-
     def delete_file(self, storage_path: str) -> bool:
         key = self._clean_key(storage_path)
         client = self._get_client()
         try:
             client.delete_object(Bucket=self.bucket_name, Key=key)
             return True
-        except Exception:
+        except Exception as e:
+            logger.warning(f"Failed to delete S3 object {key}: {e}")
             return False
 
     def exists(self, storage_path: str) -> bool:
@@ -254,8 +291,12 @@ class S3StorageService(StorageService):
         try:
             client.head_object(Bucket=self.bucket_name, Key=key)
             return True
-        except Exception:
-            return False
+        except Exception as e:
+            mapped = self._map_s3_error(e, key)
+            if isinstance(mapped, ObjectNotFoundError):
+                return False
+            # Never disguise network, authorization, or timeout failures as missing objects!
+            raise mapped
 
 
 _global_storage: StorageService | None = None

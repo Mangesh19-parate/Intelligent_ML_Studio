@@ -3,6 +3,12 @@ from app.infrastructure.storage.object_store import (
     LocalStorageService,
     S3StorageService,
     get_storage_service,
+    StorageError,
+    ObjectNotFoundError,
+    StorageUnavailableError,
+    StoragePermissionDeniedError,
+    StorageTimeoutError,
+    StorageConfigurationError,
 )
 
 __all__ = [
@@ -10,4 +16,10 @@ __all__ = [
     "LocalStorageService",
     "S3StorageService",
     "get_storage_service",
+    "StorageError",
+    "ObjectNotFoundError",
+    "StorageUnavailableError",
+    "StoragePermissionDeniedError",
+    "StorageTimeoutError",
+    "StorageConfigurationError",
 ]

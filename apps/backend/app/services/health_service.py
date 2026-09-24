@@ -233,8 +233,21 @@ class HealthService:
             )
         try:
             from app.models.durable_task import DurableTask
+            from app.models.worker_heartbeat import WorkerHeartbeat
             from datetime import timedelta
             now = datetime.now(timezone.utc)
+
+            # Query daemon workers with heartbeats within last 30 seconds
+            active_worker_records = (
+                session.query(WorkerHeartbeat)
+                .filter(
+                    WorkerHeartbeat.status == "ONLINE",
+                    WorkerHeartbeat.last_seen_at >= (now - timedelta(seconds=30)),
+                )
+                .all()
+            )
+            daemon_worker_ids = [w.worker_id for w in active_worker_records]
+
             active_tasks = (
                 session.query(DurableTask)
                 .filter(
@@ -252,14 +265,16 @@ class HealthService:
                 .count()
             )
             latency_ms = round((time.perf_counter() - start) * 1000, 2)
-            active_worker_ids = list({t.worker_id for t in active_tasks if t.worker_id})
+            task_worker_ids = list({t.worker_id for t in active_tasks if t.worker_id})
+            all_active_workers = list(set(daemon_worker_ids + task_worker_ids))
 
             return SubsystemHealth(
                 status="UP",
                 latency_ms=latency_ms,
                 details={
-                    "active_worker_count": len(active_worker_ids),
-                    "active_workers": active_worker_ids,
+                    "active_worker_count": len(all_active_workers),
+                    "active_workers": all_active_workers,
+                    "registered_daemons": len(daemon_worker_ids),
                     "running_tasks": len(active_tasks),
                     "stale_tasks_pending_recovery": stale_tasks,
                 },

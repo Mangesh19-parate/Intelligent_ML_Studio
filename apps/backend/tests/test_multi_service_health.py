@@ -81,3 +81,38 @@ def test_backward_compatible_baseline_health(client: TestClient):
         assert data["api_version"] == "v1"
         assert "code_version" in data
         assert "timestamp" in data
+
+
+def test_worker_health_check_endpoints(client: TestClient):
+    for endpoint in ["/health/worker", "/api/v1/health/worker"]:
+        response = client.get(endpoint)
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] in ("UP", "DEGRADED")
+        assert "latency_ms" in data
+        assert "active_worker_count" in data["details"]
+
+
+def test_worker_heartbeat_independent_reporting(client: TestClient, db_session):
+    from datetime import datetime, timezone
+    from app.models.worker_heartbeat import WorkerHeartbeat
+    
+    # Insert a fresh worker heartbeat record
+    worker_record = WorkerHeartbeat(
+        id="test-worker-uuid-1",
+        worker_id="worker-test-node-99",
+        hostname="ml-node-01",
+        status="ONLINE",
+        started_at=datetime.now(timezone.utc),
+        last_seen_at=datetime.now(timezone.utc),
+    )
+    db_session.add(worker_record)
+    db_session.commit()
+
+    response = client.get("/health/worker")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "UP"
+    assert "worker-test-node-99" in data["details"]["active_workers"]
+    assert data["details"]["registered_daemons"] >= 1
+

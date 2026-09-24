@@ -77,7 +77,7 @@ def reset_user_password(
     current_user: User = Depends(require_permission("MANAGE_USERS")),
 ):
     service = AdminService(db)
-    return service.reset_user_password(user_id)
+    return service.reset_user_password(user_id, actor_id=current_user.id)
 
 
 @router.put(

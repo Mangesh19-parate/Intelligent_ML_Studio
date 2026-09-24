@@ -11,6 +11,7 @@ from app.models.user_permission_override import UserPermissionOverride
 from app.models.deployment_gate import DeploymentGate
 from app.models.prediction_log import PredictionLog
 from app.models.deployment import Deployment
+from app.models.audit_log import AuditLog
 from app.core.security import get_password_hash
 from app.config.contract import (
     ALGORITHM_SET,
@@ -207,7 +208,13 @@ class AdminService:
 
         return self._serialize_user(user)
 
-    def reset_user_password(self, user_id: PyUUID | str) -> dict[str, str]:
+    def reset_user_password(
+        self,
+        user_id: PyUUID | str,
+        actor_id: PyUUID | str | None = None,
+        ip_address: str | None = None,
+        user_agent: str | None = None,
+    ) -> dict[str, str]:
         """
         Resets a user's password securely, generating a high-entropy temporary password,
         invalidating all active refresh tokens, and recording a security audit event.
@@ -227,15 +234,35 @@ class AdminService:
         import hashlib
         from datetime import timedelta
         from app.models.revoked_token import RevokedToken
+        from app.models.audit_log import AuditLog
+
         revocation_marker = RevokedToken(
             id=uuid4(),
             user_id=user.id,
             token_hash=hashlib.sha256(f"all_sessions_reset_{user.id}_{datetime.now(timezone.utc).isoformat()}".encode("utf-8")).hexdigest(),
             revoked_at=datetime.now(timezone.utc),
-            expires_at=datetime.now(timezone.utc) + timedelta(days=30),
         )
         self.db.add(revocation_marker)
+
+        # P1-05 SECURITY AUDIT: Dedicated Audit Log Entry (does not log temporary password)
+        audit_entry = AuditLog(
+            id=str(uuid4()),
+            event_type="PASSWORD_RESET",
+            actor_id=str(actor_id) if actor_id else "SYSTEM_ADMIN",
+            target_user_id=str(user.id),
+            ip_address=ip_address,
+            user_agent=user_agent,
+            status="SUCCESS",
+            summary=f"Password reset for user '{user.email}' (session version incremented to {user.session_version}).",
+            details={
+                "target_email": user.email,
+                "session_version": user.session_version,
+            },
+            timestamp=datetime.now(timezone.utc),
+        )
+        self.db.add(audit_entry)
         self.db.commit()
+
         return {
             "message": "Password reset successfully. Active sessions revoked.",
             "temporary_password": temp_password,
@@ -295,6 +322,27 @@ class AdminService:
         Aggregates multi-table system governance audit events.
         """
         events: list[AuditLogItem] = []
+
+        # 0. Dedicated Security and System Audit Logs
+        audit_logs = (
+            self.db.query(AuditLog)
+            .order_by(AuditLog.timestamp.desc())
+            .limit(limit)
+            .all()
+        )
+        for a in audit_logs:
+            events.append(
+                AuditLogItem(
+                    id=str(a.id),
+                    event_type=a.event_type,
+                    timestamp=a.timestamp or datetime.now(timezone.utc),
+                    actor=str(a.actor_id) if a.actor_id else "SYSTEM",
+                    target_id=str(a.target_user_id) if a.target_user_id else None,
+                    status=a.status,
+                    summary=a.summary,
+                    details=a.details or {},
+                )
+            )
 
         # 1. Gate evaluations & approvals
         gates = (

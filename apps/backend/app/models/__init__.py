@@ -26,6 +26,8 @@ from app.models.prediction_log import PredictionLog
 from app.models.reproducibility import ReproducibilityRun
 from app.models.durable_task import DurableTask
 from app.models.revoked_token import RevokedToken
+from app.models.worker_heartbeat import WorkerHeartbeat
+from app.models.audit_log import AuditLog
 
 __all__ = [
     "Base",
@@ -56,5 +58,7 @@ __all__ = [
     "ReproducibilityRun",
     "DurableTask",
     "RevokedToken",
+    "WorkerHeartbeat",
+    "AuditLog",
 ]
 

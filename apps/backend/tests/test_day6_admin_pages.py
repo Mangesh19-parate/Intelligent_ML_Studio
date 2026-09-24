@@ -219,3 +219,54 @@ def test_governance_audit_logs(client: TestClient, db_session: Session, admin_he
     assert gate_logs_resp.status_code == status.HTTP_200_OK
     gate_logs = gate_logs_resp.json()
     assert all(l["event_type"] == "GATE_EVALUATION" for l in gate_logs)
+
+
+def test_admin_reset_password_creates_audit_log_and_revokes_sessions(
+    client: TestClient,
+    db_session: Session,
+    admin_headers: dict,
+):
+    """
+    P1-05: Verifies that admin password reset generates temporary credentials,
+    increments session_version, revokes active sessions, and writes an AuditLog event.
+    """
+    user_role = db_session.query(Role).filter(Role.role_name == "USER").first()
+    target_user = User(
+        id=uuid4(),
+        full_name="Target Reset User",
+        email=f"reset_target_{uuid4().hex[:6]}@demo.com",
+        password_hash=get_password_hash("OldSecret123!"),
+        role_id=user_role.id,
+        is_active=True,
+        session_version=1,
+    )
+    db_session.add(target_user)
+    db_session.commit()
+
+    initial_version = target_user.session_version
+    user_id = str(target_user.id)
+
+    # Perform admin password reset
+    reset_resp = client.post(f"/api/v1/admin/users/{user_id}/reset-password", headers=admin_headers)
+    assert reset_resp.status_code == status.HTTP_200_OK
+    data = reset_resp.json()
+    assert "temporary_password" in data
+    assert len(data["temporary_password"]) >= 12
+
+    # Verify session_version incremented in database
+    db_session.refresh(target_user)
+    assert target_user.session_version == initial_version + 1
+
+    # Verify AuditLog row was written and appears in audit-logs endpoint
+    logs_resp = client.get("/api/v1/admin/audit-logs?event_type=PASSWORD_RESET", headers=admin_headers)
+    assert logs_resp.status_code == status.HTTP_200_OK
+    audit_logs = logs_resp.json()
+    matching = [l for l in audit_logs if l.get("target_id") == user_id]
+    assert len(matching) >= 1
+    audit_entry = matching[0]
+    assert audit_entry["event_type"] == "PASSWORD_RESET"
+    assert audit_entry["status"] == "SUCCESS"
+    # Ensure temporary password was NOT leaked in the audit details
+    assert "temporary_password" not in str(audit_entry)
+    assert data["temporary_password"] not in str(audit_entry)
+

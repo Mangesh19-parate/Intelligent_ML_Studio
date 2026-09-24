@@ -225,10 +225,10 @@ class DeploymentGateService:
         self.db.refresh(gate_record)
         return gate_record
 
-    def get_latest_gate(self, model_id: UUID | str) -> DeploymentGate | None:
+    def get_latest_gate(self, model_id: UUID | str) -> DeploymentGate:
         """
-        Retrieves the latest persisted deployment gate check for a model,
-        or performs a new check if none exists.
+        Retrieves the latest persisted deployment gate check for a model (strictly read-only).
+        Raises HTTP 404 if no gate check evaluation has been performed yet.
         """
         latest = (
             self.db.query(DeploymentGate)
@@ -237,7 +237,10 @@ class DeploymentGateService:
             .first()
         )
         if not latest:
-            latest = self.check_gate(model_id, user_approved=False)
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"No deployment gate evaluation found for model '{model_id}'. Evaluate gate via POST /models/{model_id}/deployment-gate/evaluate first."
+            )
         return latest
 
     def approve(self, model_id: UUID | str, approved_by_user_id: UUID | str) -> DeploymentGate:

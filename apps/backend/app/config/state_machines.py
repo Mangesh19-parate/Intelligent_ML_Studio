@@ -101,6 +101,7 @@ EXPERIMENT_VALID_TRANSITIONS: Dict[ExperimentState, List[ExperimentState]] = {
     ],
     ExperimentState.CONFIGURED: [
         ExperimentState.TRAINING,
+        ExperimentState.TRAINING_FAILED,
     ],
     ExperimentState.TRAINING: [
         ExperimentState.EVALUATED,

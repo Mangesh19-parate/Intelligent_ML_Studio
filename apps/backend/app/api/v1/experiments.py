@@ -95,7 +95,7 @@ def create_experiment(
         "deployment_threshold": dep_threshold,
     }
 
-    # Create Experiment shell record in CREATED status with frozen immutable configuration
+    # Single atomic transaction: Experiment (CONFIGURED) + DurableTask (QUEUED)
     experiment = exp_repo.create_experiment(
         project_id=project.id,
         task_type=project.task_type,
@@ -103,16 +103,13 @@ def create_experiment(
         cv_seed=cv_seed,
         selection_metric=eff_metric,
         selection_direction=eff_direction,
-        status=ExperimentState.CREATED.value,
+        status=ExperimentState.CONFIGURED.value,
         experiment_config=frozen_config,
         dataset_content_hash=getattr(project, "dataset_content_hash", None),
         deployment_threshold_frozen_at_creation=True,
     )
 
-    # Atomically acquire training lock with DB concurrency protection
-    service.start_training(experiment.id)
-
-    # Submit task to durable persistent execution layer
+    # Submit task to durable execution queue in QUEUED state within the same DB session
     submit_experiment_task(
         project_id=project.id,
         experiment_id=experiment.id,
@@ -122,17 +119,20 @@ def create_experiment(
         selection_metric=eff_metric,
         selection_direction=eff_direction,
         deployment_threshold=dep_threshold,
+        db=db,
     )
+
+    db.commit()
 
     return ExperimentCreateResponse(
         experiment_id=experiment.id,
-        status=ExperimentState.TRAINING.value,
+        status=ExperimentState.CONFIGURED.value,
         task_type=project.task_type,
         fold_count=payload.folds,
         cv_seed=cv_seed,
         selection_metric=eff_metric,
         selection_direction=eff_direction,
-        message="Model training experiment started in background.",
+        message="Model training experiment queued for execution.",
     )
 
 

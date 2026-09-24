@@ -295,6 +295,7 @@ export const modelApi = {
   getLocalExplainability: (modelId: string, inputRow: any) =>
     apiClient.post(`/models/${modelId}/explainability/local`, inputRow),
   getDeploymentGate: (modelId: string) => apiClient.get(`/models/${modelId}/deployment-gate`),
+  evaluateDeploymentGate: (modelId: string) => apiClient.post(`/models/${modelId}/deployment-gate/evaluate`),
   approveDeploymentGate: (modelId: string) => apiClient.post(`/models/${modelId}/deployment-gate/approve`),
   deploy: (modelId: string) => apiClient.post(`/models/${modelId}/deploy`),
   download: (modelId: string, format = 'joblib') =>

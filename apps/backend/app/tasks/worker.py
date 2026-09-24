@@ -70,6 +70,13 @@ def claim_next_queued_task(
             task.started_at = now
             task.heartbeat_at = now
             task.lease_expires_at = now + timedelta(seconds=lease_duration_seconds)
+
+            # Atomically transition parent experiment from CONFIGURED/CREATED to TRAINING
+            exp = db.query(Experiment).filter(Experiment.id == task.experiment_id).first()
+            if exp and exp.status in ["CONFIGURED", "CREATED", "QUEUED"]:
+                exp.status = "TRAINING"
+                exp.started_at = now
+
             db.commit()
             db.refresh(task)
             return task

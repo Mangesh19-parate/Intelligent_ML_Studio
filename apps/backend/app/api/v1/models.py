@@ -150,7 +150,7 @@ def download_model(
     "/{id}/deployment-gate",
     response_model=DeploymentGateResponse,
     status_code=status.HTTP_200_OK,
-    summary="Check or retrieve latest deployment gate verification status (READ permission required)",
+    summary="Retrieve latest deployment gate verification status (strictly read-only, READ permission required)",
 )
 def get_deployment_gate(
     id: UUID,
@@ -158,11 +158,30 @@ def get_deployment_gate(
     db: Session = Depends(get_db),
 ):
     """
-    Evaluates or retrieves the 6-condition pre-deployment verification gate.
+    Retrieves the latest persisted pre-deployment verification gate record without mutations.
     """
     _get_model_and_verify_access(id, current_user, db, allow_deployers=True)
     gate_service = DeploymentGateService(db)
     return gate_service.get_latest_gate(model_id=id)
+
+
+@router.post(
+    "/{id}/deployment-gate/evaluate",
+    response_model=DeploymentGateResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Explicitly evaluate and persist 6-condition pre-deployment verification gate",
+)
+def evaluate_deployment_gate(
+    id: UUID,
+    current_user: User = Depends(require_permission("READ")),
+    db: Session = Depends(get_db),
+):
+    """
+    Computes and records a new immutable pre-deployment verification gate row.
+    """
+    _get_model_and_verify_access(id, current_user, db, allow_deployers=True)
+    gate_service = DeploymentGateService(db)
+    return gate_service.check_gate(model_id=id, user_approved=False)
 
 
 @router.post(

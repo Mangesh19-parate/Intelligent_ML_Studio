@@ -72,13 +72,21 @@ class DeploymentService:
         # Confirm artifact exists and checksum is verified in storage
         from app.infrastructure.storage.object_store import get_storage_service
         storage = get_storage_service()
-        if not model.artifact_path or not storage.exists(model.artifact_path):
+        model_bytes = None
+        try:
+            if model.artifact_path and storage.exists(model.artifact_path):
+                model_bytes = storage.get_file_bytes(model.artifact_path)
+        except Exception:
+            pass
+        if model_bytes is None and model.artifact_path and Path(model.artifact_path).is_file():
+            model_bytes = Path(model.artifact_path).read_bytes()
+
+        if model_bytes is None:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail="Model artifact file missing from storage. Deployment rejected.",
             )
 
-        model_bytes = storage.get_file_bytes(model.artifact_path)
         actual_hash = hashlib.sha256(model_bytes).hexdigest()
         if model.artifact_checksum and actual_hash != model.artifact_checksum:
             raise HTTPException(

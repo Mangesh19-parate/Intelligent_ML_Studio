@@ -21,6 +21,7 @@ import {
   FolderOpen,
 } from 'lucide-react';
 import { Button } from '../components/ui/Button';
+import { TaskType } from '../types/api';
 
 export const DataStage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -379,7 +380,7 @@ export const DataStage: React.FC = () => {
                 <label className="text-xs font-bold text-[var(--color-text)]">Task Type (Optional)</label>
                 <select
                   value={newTaskType}
-                  onChange={(e) => setNewTaskType(e.target.value)}
+                  onChange={(e) => setNewTaskType(e.target.value as TaskType)}
                   className="w-full px-3.5 py-2 text-xs rounded-full border border-[var(--color-border)] bg-[var(--color-bg)] text-[var(--color-text)] focus:outline-none focus:border-[var(--color-accent)] cursor-pointer"
                 >
                   <option value="UNDETERMINED">Auto-detect / Profile Later</option>

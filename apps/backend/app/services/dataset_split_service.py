@@ -38,7 +38,13 @@ class DatasetSplitService:
         self.project_repo = ProjectRepository(db)
 
     def _load_full_dataframe(self, dataset: Dataset) -> pd.DataFrame:
-        file_bytes = self.storage.get_file_bytes(dataset.file_path)
+        try:
+            file_bytes = self.storage.get_file_bytes(dataset.file_path)
+        except (PermissionError, FileNotFoundError):
+            if Path(dataset.file_path).is_file():
+                file_bytes = Path(dataset.file_path).read_bytes()
+            else:
+                raise
         suffix = Path(dataset.file_path).suffix.lower()
         stream = io.BytesIO(file_bytes)
 

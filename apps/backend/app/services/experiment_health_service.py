@@ -134,8 +134,16 @@ class ExperimentHealthService:
                 try:
                     from app.infrastructure.storage.object_store import get_storage_service
                     storage = get_storage_service()
-                    if storage.exists(champion_model.artifact_path):
-                        data_bytes = storage.get_file_bytes(champion_model.artifact_path)
+                    data_bytes = None
+                    try:
+                        if storage.exists(champion_model.artifact_path):
+                            data_bytes = storage.get_file_bytes(champion_model.artifact_path)
+                    except Exception:
+                        pass
+                    if data_bytes is None and Path(champion_model.artifact_path).is_file():
+                        data_bytes = Path(champion_model.artifact_path).read_bytes()
+
+                    if data_bytes is not None:
                         computed_hash = hashlib.sha256(data_bytes).hexdigest()
                         if artifact_checksum_val and computed_hash == artifact_checksum_val:
                             checksum_status = "VERIFIED"

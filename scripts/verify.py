@@ -60,7 +60,10 @@ def run_step(step_name: str, cmd: list[str], cwd: Path) -> tuple[bool, str, floa
         env["ENV"] = "testing"
         
         if is_win and is_npm:
-            exec_args = " ".join(cmd)
+            cmd_fixed = list(cmd)
+            if cmd_fixed[0] in ["npm", "npx"] and not cmd_fixed[0].endswith(".cmd"):
+                cmd_fixed[0] = f"{cmd_fixed[0]}.cmd"
+            exec_args = " ".join(cmd_fixed)
             use_shell = True
         else:
             exec_args = cmd

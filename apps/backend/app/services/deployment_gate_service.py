@@ -84,15 +84,31 @@ class DeploymentGateService:
             try:
                 from app.infrastructure.storage.object_store import get_storage_service
                 storage = get_storage_service()
-                if storage.exists(model.artifact_path):
-                    model_bytes = storage.get_file_bytes(model.artifact_path)
+                model_bytes = None
+                try:
+                    if storage.exists(model.artifact_path):
+                        model_bytes = storage.get_file_bytes(model.artifact_path)
+                except Exception:
+                    pass
+                if model_bytes is None and Path(model.artifact_path).is_file():
+                    model_bytes = Path(model.artifact_path).read_bytes()
+
+                if model_bytes is not None:
                     disk_checksum = hashlib.sha256(model_bytes).hexdigest()
                     if disk_checksum == model.artifact_checksum:
                         manifest_key = str(Path(model.artifact_path).with_suffix(".manifest.json")).replace("\\", "/")
-                        if storage.exists(manifest_key):
+                        manifest_bytes = None
+                        try:
+                            if storage.exists(manifest_key):
+                                manifest_bytes = storage.get_file_bytes(manifest_key)
+                        except Exception:
+                            pass
+                        if manifest_bytes is None and Path(manifest_key).is_file():
+                            manifest_bytes = Path(manifest_key).read_bytes()
+
+                        if manifest_bytes:
                             import json
                             import hmac
-                            manifest_bytes = storage.get_file_bytes(manifest_key)
                             mdata = json.loads(manifest_bytes.decode("utf-8"))
                             expected_sig = mdata.get("signature")
                             computed_sig = hmac.new(

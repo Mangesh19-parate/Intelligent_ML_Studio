@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-09-24T15:16:40.765562+00:00",
+  "generated_at": "2026-09-24T15:27:57.280388+00:00",
   "fingerprint": {
-    "commit": "6f1a0ff05625efd7094c473f74eefd11ae043e17",
+    "commit": "d1639593cf40415faa13246a8b1382184060250d",
     "dirty_worktree": true,
     "python_version": "3.13.14",
     "platform": "win32",
@@ -16,15 +16,15 @@
       "rows": 20640,
       "features": 8,
       "champion_algorithm": "RandomForestRegressor",
-      "single_fit_training_time_s": 1.626,
+      "single_fit_training_time_s": 0.813,
       "peak_training_traced_ram_mb": 1.46,
-      "process_rss_mb": 249.44,
+      "process_rss_mb": 248.94,
       "artifact_size_mb": 17.25,
       "measured": true,
       "in_process_prediction_latency_ms": {
-        "p50_ms": 4.7,
-        "p95_ms": 7.91,
-        "p99_ms": 11.86,
+        "p50_ms": 1.05,
+        "p95_ms": 1.51,
+        "p99_ms": 1.66,
         "raw_observations_count": 100
       }
     },
@@ -34,23 +34,23 @@
       "rows": 2000,
       "features": 12,
       "champion_algorithm": "GradientBoostingClassifier",
-      "single_fit_training_time_s": 0.224,
+      "single_fit_training_time_s": 0.088,
       "peak_training_traced_ram_mb": 0.27,
-      "process_rss_mb": 234.42,
+      "process_rss_mb": 233.95,
       "artifact_size_mb": 0.04,
       "measured": true,
       "in_process_prediction_latency_ms": {
-        "p50_ms": 2.6,
-        "p95_ms": 4.38,
-        "p99_ms": 4.79,
+        "p50_ms": 0.69,
+        "p95_ms": 0.86,
+        "p99_ms": 0.94,
         "raw_observations_count": 100
       }
     }
   ],
   "pooled_in_process_latency_percentiles": {
-    "p50_ms": 3.74,
-    "p95_ms": 7.05,
-    "p99_ms": 8.93,
+    "p50_ms": 0.97,
+    "p95_ms": 1.29,
+    "p99_ms": 1.59,
     "total_observations": 200
   }
 }

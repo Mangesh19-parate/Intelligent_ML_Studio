@@ -225,9 +225,9 @@ export const ProjectDetail: React.FC = () => {
     }
   };
 
-  const handleTaskTypeConfirmed = async (taskType: TaskType) => {
+  const handleTaskTypeConfirmed = async (taskType: string) => {
     if (!id) return;
-    const projRes = await projectApi.updateTaskType(id, taskType);
+    const projRes = await projectApi.updateTaskType(id, taskType as TaskType);
     setProject(projRes.data);
     setSuccessMsg(`Task type confirmed as ${taskType}.`);
   };
@@ -654,7 +654,7 @@ export const ProjectDetail: React.FC = () => {
                         Development Partition
                       </div>
                       <div className="text-xl font-extrabold text-white font-mono">
-                        {splitSummary.development_rows.toLocaleString()}{' '}
+                        {splitSummary.development_rows?.toLocaleString() ?? 0}{' '}
                         <span className="text-xs font-normal text-slate-400">
                           ({100 - splitSummary.locked_test_pct}%)
                         </span>
@@ -670,7 +670,7 @@ export const ProjectDetail: React.FC = () => {
                         Locked Test Partition
                       </div>
                       <div className="text-xl font-extrabold text-white font-mono">
-                        {splitSummary.locked_test_rows.toLocaleString()}{' '}
+                        {splitSummary.locked_test_rows?.toLocaleString() ?? 0}{' '}
                         <span className="text-xs font-normal text-slate-400">
                           ({splitSummary.locked_test_pct}%)
                         </span>
@@ -852,7 +852,7 @@ export const ProjectDetail: React.FC = () => {
                             </span>
                           </td>
                           <td className="px-6 py-4 font-mono text-slate-200">
-                            {col.unique_count.toLocaleString()}
+                            {col.unique_count?.toLocaleString() ?? '-'}
                           </td>
                           <td className="px-6 py-4 font-mono text-slate-200">
                             {col.missing_percentage}%

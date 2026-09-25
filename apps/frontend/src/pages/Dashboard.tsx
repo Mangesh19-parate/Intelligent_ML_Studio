@@ -648,7 +648,7 @@ export const Dashboard: React.FC = () => {
                         {proj.task_type || 'Unassigned'}
                       </span>
                       <span className="text-[10px] font-mono text-[var(--color-text-muted)]">
-                        {new Date(proj.created_at).toLocaleDateString()}
+                        {proj.created_at ? new Date(proj.created_at).toLocaleDateString() : 'Recent'}
                       </span>
                     </div>
 

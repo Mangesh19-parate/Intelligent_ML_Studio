@@ -357,7 +357,8 @@ export const LineageViewer: React.FC<LineageViewerProps> = ({ experimentId, onCl
                     </span>
                     {lineage.winning_model?.artifact_checksum && (
                       <button
-                        onClick={() => copyToClipboard(lineage.winning_model.artifact_checksum, 'artifact_hash')}
+                        type="button"
+                        onClick={() => copyToClipboard(lineage.winning_model?.artifact_checksum || '', 'artifact_hash')}
                         className="text-[var(--color-text-muted)] hover:text-[var(--color-text)] p-1 rounded-full cursor-pointer transition-colors"
                         title="Copy Checksum"
                       >

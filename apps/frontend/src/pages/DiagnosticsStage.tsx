@@ -463,7 +463,7 @@ export const DiagnosticsStage: React.FC = () => {
                                 </span>
                               )}
                             </div>
-                            <span className="text-[10px] font-mono text-[var(--color-text-muted)]">ID: {model.id.slice(0, 8)}</span>
+                            <span className="text-[10px] font-mono text-[var(--color-text-muted)]">ID: {model.id ? model.id.slice(0, 8) : 'N/A'}</span>
                           </div>
                           {renderFitBadge(model.fit_diagnosis)}
                         </div>
@@ -525,8 +525,9 @@ export const DiagnosticsStage: React.FC = () => {
                             </span>
                           </div>
                           <button
+                            type="button"
                             onClick={() => {
-                              setSelectedPassportModelId(model.id);
+                              setSelectedPassportModelId(model.id || null);
                               setPassportModalOpen(true);
                             }}
                             className="px-3 py-1 rounded-full bg-[var(--color-surface-hover)] hover:bg-[var(--color-surface-card)] border border-[var(--color-border)] text-[var(--color-text)] font-semibold flex items-center space-x-1.5 cursor-pointer transition text-[11px] shadow-xs"
@@ -578,8 +579,9 @@ export const DiagnosticsStage: React.FC = () => {
                         </div>
                       </div>
                       <button
+                        type="button"
                         onClick={() => {
-                          setSelectedPassportModelId(winningModel.id);
+                          setSelectedPassportModelId(winningModel.id || null);
                           setPassportModalOpen(true);
                         }}
                         className="px-4 py-2 rounded-full bg-[var(--color-accent-soft)] hover:bg-[var(--color-accent)] hover:text-white text-[var(--color-accent)] border border-[var(--color-accent-border)] text-xs font-bold flex items-center space-x-1.5 transition cursor-pointer shadow-sm"
@@ -623,14 +625,15 @@ export const DiagnosticsStage: React.FC = () => {
                             </span>
                             <div>
                               <h4 className="text-sm font-bold text-[var(--color-text)]">{candidate.algorithm_name}</h4>
-                              <span className="text-[10px] font-mono text-[var(--color-text-muted)]">ID: {candidate.id.slice(0, 8)}</span>
+                              <span className="text-[10px] font-mono text-[var(--color-text-muted)]">ID: {candidate.id ? candidate.id.slice(0, 8) : 'N/A'}</span>
                             </div>
                           </div>
                           <div className="flex items-center space-x-2">
                             {renderFitBadge(candidate.fit_diagnosis)}
                             <button
+                              type="button"
                               onClick={() => {
-                                setSelectedPassportModelId(candidate.id);
+                                setSelectedPassportModelId(candidate.id || null);
                                 setPassportModalOpen(true);
                               }}
                               className="px-3 py-1 rounded-full bg-[var(--color-surface-hover)] hover:bg-[var(--color-surface-card)] border border-[var(--color-border)] text-[var(--color-text)] font-semibold flex items-center space-x-1 cursor-pointer transition text-[11px] shadow-xs"

@@ -178,11 +178,11 @@ export const DataAnalysisStage: React.FC = () => {
     }
   };
 
-  const handleTaskTypeConfirmed = (confirmedType: TaskType) => {
+  const handleTaskTypeConfirmed = (confirmedType: string) => {
     if (currentProject) {
       setCurrentProject({
         ...currentProject,
-        task_type: confirmedType,
+        task_type: confirmedType as TaskType,
         task_type_confidence: 'MANUAL',
       });
     }

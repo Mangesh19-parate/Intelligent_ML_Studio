@@ -81,7 +81,10 @@ export const AdminConsole: React.FC = () => {
     setLoadingAudits(true);
     try {
       const res = await adminApi.getAuditLogs(auditFilter, auditSearch);
-      setAuditLogs(res.data || []);
+      setAuditLogs((res.data || []).map((log: any) => ({
+        ...log,
+        resource_type: log.resource_type ?? undefined,
+      })));
     } catch (err) {
       console.error('Failed to load audit logs', err);
     } finally {

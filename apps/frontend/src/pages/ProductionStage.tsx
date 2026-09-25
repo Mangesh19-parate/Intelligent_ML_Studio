@@ -130,7 +130,7 @@ export const ProductionStage: React.FC = () => {
         const winner = modelsList.find((m: ModelItem) => m.is_winning_model || m.is_selected_champion || m.is_winner) || (modelsList.length ? modelsList[0] : null);
         setWinningModel(winner);
 
-        if (winner) {
+        if (winner && winner.id) {
           try {
             const gateRes = await modelApi.getDeploymentGate(winner.id);
             setGate(gateRes.data);
@@ -156,7 +156,7 @@ export const ProductionStage: React.FC = () => {
   }, [selectedProjectId]);
 
   const handleApproveGate = async () => {
-    if (!winningModel) return;
+    if (!winningModel || !winningModel.id) return;
     setApproving(true);
     setError('');
     try {
@@ -172,7 +172,7 @@ export const ProductionStage: React.FC = () => {
   };
 
   const handleDeploy = async () => {
-    if (!winningModel) return;
+    if (!winningModel || !winningModel.id) return;
     setDeploying(true);
     setError('');
     try {

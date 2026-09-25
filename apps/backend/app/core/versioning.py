@@ -1,6 +1,5 @@
 import os
 import subprocess
-from typing import Any
 from functools import lru_cache
 from app.core.config import settings
 
@@ -30,36 +29,3 @@ def get_code_version() -> str:
         pass
     
     return "0000000000000000000000000000000000000000"
-
-
-@lru_cache()
-def get_environment_metadata() -> dict[str, Any]:
-    """Captures runtime runtime library versions for reproducibility snapshot."""
-    import sys
-    meta = {
-        "python_version": sys.version.split()[0],
-        "environment_capture_method": "RUNTIME_INSPECTION",
-        "model_library_versions": {},
-    }
-    try:
-        import sklearn
-        meta["sklearn_version"] = sklearn.__version__
-        meta["model_library_versions"]["scikit-learn"] = sklearn.__version__
-    except ImportError:
-        meta["sklearn_version"] = None
-
-    try:
-        import numpy
-        meta["numpy_version"] = numpy.__version__
-        meta["model_library_versions"]["numpy"] = numpy.__version__
-    except ImportError:
-        meta["numpy_version"] = None
-
-    try:
-        import pandas
-        meta["pandas_version"] = pandas.__version__
-        meta["model_library_versions"]["pandas"] = pandas.__version__
-    except ImportError:
-        meta["pandas_version"] = None
-
-    return meta

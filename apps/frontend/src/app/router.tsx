@@ -8,17 +8,17 @@ import { Login } from '../pages/Login';
 import { LegalCenter } from '../pages/legal/LegalCenter';
 import { PrivacyPolicy } from '../pages/legal/PrivacyPolicy';
 import { TermsOfService } from '../pages/legal/TermsOfService';
-import { Dashboard } from '../pages/Dashboard';
-import { ProjectDetail } from '../pages/ProjectDetail';
-import DataStage from '../pages/DataStage';
-import { DataAnalysisStage } from '../pages/DataAnalysisStage';
-import { TransformationStage } from '../pages/TransformationStage';
-import { FeatureEngineeringStage } from '../pages/FeatureEngineeringStage';
-import { MLStage } from '../pages/MLStage';
-import { DiagnosticsStage } from '../pages/DiagnosticsStage';
-import { ProductionStage } from '../pages/ProductionStage';
-import { DeploymentMonitoring } from '../pages/DeploymentMonitoring';
-import { AdminConsole } from '../pages/AdminConsole';
+import { DashboardPage as Dashboard } from '../features/projects/pages/DashboardPage';
+import { ProjectDetailPage as ProjectDetail } from '../features/projects/pages/ProjectDetailPage';
+import { DatasetsPage as DataStage } from '../features/datasets/pages/DatasetsPage';
+import { EDAPage as DataAnalysisStage } from '../features/diagnostics/pages/EDAPage';
+import { TransformationsPage as TransformationStage } from '../features/transformations/pages/TransformationsPage';
+import { FeatureSelectionPage as FeatureEngineeringStage } from '../features/feature-selection/pages/FeatureSelectionPage';
+import { TrainingPage as MLStage } from '../features/training/pages/TrainingPage';
+import { DiagnosticsPage as DiagnosticsStage } from '../features/diagnostics/pages/DiagnosticsPage';
+import { ProductionPage as ProductionStage } from '../features/deployments/pages/ProductionPage';
+import { MonitoringPage as DeploymentMonitoring } from '../features/monitoring/pages/MonitoringPage';
+import { AdminConsolePage as AdminConsole } from '../features/admin/pages/AdminConsolePage';
 import { NotFound } from '../pages/NotFound';
 
 interface ProtectedRouteProps {

@@ -29,20 +29,20 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     ref
   ) => {
     const baseStyles =
-      'inline-flex items-center justify-center font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed select-none rounded-lg';
+      'inline-flex items-center justify-center font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--color-accent)] disabled:opacity-50 disabled:cursor-not-allowed select-none rounded-lg';
 
     const variantStyles = {
       primary:
-        'bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm hover:shadow-md shadow-indigo-500/25 hover:shadow-indigo-500/35 active:bg-indigo-800 border border-transparent',
+        'bg-[var(--color-accent)] hover:bg-[var(--color-accent-hover)] active:bg-[var(--color-accent-active)] text-white shadow-sm shadow-[var(--color-accent)]/25 border border-transparent',
       secondary:
-        'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 hover:border-slate-600 shadow-sm hover:shadow',
+        'bg-[var(--color-surface)] hover:bg-[var(--color-surface-hover)] text-[var(--color-text)] border border-[var(--color-border)] shadow-sm',
       danger:
-        'bg-rose-600 hover:bg-rose-700 text-white shadow-sm hover:shadow-md shadow-rose-500/25 hover:shadow-rose-500/35 active:bg-rose-800 border border-transparent focus:ring-rose-500',
+        'bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white shadow-sm shadow-rose-500/25 border border-transparent focus:ring-rose-500',
       ghost:
-        'bg-transparent hover:bg-slate-800/60 text-slate-300 hover:text-white border border-transparent',
+        'bg-transparent hover:bg-[var(--color-surface-hover)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] border border-transparent',
       outline:
-        'bg-transparent hover:bg-slate-800/40 text-slate-200 border border-slate-600 hover:border-slate-500 shadow-sm hover:shadow',
-      icon: 'bg-transparent hover:bg-slate-800 text-slate-400 hover:text-slate-200 p-2 rounded-lg',
+        'bg-transparent hover:bg-[var(--color-surface-hover)] text-[var(--color-text)] border border-[var(--color-border)] shadow-sm',
+      icon: 'bg-transparent hover:bg-[var(--color-surface-hover)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] p-2 rounded-lg',
     };
 
     const sizeStyles = {

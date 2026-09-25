@@ -30,6 +30,6 @@ describe('Button Component', () => {
     expect(screen.getByRole('button')).toHaveClass('bg-rose-600');
 
     rerender(<Button variant="secondary">Cancel</Button>);
-    expect(screen.getByRole('button')).toHaveClass('bg-slate-800');
+    expect(screen.getByRole('button')).toHaveClass('bg-[var(--color-surface)]');
   });
 });

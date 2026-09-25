@@ -10,13 +10,9 @@ venv/
 ENV/
 build/
 develop-eggs/
-dist/
 downloads/
 eggs/
 .eggs/
-/lib/
-/lib64/
-!frontend/src/lib/
 parts/
 sdist/
 var/
@@ -28,16 +24,27 @@ wheels/
 .coverage
 htmlcov/
 
-# Data, SQLite databases, and Serialized Artifacts
-/data/
-backend/data/
+# Node & Frontend
+node_modules/
+apps/frontend/dist/
+apps/frontend/.vite/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Secrets & Environment (Only examples permitted)
+.env
+.env.*
+!.env.example
+!apps/backend/.env.example
+!apps/frontend/.env.production.example
+
+# Runtime Data, Databases, and Serialized Artifacts
 apps/backend/data/
-research/data/
+apps/backend/ml_studio.db
 models/
-!frontend/src/components/data/
-!frontend/src/data/
-!apps/frontend/src/components/data/
-!apps/frontend/src/data/
+research/data/
+research/results.db
 *.db
 *.sqlite
 *.sqlite3
@@ -45,40 +52,22 @@ models/
 *.joblib
 *.npy
 *.parquet
+!apps/frontend/src/components/data/
+!apps/frontend/src/data/
 
-# Node & Frontend Build Artifacts
-node_modules/
-frontend/node_modules/
-apps/frontend/node_modules/
-dist/
-frontend/dist/
-apps/frontend/dist/
-.vite/
-frontend/.vite/
-apps/frontend/.vite/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# Environment & Secrets (Never commit production or dev secrets)
-.env
-.env.local
-.env.*.local
-backend/.env
-apps/backend/.env
-frontend/.env
-*.env
-
-# IDE, Scratch & System
+# IDE, OS & Tooling
 .idea/
 .vscode/
 *.swp
 *.swo
 .DS_Store
+.agents/
+brain/
+scratch/
+
+# Archives & Distribution Bundles
+dist/
 dist_export/
 releases/
 *.zip
 *.tar.gz
-brain/
-scratch/
-.agents/

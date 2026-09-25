@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { X } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Button } from './Button';
@@ -12,6 +12,7 @@ export interface ModalProps {
   footer?: React.ReactNode;
   maxWidth?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl';
   className?: string;
+  ariaLabelledBy?: string;
 }
 
 export const Modal: React.FC<ModalProps> = ({
@@ -23,7 +24,10 @@ export const Modal: React.FC<ModalProps> = ({
   footer,
   maxWidth = 'lg',
   className,
+  ariaLabelledBy = 'modal-title',
 }) => {
+  const modalRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && isOpen) {
@@ -54,14 +58,16 @@ export const Modal: React.FC<ModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fadeIn"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fadeIn"
       role="dialog"
       aria-modal="true"
+      aria-labelledby={title ? ariaLabelledBy : undefined}
       onClick={onClose}
     >
       <div
+        ref={modalRef}
         className={cn(
-          'w-full bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] text-slate-100 animate-scaleUp',
+          'w-full bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] text-[var(--color-text)] animate-scaleUp',
           maxWidthStyles[maxWidth],
           className
         )}
@@ -69,22 +75,24 @@ export const Modal: React.FC<ModalProps> = ({
       >
         {/* Modal Header */}
         {(title || description) && (
-          <div className="flex items-start justify-between px-6 py-5 border-b border-slate-800 shrink-0">
+          <div className="flex items-start justify-between px-6 py-5 border-b border-[var(--color-border)] shrink-0">
             <div>
               {title && typeof title === 'string' ? (
-                <h3 className="text-lg font-semibold text-slate-100">{title}</h3>
+                <h3 id={ariaLabelledBy} className="text-lg font-semibold text-[var(--color-text)]">
+                  {title}
+                </h3>
               ) : (
-                title
+                <div id={ariaLabelledBy}>{title}</div>
               )}
               {description && (
-                <p className="mt-1 text-sm text-slate-400">{description}</p>
+                <p className="mt-1 text-sm text-[var(--color-text-muted)]">{description}</p>
               )}
             </div>
             <Button
               variant="icon"
               size="icon"
               onClick={onClose}
-              className="text-slate-400 hover:text-slate-200"
+              className="text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
               aria-label="Close modal"
             >
               <X className="w-5 h-5" />
@@ -97,7 +105,7 @@ export const Modal: React.FC<ModalProps> = ({
 
         {/* Modal Footer */}
         {footer && (
-          <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-slate-800 bg-slate-900/50 shrink-0">
+          <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-[var(--color-border)] bg-[var(--color-surface-hover)] shrink-0">
             {footer}
           </div>
         )}

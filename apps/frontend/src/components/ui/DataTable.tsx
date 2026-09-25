@@ -62,11 +62,18 @@ export function DataTable<T extends Record<string, any>>({
     return [...filteredData].sort((a, b) => {
       const aVal = a[sortKey];
       const bVal = b[sortKey];
+
       if (aVal === bVal) return 0;
       if (aVal === null || aVal === undefined) return 1;
       if (bVal === null || bVal === undefined) return -1;
-      if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
-      return sortDirection === 'asc' ? 1 : -1;
+
+      if (typeof aVal === 'number' && typeof bVal === 'number') {
+        return sortDirection === 'asc' ? aVal - bVal : bVal - aVal;
+      }
+
+      const strA = String(aVal).toLowerCase();
+      const strB = String(bVal).toLowerCase();
+      return sortDirection === 'asc' ? strA.localeCompare(strB) : strB.localeCompare(strA);
     });
   }, [filteredData, sortKey, sortDirection]);
 
@@ -93,12 +100,12 @@ export function DataTable<T extends Record<string, any>>({
   };
 
   return (
-    <div className={cn('w-full flex flex-col gap-4 text-slate-100', className)}>
+    <div className={cn('w-full flex flex-col gap-4 text-[var(--color-text)]', className)}>
       {/* Table Controls */}
       {searchable && (
         <div className="flex items-center justify-between gap-4">
           <div className="relative flex-1 max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--color-text-muted)]" />
             <input
               type="text"
               value={searchTerm}
@@ -107,43 +114,43 @@ export function DataTable<T extends Record<string, any>>({
                 setCurrentPage(1);
               }}
               placeholder={searchPlaceholder}
-              className="w-full pl-9 pr-4 py-2 bg-slate-900/80 border border-slate-800 rounded-lg text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
+              className="w-full pl-9 pr-4 py-2 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg text-sm text-[var(--color-text)] placeholder-[var(--color-text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] focus:border-[var(--color-accent)] transition-all"
             />
           </div>
-          <div className="text-xs text-slate-400">
-            Showing <strong className="text-slate-200">{paginatedData.length}</strong> of{' '}
-            <strong className="text-slate-200">{sortedData.length}</strong> results
+          <div className="text-xs text-[var(--color-text-muted)]">
+            Showing <strong className="text-[var(--color-text)]">{paginatedData.length}</strong> of{' '}
+            <strong className="text-[var(--color-text)]">{sortedData.length}</strong> results
           </div>
         </div>
       )}
 
       {/* Table Container */}
-      <div className="w-full overflow-x-auto rounded-xl border border-slate-800 bg-slate-900/60 backdrop-blur-sm">
+      <div className="w-full overflow-x-auto rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)]">
         <table className="w-full text-left text-sm border-collapse">
           <thead>
-            <tr className="border-b border-slate-800 bg-slate-900/90 text-xs font-semibold uppercase tracking-wider text-slate-400">
+            <tr className="border-b border-[var(--color-border)] bg-[var(--color-surface-hover)] text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
               {columns.map((col) => (
                 <th
                   key={col.key}
                   onClick={() => handleSort(col.key, col.sortable)}
                   className={cn(
                     'px-4 py-3.5 select-none transition-colors',
-                    col.sortable && 'cursor-pointer hover:text-slate-200',
+                    col.sortable && 'cursor-pointer hover:text-[var(--color-text)]',
                     col.className
                   )}
                 >
                   <div className="flex items-center gap-1.5">
                     <span>{col.header}</span>
                     {col.sortable && (
-                      <span className="shrink-0 text-slate-500">
+                      <span className="shrink-0 text-[var(--color-text-muted)]">
                         {sortKey === col.key ? (
                           sortDirection === 'asc' ? (
-                            <ChevronUp className="w-3.5 h-3.5 text-indigo-400" />
+                            <ChevronUp className="w-3.5 h-3.5 text-[var(--color-accent)]" />
                           ) : (
-                            <ChevronDown className="w-3.5 h-3.5 text-indigo-400" />
+                            <ChevronDown className="w-3.5 h-3.5 text-[var(--color-accent)]" />
                           )
                         ) : (
-                          <ChevronsUpDown className="w-3.5 h-3.5 hover:text-slate-400" />
+                          <ChevronsUpDown className="w-3.5 h-3.5 hover:text-[var(--color-text)]" />
                         )}
                       </span>
                     )}
@@ -152,24 +159,24 @@ export function DataTable<T extends Record<string, any>>({
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-800/60">
+          <tbody className="divide-y divide-[var(--color-border)]">
             {isLoading ? (
               Array.from({ length: 5 }).map((_, i) => (
                 <tr key={i} className="animate-pulse">
                   {columns.map((col) => (
                     <td key={col.key} className="px-4 py-4">
-                      <div className="h-4 bg-slate-800 rounded w-3/4" />
+                      <div className="h-4 bg-[var(--color-surface-hover)] rounded w-3/4" />
                     </td>
                   ))}
                 </tr>
               ))
             ) : paginatedData.length === 0 ? (
               <tr>
-                <td colSpan={columns.length} className="px-4 py-12 text-center text-slate-400">
+                <td colSpan={columns.length} className="px-4 py-12 text-center text-[var(--color-text-muted)]">
                   {emptyState || (
                     <div className="flex flex-col items-center justify-center gap-2">
-                      <p className="text-sm font-medium text-slate-300">No records found</p>
-                      <p className="text-xs text-slate-500">
+                      <p className="text-sm font-medium text-[var(--color-text)]">No records found</p>
+                      <p className="text-xs text-[var(--color-text-muted)]">
                         {searchTerm ? 'Try adjusting your search criteria' : 'No data available'}
                       </p>
                     </div>
@@ -182,12 +189,12 @@ export function DataTable<T extends Record<string, any>>({
                   key={row.id ?? idx}
                   onClick={() => onRowClick && onRowClick(row)}
                   className={cn(
-                    'hover:bg-slate-800/40 transition-colors',
+                    'hover:bg-[var(--color-surface-hover)] transition-colors',
                     onRowClick && 'cursor-pointer'
                   )}
                 >
                   {columns.map((col) => (
-                    <td key={col.key} className={cn('px-4 py-3.5 text-slate-200', col.className)}>
+                    <td key={col.key} className={cn('px-4 py-3.5 text-[var(--color-text)]', col.className)}>
                       {col.cell ? col.cell(row, idx) : row[col.key]}
                     </td>
                   ))}
@@ -201,9 +208,9 @@ export function DataTable<T extends Record<string, any>>({
       {/* Pagination Controls */}
       {totalPages > 1 && (
         <div className="flex items-center justify-between px-1 py-2">
-          <span className="text-xs text-slate-400">
-            Page <strong className="text-slate-200">{currentPage}</strong> of{' '}
-            <strong className="text-slate-200">{totalPages}</strong>
+          <span className="text-xs text-[var(--color-text-muted)]">
+            Page <strong className="text-[var(--color-text)]">{currentPage}</strong> of{' '}
+            <strong className="text-[var(--color-text)]">{totalPages}</strong>
           </span>
           <div className="flex items-center gap-2">
             <Button

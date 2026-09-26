@@ -8,17 +8,17 @@ import { Login } from '../pages/Login';
 import { LegalCenter } from '../pages/legal/LegalCenter';
 import { PrivacyPolicy } from '../pages/legal/PrivacyPolicy';
 import { TermsOfService } from '../pages/legal/TermsOfService';
-import { DashboardPage as Dashboard } from '../features/projects/pages/DashboardPage';
-import { ProjectDetailPage as ProjectDetail } from '../features/projects/pages/ProjectDetailPage';
-import { DatasetsPage as DataStage } from '../features/datasets/pages/DatasetsPage';
-import { EDAPage as DataAnalysisStage } from '../features/diagnostics/pages/EDAPage';
-import { TransformationsPage as TransformationStage } from '../features/transformations/pages/TransformationsPage';
-import { FeatureSelectionPage as FeatureEngineeringStage } from '../features/feature-selection/pages/FeatureSelectionPage';
-import { TrainingPage as MLStage } from '../features/training/pages/TrainingPage';
-import { DiagnosticsPage as DiagnosticsStage } from '../features/diagnostics/pages/DiagnosticsPage';
-import { ProductionPage as ProductionStage } from '../features/deployments/pages/ProductionPage';
-import { MonitoringPage as DeploymentMonitoring } from '../features/monitoring/pages/MonitoringPage';
-import { AdminConsolePage as AdminConsole } from '../features/admin/pages/AdminConsolePage';
+import { DashboardPage } from '../features/projects/pages/DashboardPage';
+import { ProjectDetailPage } from '../features/projects/pages/ProjectDetailPage';
+import { DatasetsPage } from '../features/datasets/pages/DatasetsPage';
+import { EDAPage } from '../features/diagnostics/pages/EDAPage';
+import { TransformationsPage } from '../features/transformations/pages/TransformationsPage';
+import { FeatureSelectionPage } from '../features/feature-selection/pages/FeatureSelectionPage';
+import { TrainingPage } from '../features/training/pages/TrainingPage';
+import { DiagnosticsPage } from '../features/diagnostics/pages/DiagnosticsPage';
+import { ProductionPage } from '../features/deployments/pages/ProductionPage';
+import { MonitoringPage } from '../features/monitoring/pages/MonitoringPage';
+import { AdminConsolePage } from '../features/admin/pages/AdminConsolePage';
 import { NotFound } from '../pages/NotFound';
 
 interface ProtectedRouteProps {
@@ -70,7 +70,7 @@ export const AppRoutes: React.FC = () => {
         path="/dashboard"
         element={
           <ProtectedRoute>
-            <Dashboard />
+            <DashboardPage />
           </ProtectedRoute>
         }
       />
@@ -80,7 +80,7 @@ export const AppRoutes: React.FC = () => {
         path="/projects/:id"
         element={
           <ProtectedRoute>
-            <ProjectDetail />
+            <ProjectDetailPage />
           </ProtectedRoute>
         }
       />
@@ -90,7 +90,7 @@ export const AppRoutes: React.FC = () => {
         path="/data"
         element={
           <ProtectedRoute>
-            <DataStage />
+            <DatasetsPage />
           </ProtectedRoute>
         }
       />
@@ -102,7 +102,7 @@ export const AppRoutes: React.FC = () => {
         path="/data-analysis"
         element={
           <ProtectedRoute>
-            <DataAnalysisStage />
+            <EDAPage />
           </ProtectedRoute>
         }
       />
@@ -115,7 +115,7 @@ export const AppRoutes: React.FC = () => {
         path="/transformations"
         element={
           <ProtectedRoute>
-            <TransformationStage />
+            <TransformationsPage />
           </ProtectedRoute>
         }
       />
@@ -125,7 +125,7 @@ export const AppRoutes: React.FC = () => {
         path="/feature-engineering"
         element={
           <ProtectedRoute>
-            <FeatureEngineeringStage />
+            <FeatureSelectionPage />
           </ProtectedRoute>
         }
       />
@@ -137,7 +137,7 @@ export const AppRoutes: React.FC = () => {
         path="/ml"
         element={
           <ProtectedRoute>
-            <MLStage />
+            <TrainingPage />
           </ProtectedRoute>
         }
       />
@@ -152,7 +152,7 @@ export const AppRoutes: React.FC = () => {
         path="/diagnostics"
         element={
           <ProtectedRoute>
-            <DiagnosticsStage />
+            <DiagnosticsPage />
           </ProtectedRoute>
         }
       />
@@ -165,7 +165,7 @@ export const AppRoutes: React.FC = () => {
         path="/production"
         element={
           <ProtectedRoute>
-            <ProductionStage />
+            <ProductionPage />
           </ProtectedRoute>
         }
       />
@@ -176,7 +176,7 @@ export const AppRoutes: React.FC = () => {
         path="/monitoring"
         element={
           <ProtectedRoute>
-            <DeploymentMonitoring />
+            <MonitoringPage />
           </ProtectedRoute>
         }
       />
@@ -185,7 +185,7 @@ export const AppRoutes: React.FC = () => {
         path="/deployments/:id/monitoring"
         element={
           <ProtectedRoute>
-            <DeploymentMonitoring />
+            <MonitoringPage />
           </ProtectedRoute>
         }
       />
@@ -195,7 +195,7 @@ export const AppRoutes: React.FC = () => {
         path="/admin"
         element={
           <ProtectedRoute requiredRole="ADMIN">
-            <AdminConsole />
+            <AdminConsolePage />
           </ProtectedRoute>
         }
       />

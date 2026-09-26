@@ -21,6 +21,10 @@ test:
 	cd apps/backend && pytest -q
 	cd apps/frontend && npm run test -- --run
 
+test-e2e:
+	cd apps/backend && pytest tests/e2e -q
+	cd apps/frontend && npm run test:e2e
+
 typecheck:
 	cd apps/frontend && npm run typecheck
 

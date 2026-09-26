@@ -8,6 +8,7 @@
     "build": "npm --prefix apps/frontend run build",
     "preview": "npm --prefix apps/frontend run preview",
     "test": "npm --prefix apps/frontend run test",
+    "test:e2e": "npm --prefix apps/frontend run test:e2e",
     "typecheck": "npm --prefix apps/frontend run typecheck",
     "lint": "npm --prefix apps/frontend run lint",
     "lint:fix": "npm --prefix apps/frontend run lint:fix",

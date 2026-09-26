@@ -122,6 +122,27 @@ def compute_paired_statistics(
     }
 
 
+def compute_holm_bonferroni_adjusted_p_values(p_values: Sequence[float]) -> list[float]:
+    """
+    Applies Holm-Bonferroni step-down procedure to control Family-Wise Error Rate (FWER).
+    p_adj_(i) = min(1.0, max_{k <= i} (m - k + 1) * p_(k))
+    """
+    m = len(p_values)
+    if m == 0:
+        return []
+    indexed_p = sorted(enumerate(p_values), key=lambda x: x[1])
+    adjusted = [0.0] * m
+    running_max = 0.0
+
+    for rank, (orig_idx, p_val) in enumerate(indexed_p):
+        multiplier = m - rank
+        raw_adj = multiplier * p_val
+        running_max = max(running_max, raw_adj)
+        adjusted[orig_idx] = min(1.0, float(running_max))
+
+    return adjusted
+
+
 def analyze_research_results(
     runs_parquet_path: Path | str = RUNS_PARQUET,
 ) -> dict[str, Any]:
@@ -199,8 +220,14 @@ def analyze_research_results(
                     metric_name=metric_name,
                     higher_is_better=higher_is_better,
                 )
-                baseline_comparisons[b_method]["unit_of_analysis"] = "repeat_mean"
-                baseline_comparisons[b_method]["n_repeats"] = len(base_repeat_means)
+        # Apply Holm-Bonferroni step-down correction across all joint baseline hypotheses
+        if baseline_comparisons:
+            b_keys = list(baseline_comparisons.keys())
+            raw_p_values = [baseline_comparisons[k]["p_val_t"] for k in b_keys]
+            adj_p_values = compute_holm_bonferroni_adjusted_p_values(raw_p_values)
+            for k, adj_p in zip(b_keys, adj_p_values):
+                baseline_comparisons[k]["p_val_t_holm"] = round(adj_p, 6)
+                baseline_comparisons[k]["is_significant_holm"] = bool(adj_p < 0.05)
 
         # Compute stability gain: Exp B vs Exp A
         stab_a = method_stability.get("RANK_AGGREGATION", {}).get("mean_stability", 0.0)

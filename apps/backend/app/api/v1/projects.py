@@ -29,16 +29,17 @@ def create_project(
     "",
     response_model=list[ProjectResponse],
     status_code=status.HTTP_200_OK,
-    summary="List user projects (or all projects if user has MANAGE_USERS permission)"
+    summary="List user projects with keyset cursor or offset pagination"
 )
 def list_projects(
+    cursor: str | None = Query(default=None, description="Keyset cursor token for deterministic O(log N) pagination"),
     skip: int = Query(default=0, ge=0),
-    limit: int = Query(default=100, ge=1, le=500),
+    limit: int = Query(default=50, ge=1, le=500),
     current_user: User = Depends(require_permission("READ")),
     db: Session = Depends(get_db),
 ):
     service = ProjectService(db)
-    return service.list_projects(current_user, skip=skip, limit=limit)
+    return service.list_projects(current_user, cursor=cursor, skip=skip, limit=limit)
 
 @router.get(
     "/{id}",

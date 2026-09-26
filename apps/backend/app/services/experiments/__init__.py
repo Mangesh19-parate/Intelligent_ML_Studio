@@ -10,10 +10,16 @@ from app.services.experiments.artifact_manager import (
     get_orphaned_recoverable_registry,
     clear_orphaned_recoverable_registry,
 )
+from app.services.experiments.evaluator import ExperimentEvaluator
+from app.services.experiments.model_trainer import ModelTrainer
+from app.services.experiments.passport_signer import ModelPassportSigner
 
 __all__ = [
     "ExperimentValidator",
     "ExperimentArtifactManager",
+    "ExperimentEvaluator",
+    "ModelTrainer",
+    "ModelPassportSigner",
     "ORPHANED_RECOVERABLE_REGISTRY",
     "get_orphaned_recoverable_registry",
     "clear_orphaned_recoverable_registry",

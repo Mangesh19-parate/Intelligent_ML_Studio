@@ -9,6 +9,10 @@
     "preview": "npm --prefix apps/frontend run preview",
     "test": "npm --prefix apps/frontend run test",
     "typecheck": "npm --prefix apps/frontend run typecheck",
-    "install:frontend": "npm --prefix apps/frontend install"
+    "lint": "npm --prefix apps/frontend run lint",
+    "lint:fix": "npm --prefix apps/frontend run lint:fix",
+    "format": "npm --prefix apps/frontend run format",
+    "format:check": "npm --prefix apps/frontend run format:check",
+    "install:frontend": "npm --prefix apps/frontend ci"
   }
 }

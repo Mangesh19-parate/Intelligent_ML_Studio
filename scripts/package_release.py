@@ -119,8 +119,15 @@ def verify_archive(zip_path: Path) -> bool:
 def main():
     parser = argparse.ArgumentParser(description="Package clean source distribution.")
     parser.add_argument("--output", default=str(ROOT_DIR / "dist" / "intelligent-ml-studio-source.zip"))
-    parser.add_argument("--verify-clean", action="store_true", help="Verify archive cleanliness")
+    parser.add_argument("--require-clean-git", action="store_true", help="Fail if git worktree is dirty")
     args = parser.parse_args()
+
+    if args.require_clean_git:
+        import subprocess
+        status = subprocess.run(["git", "status", "--porcelain"], cwd=ROOT_DIR, capture_output=True, text=True)
+        if status.returncode == 0 and status.stdout.strip():
+            print("[FAIL] Git worktree is dirty. Commit or stash changes before packaging clean release.")
+            sys.exit(1)
 
     out_path = Path(args.output).resolve()
     print("=" * 60)

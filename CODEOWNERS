@@ -1,0 +1,9 @@
+# Global Code Owners for Intelligent ML Studio
+* @Mangesh19-parate
+
+# Subsystem specific review rules
+/apps/backend/app/core/ @Mangesh19-parate
+/apps/backend/app/services/ @Mangesh19-parate
+/apps/backend/app/ml/ @Mangesh19-parate
+/apps/frontend/ @Mangesh19-parate
+/docs/ @Mangesh19-parate

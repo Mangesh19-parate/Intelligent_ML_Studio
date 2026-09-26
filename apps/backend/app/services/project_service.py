@@ -12,7 +12,7 @@ class ProjectService:
         self.project_repo = ProjectRepository(db)
 
     def list_projects(self, current_user: User, skip: int = 0, limit: int = 100) -> list[Project]:
-        from app.services.workspace_analytics_service import derive_pipeline_stage
+        from app.services.workspace_analytics_service import derive_pipeline_stages_batch
         user_permissions = {p.permission_key for p in current_user.role.permissions} if current_user.role and current_user.role.permissions else set()
         
         # If user has MANAGE_USERS permission, allow viewing all projects
@@ -21,8 +21,10 @@ class ProjectService:
         else:
             projects = self.project_repo.get_by_owner(owner_id=current_user.id, skip=skip, limit=limit)
         
-        for p in projects:
-            p.pipeline_stage = derive_pipeline_stage(p.id, self.db)
+        if projects:
+            stages_by_id = derive_pipeline_stages_batch([p.id for p in projects], self.db)
+            for p in projects:
+                p.pipeline_stage = stages_by_id.get(p.id, "DATA")
         return projects
 
     def get_project_by_id(self, project_id: UUID | str, current_user: User) -> Project:

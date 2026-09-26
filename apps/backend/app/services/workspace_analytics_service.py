@@ -18,12 +18,10 @@ from app.models.user import User
 from app.services.monitoring_service import MonitoringService
 
 
-def derive_pipeline_stage(project_id: UUID | str, db: Session) -> str:
+def derive_pipeline_stages_batch(project_ids: list[UUID | str], db: Session) -> dict[UUID, str]:
     """
-    Derives the project's pipeline stage dynamically from live DB relational state.
-    
-    ARCHITECTURAL NOTE (Day 11):
-    Eliminates reliance on stale stored `projects.pipeline_stage` columns.
+    Derives pipeline stages for multiple projects in a single batched O(1) query round trip.
+    Eliminates the N+1 query problem when loading project lists or workspace dashboards.
     
     State transition precedence (evaluated highest to lowest):
     1. DEPLOYED: A deployments row exists with status=LIVE
@@ -36,116 +34,168 @@ def derive_pipeline_stage(project_id: UUID | str, db: Session) -> str:
     8. SPLIT: A dataset_splits row exists, but no profiling_reports row
     9. DATA: No dataset uploaded OR dataset uploaded with no split
     """
-    proj_id = UUID(str(project_id)) if not isinstance(project_id, UUID) else project_id
-    project = db.query(Project).filter(Project.id == proj_id).first()
-    if not project:
-        return "DATA"
+    if not project_ids:
+        return {}
 
-    # 1. Datasets check
-    datasets = db.query(Dataset).filter(Dataset.project_id == proj_id).all()
+    normalized_ids = [UUID(str(pid)) if not isinstance(pid, UUID) else pid for pid in project_ids]
+    results: dict[UUID, str] = {pid: "DATA" for pid in normalized_ids}
+
+    # 1. Fetch datasets grouped by project
+    datasets = (
+        db.query(Dataset.id, Dataset.project_id)
+        .filter(Dataset.project_id.in_(normalized_ids))
+        .all()
+    )
     if not datasets:
-        return "DATA"
+        return results
 
-    dataset_ids = [d.id for d in datasets]
+    dataset_to_project: dict[UUID, UUID] = {d.id: d.project_id for d in datasets}
+    all_dataset_ids = list(dataset_to_project.keys())
 
-    # 2. Splits check
+    # 2. Fetch splits grouped by dataset
     splits = (
-        db.query(DatasetSplit)
-        .filter(DatasetSplit.dataset_id.in_(dataset_ids))
+        db.query(DatasetSplit.id, DatasetSplit.dataset_id)
+        .filter(DatasetSplit.dataset_id.in_(all_dataset_ids))
         .all()
     )
-    if not splits:
-        return "DATA"
+    split_to_project: dict[UUID, UUID] = {s.id: dataset_to_project[s.dataset_id] for s in splits}
+    all_split_ids = list(split_to_project.keys())
 
-    split_ids = [s.id for s in splits]
+    # Update candidate stage: projects with splits reach at least SPLIT
+    for pid in split_to_project.values():
+        results[pid] = "SPLIT"
 
-    # 3. Profiling reports check
-    profiling_reports = (
-        db.query(ProfilingReport)
-        .filter(ProfilingReport.dataset_split_id.in_(split_ids))
-        .all()
-    )
-    if not profiling_reports:
-        return "SPLIT"
+    # 3. Fetch profiling reports
+    if all_split_ids:
+        profiling_reports = (
+            db.query(ProfilingReport.dataset_split_id)
+            .filter(ProfilingReport.dataset_split_id.in_(all_split_ids))
+            .all()
+        )
+        for pr in profiling_reports:
+            pid = split_to_project.get(pr.dataset_split_id)
+            if pid:
+                results[pid] = "PROFILED"
 
-    # 4. Active transformation configs check
+    # 4. Fetch active transformation configs
     active_transforms = (
-        db.query(TransformationConfig)
+        db.query(TransformationConfig.project_id)
         .filter(
-            TransformationConfig.project_id == proj_id,
-            TransformationConfig.is_active == True
+            TransformationConfig.project_id.in_(normalized_ids),
+            TransformationConfig.is_active == True,
         )
         .all()
     )
-    if not active_transforms:
-        return "PROFILED"
+    for at in active_transforms:
+        results[at.project_id] = "TRANSFORMED"
 
-    # 5. Experiments check
+    # 5. Fetch experiments
     experiments = (
-        db.query(Experiment)
-        .filter(Experiment.project_id == proj_id)
-        .order_by(Experiment.created_at.desc())
+        db.query(Experiment.id, Experiment.project_id, Experiment.status, Experiment.locked_test_consumed)
+        .filter(Experiment.project_id.in_(normalized_ids))
         .all()
     )
     if not experiments:
-        return "TRANSFORMED"
+        return results
 
-    exp_ids = [e.id for e in experiments]
+    exp_to_project: dict[UUID, UUID] = {e.id: e.project_id for e in experiments}
+    all_exp_ids = list(exp_to_project.keys())
+
+    # Track training states per project
+    completed_exps: set[UUID] = set()
+    running_exps: set[UUID] = set()
+    locked_consumed_projects: set[UUID] = set()
+
+    for e in experiments:
+        if e.locked_test_consumed:
+            locked_consumed_projects.add(e.project_id)
+        if e.status in ["COMPLETED", "REGISTERED", "EVALUATED", "TEST_CONSUMED"]:
+            completed_exps.add(e.project_id)
+        elif e.status in ["RUNNING", "TRAINING"]:
+            running_exps.add(e.project_id)
+
+    # 6. Fetch trained models
     trained_models = (
-        db.query(TrainedModel)
-        .filter(TrainedModel.experiment_id.in_(exp_ids))
+        db.query(TrainedModel.id, TrainedModel.experiment_id)
+        .filter(TrainedModel.experiment_id.in_(all_exp_ids))
         .all()
     )
-    model_ids = [m.id for m in trained_models]
+    model_to_project: dict[UUID, UUID] = {m.id: exp_to_project[m.experiment_id] for m in trained_models}
+    all_model_ids = list(model_to_project.keys())
 
-    if model_ids:
+    deployed_projects: set[UUID] = set()
+    gate_passed_projects: set[UUID] = set()
+    evaluated_projects: set[UUID] = set(locked_consumed_projects)
+
+    if all_model_ids:
         # Check LIVE Deployments
         live_deployments = (
-            db.query(Deployment)
+            db.query(Deployment.model_id)
             .filter(
-                Deployment.model_id.in_(model_ids),
-                Deployment.status.in_(["LIVE", "DEPLOYED"])
+                Deployment.model_id.in_(all_model_ids),
+                Deployment.status.in_(["LIVE", "DEPLOYED"]),
             )
-            .first()
+            .all()
         )
-        if live_deployments:
-            return "DEPLOYED"
+        for dep in live_deployments:
+            pid = model_to_project.get(dep.model_id)
+            if pid:
+                deployed_projects.add(pid)
 
         # Check Passed Deployment Gates
         passed_gates = (
-            db.query(DeploymentGate)
+            db.query(DeploymentGate.model_id)
             .filter(
-                DeploymentGate.model_id.in_(model_ids),
-                DeploymentGate.gate_passed == True
+                DeploymentGate.model_id.in_(all_model_ids),
+                DeploymentGate.gate_passed == True,
             )
-            .first()
+            .all()
         )
-        if passed_gates:
-            return "GATE_PASSED"
+        for g in passed_gates:
+            pid = model_to_project.get(g.model_id)
+            if pid:
+                gate_passed_projects.add(pid)
 
-        # Check LOCKED_TEST metrics (or locked_test_consumed on experiment)
-        locked_test_metrics = (
-            db.query(ModelMetric)
+        # Check LOCKED_TEST metrics
+        locked_metrics = (
+            db.query(ModelMetric.model_id)
             .filter(
-                ModelMetric.model_id.in_(model_ids),
-                ModelMetric.split == "LOCKED_TEST"
+                ModelMetric.model_id.in_(all_model_ids),
+                ModelMetric.split == "LOCKED_TEST",
             )
-            .first()
+            .all()
         )
-        if locked_test_metrics or any(e.locked_test_consumed for e in experiments):
-            return "EVALUATED"
+        for lm in locked_metrics:
+            pid = model_to_project.get(lm.model_id)
+            if pid:
+                evaluated_projects.add(pid)
 
-    # Check for COMPLETED / REGISTERED experiment
-    completed_exp = any(e.status in ["COMPLETED", "REGISTERED", "EVALUATED", "TEST_CONSUMED"] for e in experiments)
-    if completed_exp:
-        return "TRAINED"
+    # Final Stage Assignment following exact precedence order:
+    for pid in normalized_ids:
+        if pid in deployed_projects:
+            results[pid] = "DEPLOYED"
+        elif pid in gate_passed_projects:
+            results[pid] = "GATE_PASSED"
+        elif pid in evaluated_projects:
+            results[pid] = "EVALUATED"
+        elif pid in completed_exps:
+            results[pid] = "TRAINED"
+        elif pid in running_exps:
+            results[pid] = "TRAINING"
+        elif results[pid] not in ["TRANSFORMED", "PROFILED", "SPLIT", "DATA"]:
+            results[pid] = "TRANSFORMED"
 
-    # Check for RUNNING / TRAINING experiment
-    running_exp = any(e.status in ["RUNNING", "TRAINING"] for e in experiments)
-    if running_exp:
-        return "TRAINING"
+    return results
 
-    return "TRANSFORMED"
+
+def derive_pipeline_stage(project_id: UUID | str, db: Session) -> str:
+    """
+    Derives the project's pipeline stage dynamically from live DB relational state.
+    Delegates to batch resolution to ensure zero logic divergence.
+    """
+    proj_id = UUID(str(project_id)) if not isinstance(project_id, UUID) else project_id
+    stages = derive_pipeline_stages_batch([proj_id], db)
+    return stages.get(proj_id, "DATA")
 
 
 class WorkspaceAnalyticsService:

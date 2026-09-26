@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { projectApi, workspaceApi, datasetApi, experimentApi, modelApi } from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import { useProject } from '../context/ProjectContext';
 import { Project, WorkspaceSummary, Leaderboard, RecommendationItem } from '../types/api';
 import {
   Plus,
@@ -93,6 +94,7 @@ export const Dashboard: React.FC = () => {
   const [creating, setCreating] = useState<boolean>(false);
 
   const { user } = useAuth();
+  const { selectProject, refreshProjects } = useProject();
   const navigate = useNavigate();
 
   const userPerms = new Set(
@@ -117,6 +119,7 @@ export const Dashboard: React.FC = () => {
       const targetId = urlProjectId || (projList.length > 0 ? projList[0].id : '');
       if (targetId) {
         setSelectedProjectId(targetId);
+        selectProject(targetId);
       }
     } catch (err: unknown) {
       const e = err as { response?: { data?: { detail?: string } } };

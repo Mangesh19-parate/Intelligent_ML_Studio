@@ -28,7 +28,7 @@ import {
 } from '../types/api';
 
 const resolveApiBaseUrl = (): string => {
-  const envUrl = (import.meta as any).env?.VITE_API_URL;
+  const envUrl = (import.meta as unknown as { env?: Record<string, string | undefined> }).env?.VITE_API_URL;
   if (!envUrl || typeof envUrl !== 'string' || !envUrl.trim()) {
     return '/api/v1';
   }

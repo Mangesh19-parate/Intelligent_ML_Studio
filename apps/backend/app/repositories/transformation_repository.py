@@ -1,21 +1,19 @@
 from uuid import UUID as PyUUID
 from sqlalchemy.orm import Session
 from app.models.transformation_config import TransformationConfig
-from app.repositories.base import BaseRepository
+from app.repositories.base import BaseRepository, safe_uuid
 
 class TransformationRepository(BaseRepository[TransformationConfig]):
     def __init__(self, db: Session):
         super().__init__(TransformationConfig, db)
 
     def get_by_project(self, project_id: PyUUID | str) -> list[TransformationConfig]:
-        if isinstance(project_id, str):
-            try:
-                project_id = PyUUID(project_id)
-            except Exception:
-                pass
+        parsed_id = safe_uuid(project_id)
+        if parsed_id is None:
+            return []
         return (
             self.db.query(TransformationConfig)
-            .filter(TransformationConfig.project_id == project_id)
+            .filter(TransformationConfig.project_id == parsed_id)
             .order_by(TransformationConfig.column_name)
             .all()
         )
@@ -23,15 +21,13 @@ class TransformationRepository(BaseRepository[TransformationConfig]):
     def get_by_project_and_column(
         self, project_id: PyUUID | str, column_name: str
     ) -> TransformationConfig | None:
-        if isinstance(project_id, str):
-            try:
-                project_id = PyUUID(project_id)
-            except Exception:
-                pass
+        parsed_id = safe_uuid(project_id)
+        if parsed_id is None:
+            return None
         return (
             self.db.query(TransformationConfig)
             .filter(
-                TransformationConfig.project_id == project_id,
+                TransformationConfig.project_id == parsed_id,
                 TransformationConfig.column_name == column_name,
             )
             .first()
@@ -43,12 +39,8 @@ class TransformationRepository(BaseRepository[TransformationConfig]):
         column_name: str,
         update_data: dict,
     ) -> TransformationConfig:
-        if isinstance(project_id, str):
-            try:
-                project_id = PyUUID(project_id)
-            except Exception:
-                pass
-        config = self.get_by_project_and_column(project_id, column_name)
+        parsed_id = safe_uuid(project_id)
+        config = self.get_by_project_and_column(parsed_id, column_name)
         if config:
             for key, val in update_data.items():
                 if hasattr(config, key) and val is not None:
@@ -59,7 +51,7 @@ class TransformationRepository(BaseRepository[TransformationConfig]):
             return config
         else:
             config = TransformationConfig(
-                project_id=project_id,
+                project_id=parsed_id,
                 column_name=column_name,
                 **update_data
             )

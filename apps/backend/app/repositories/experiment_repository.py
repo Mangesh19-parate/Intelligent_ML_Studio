@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from uuid import UUID as PyUUID
 from typing import Any
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session, joinedload, selectinload
 from app.models.experiment import Experiment
 from app.models.feature_selection_fold_result import FeatureSelectionFoldResult
 from app.models.transformation_snapshot import TransformationSnapshot
@@ -9,7 +9,8 @@ from app.models.feature_selection_snapshot import FeatureSelectionSnapshot
 from app.models.trained_model import TrainedModel
 from app.models.model_metric import ModelMetric
 from app.config.state_machines import ExperimentState, ModelState
-from app.repositories.base import BaseRepository
+from app.repositories.base import BaseRepository, safe_uuid
+
 
 class ExperimentRepository(BaseRepository[Experiment]):
     def __init__(self, db: Session):
@@ -34,14 +35,11 @@ class ExperimentRepository(BaseRepository[Experiment]):
         model_library_versions: dict | None = None,
         environment_capture_method: str | None = None,
         deployment_threshold_frozen_at_creation: bool = True,
+        commit: bool = True,
     ) -> Experiment:
-        if isinstance(project_id, str):
-            try:
-                project_id = PyUUID(project_id)
-            except Exception:
-                pass
+        parsed_project_id = safe_uuid(project_id)
         exp = Experiment(
-            project_id=project_id,
+            project_id=parsed_project_id,
             task_type=task_type,
             fold_count=fold_count,
             cv_seed=cv_seed,
@@ -60,37 +58,36 @@ class ExperimentRepository(BaseRepository[Experiment]):
             deployment_threshold_frozen_at_creation=deployment_threshold_frozen_at_creation,
         )
         self.db.add(exp)
-        self.db.commit()
-        self.db.refresh(exp)
+        if commit:
+            self.db.commit()
+            self.db.refresh(exp)
+        else:
+            self.db.flush()
         return exp
 
     def get_by_project(self, project_id: PyUUID | str) -> list[Experiment]:
-        if isinstance(project_id, str):
-            try:
-                project_id = PyUUID(project_id)
-            except Exception:
-                pass
+        parsed_id = safe_uuid(project_id)
+        if parsed_id is None:
+            return []
         return (
             self.db.query(Experiment)
-            .filter(Experiment.project_id == project_id)
+            .filter(Experiment.project_id == parsed_id)
             .options(
-                joinedload(Experiment.trained_models).joinedload(TrainedModel.metrics)
+                selectinload(Experiment.trained_models).selectinload(TrainedModel.metrics)
             )
             .order_by(Experiment.created_at.desc())
             .all()
         )
 
     def get_with_models(self, experiment_id: PyUUID | str) -> Experiment | None:
-        if isinstance(experiment_id, str):
-            try:
-                experiment_id = PyUUID(experiment_id)
-            except Exception:
-                pass
+        parsed_id = safe_uuid(experiment_id)
+        if parsed_id is None:
+            return None
         return (
             self.db.query(Experiment)
-            .filter(Experiment.id == experiment_id)
+            .filter(Experiment.id == parsed_id)
             .options(
-                joinedload(Experiment.trained_models).joinedload(TrainedModel.metrics)
+                selectinload(Experiment.trained_models).selectinload(TrainedModel.metrics)
             )
             .first()
         )
@@ -101,12 +98,10 @@ class ExperimentRepository(BaseRepository[Experiment]):
         status: str,
         completed_at: datetime | None = None,
     ) -> Experiment | None:
-        if isinstance(experiment_id, str):
-            try:
-                experiment_id = PyUUID(experiment_id)
-            except Exception:
-                pass
-        exp = self.get_by_id(experiment_id)
+        parsed_id = safe_uuid(experiment_id)
+        if parsed_id is None:
+            return None
+        exp = self.get_by_id(parsed_id)
         if exp:
             exp.status = status
             if completed_at is not None:
@@ -125,19 +120,13 @@ class ExperimentRepository(BaseRepository[Experiment]):
         selection_metric: str | None = None,
         selection_direction: str | None = None,
     ) -> Experiment | None:
-        if isinstance(experiment_id, str):
-            try:
-                experiment_id = PyUUID(experiment_id)
-            except Exception:
-                pass
-        if isinstance(selected_model_id, str):
-            try:
-                selected_model_id = PyUUID(selected_model_id)
-            except Exception:
-                pass
-        exp = self.get_by_id(experiment_id)
+        parsed_exp_id = safe_uuid(experiment_id)
+        parsed_model_id = safe_uuid(selected_model_id)
+        if parsed_exp_id is None:
+            return None
+        exp = self.get_by_id(parsed_exp_id)
         if exp:
-            exp.selected_model_id = selected_model_id
+            exp.selected_model_id = parsed_model_id
             if selection_metric is not None:
                 exp.selection_metric = selection_metric
             if selection_direction is not None:
@@ -152,12 +141,10 @@ class ExperimentRepository(BaseRepository[Experiment]):
         experiment_id: PyUUID | str,
         consumed_at: datetime | None = None,
     ) -> Experiment | None:
-        if isinstance(experiment_id, str):
-            try:
-                experiment_id = PyUUID(experiment_id)
-            except Exception:
-                pass
-        exp = self.get_by_id(experiment_id)
+        parsed_id = safe_uuid(experiment_id)
+        if parsed_id is None:
+            return None
+        exp = self.get_by_id(parsed_id)
         if exp:
             exp.locked_test_consumed = True
             exp.locked_test_consumed_at = consumed_at or datetime.now(timezone.utc)
@@ -179,15 +166,11 @@ class ExperimentRepository(BaseRepository[Experiment]):
         validation_row_hash: str | None = None,
         test_row_hash: str | None = None,
     ) -> FeatureSelectionFoldResult:
-        if isinstance(experiment_id, str):
-            try:
-                experiment_id = PyUUID(experiment_id)
-            except Exception:
-                pass
+        parsed_id = safe_uuid(experiment_id)
         # INVARIANT: Locked Test is NEVER accessed during feature selection
         assert locked_test_accessed is False, "CRITICAL INVARIANT: Locked Test accessed during fold feature selection!"
         fold_res = FeatureSelectionFoldResult(
-            experiment_id=experiment_id,
+            experiment_id=parsed_id,
             fold_index=fold_index,
             selected_features=selected_features,
             technique_scores=technique_scores,
@@ -204,14 +187,12 @@ class ExperimentRepository(BaseRepository[Experiment]):
         return fold_res
 
     def get_fold_results(self, experiment_id: PyUUID | str) -> list[FeatureSelectionFoldResult]:
-        if isinstance(experiment_id, str):
-            try:
-                experiment_id = PyUUID(experiment_id)
-            except Exception:
-                pass
+        parsed_id = safe_uuid(experiment_id)
+        if parsed_id is None:
+            return []
         return (
             self.db.query(FeatureSelectionFoldResult)
-            .filter(FeatureSelectionFoldResult.experiment_id == experiment_id)
+            .filter(FeatureSelectionFoldResult.experiment_id == parsed_id)
             .order_by(FeatureSelectionFoldResult.fold_index.asc())
             .all()
         )
@@ -229,18 +210,10 @@ class ExperimentRepository(BaseRepository[Experiment]):
         error_message: str | None = None,
         created_by: PyUUID | str | None = None,
     ) -> TrainedModel:
-        if isinstance(experiment_id, str):
-            try:
-                experiment_id = PyUUID(experiment_id)
-            except Exception:
-                pass
-        if isinstance(created_by, str):
-            try:
-                created_by = PyUUID(created_by)
-            except Exception:
-                pass
+        parsed_exp_id = safe_uuid(experiment_id)
+        parsed_user_id = safe_uuid(created_by)
         model_rec = TrainedModel(
-            experiment_id=experiment_id,
+            experiment_id=parsed_exp_id,
             algorithm_name=algorithm_name,
             hyperparameters=hyperparameters,
             quick_cv_score=quick_cv_score,
@@ -249,7 +222,7 @@ class ExperimentRepository(BaseRepository[Experiment]):
             decision_threshold=decision_threshold,
             status=status,
             error_message=error_message,
-            created_by=created_by,
+            created_by=parsed_user_id,
         )
         self.db.add(model_rec)
         self.db.commit()
@@ -263,12 +236,10 @@ class ExperimentRepository(BaseRepository[Experiment]):
         model_selection_score: float | None,
         quick_cv_score: float | None = None,
     ) -> TrainedModel | None:
-        if isinstance(model_id, str):
-            try:
-                model_id = PyUUID(model_id)
-            except Exception:
-                pass
-        m = self.db.query(TrainedModel).filter(TrainedModel.id == model_id).first()
+        parsed_id = safe_uuid(model_id)
+        if parsed_id is None:
+            return None
+        m = self.db.query(TrainedModel).filter(TrainedModel.id == parsed_id).first()
         if m:
             m.fit_diagnosis = fit_diagnosis
             m.model_selection_score = model_selection_score
@@ -280,15 +251,13 @@ class ExperimentRepository(BaseRepository[Experiment]):
         return m
 
     def get_trained_models(self, experiment_id: PyUUID | str) -> list[TrainedModel]:
-        if isinstance(experiment_id, str):
-            try:
-                experiment_id = PyUUID(experiment_id)
-            except Exception:
-                pass
+        parsed_id = safe_uuid(experiment_id)
+        if parsed_id is None:
+            return []
         return (
             self.db.query(TrainedModel)
-            .filter(TrainedModel.experiment_id == experiment_id)
-            .options(joinedload(TrainedModel.metrics))
+            .filter(TrainedModel.experiment_id == parsed_id)
+            .options(selectinload(TrainedModel.metrics))
             .order_by(TrainedModel.created_at.asc())
             .all()
         )
@@ -302,13 +271,9 @@ class ExperimentRepository(BaseRepository[Experiment]):
         metric_json: dict | list | None = None,
         fold_index: int | None = None,
     ) -> ModelMetric:
-        if isinstance(model_id, str):
-            try:
-                model_id = PyUUID(model_id)
-            except Exception:
-                pass
+        parsed_id = safe_uuid(model_id)
         metric = ModelMetric(
-            model_id=model_id,
+            model_id=parsed_id,
             metric_name=metric_name,
             split=split,
             metric_value=metric_value,
@@ -331,12 +296,10 @@ class ExperimentRepository(BaseRepository[Experiment]):
         split: str | None = None,
         exclude_diagnostic: bool = False,
     ) -> list[ModelMetric]:
-        if isinstance(model_id, str):
-            try:
-                model_id = PyUUID(model_id)
-            except Exception:
-                pass
-        q = self.db.query(ModelMetric).filter(ModelMetric.model_id == model_id)
+        parsed_id = safe_uuid(model_id)
+        if parsed_id is None:
+            return []
+        q = self.db.query(ModelMetric).filter(ModelMetric.model_id == parsed_id)
         if split:
             q = q.filter(ModelMetric.split == split)
         elif exclude_diagnostic:
@@ -348,13 +311,9 @@ class ExperimentRepository(BaseRepository[Experiment]):
         experiment_id: PyUUID | str,
         config_json: list[dict[str, Any]] | dict[str, Any],
     ) -> TransformationSnapshot:
-        if isinstance(experiment_id, str):
-            try:
-                experiment_id = PyUUID(experiment_id)
-            except Exception:
-                pass
+        parsed_id = safe_uuid(experiment_id)
         snapshot = TransformationSnapshot(
-            experiment_id=experiment_id,
+            experiment_id=parsed_id,
             config_json=config_json,
         )
         self.db.add(snapshot)
@@ -368,13 +327,9 @@ class ExperimentRepository(BaseRepository[Experiment]):
         final_selected_features: list[str],
         final_selection_method: str = "rank_aggregation_ensemble",
     ) -> FeatureSelectionSnapshot:
-        if isinstance(experiment_id, str):
-            try:
-                experiment_id = PyUUID(experiment_id)
-            except Exception:
-                pass
+        parsed_id = safe_uuid(experiment_id)
         snapshot = FeatureSelectionSnapshot(
-            experiment_id=experiment_id,
+            experiment_id=parsed_id,
             final_selected_features=final_selected_features,
             final_selection_method=final_selection_method,
         )
@@ -387,14 +342,12 @@ class ExperimentRepository(BaseRepository[Experiment]):
         self,
         experiment_id: PyUUID | str,
     ) -> list[TransformationSnapshot]:
-        if isinstance(experiment_id, str):
-            try:
-                experiment_id = PyUUID(experiment_id)
-            except Exception:
-                pass
+        parsed_id = safe_uuid(experiment_id)
+        if parsed_id is None:
+            return []
         return (
             self.db.query(TransformationSnapshot)
-            .filter(TransformationSnapshot.experiment_id == experiment_id)
+            .filter(TransformationSnapshot.experiment_id == parsed_id)
             .order_by(TransformationSnapshot.created_at.asc())
             .all()
         )
@@ -403,16 +356,12 @@ class ExperimentRepository(BaseRepository[Experiment]):
         self,
         experiment_id: PyUUID | str,
     ) -> list[FeatureSelectionSnapshot]:
-        if isinstance(experiment_id, str):
-            try:
-                experiment_id = PyUUID(experiment_id)
-            except Exception:
-                pass
+        parsed_id = safe_uuid(experiment_id)
+        if parsed_id is None:
+            return []
         return (
             self.db.query(FeatureSelectionSnapshot)
-            .filter(FeatureSelectionSnapshot.experiment_id == experiment_id)
+            .filter(FeatureSelectionSnapshot.experiment_id == parsed_id)
             .order_by(FeatureSelectionSnapshot.created_at.asc())
             .all()
         )
-
-

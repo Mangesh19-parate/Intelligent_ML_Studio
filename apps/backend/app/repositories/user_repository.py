@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from app.models.user import User
 from app.models.role import Role
 from app.models.permission import Permission
-from app.repositories.base import BaseRepository
+from app.repositories.base import BaseRepository, safe_uuid
 
 class UserRepository(BaseRepository[User]):
     def __init__(self, db: Session):
@@ -16,12 +16,10 @@ class UserRepository(BaseRepository[User]):
         return self.db.query(Role).filter(Role.role_name == role_name).first()
 
     def get_role_by_id(self, role_id: PyUUID | str) -> Role | None:
-        if isinstance(role_id, str):
-            try:
-                role_id = PyUUID(role_id)
-            except Exception:
-                pass
-        return self.db.query(Role).filter(Role.id == role_id).first()
+        parsed_id = safe_uuid(role_id)
+        if parsed_id is None:
+            return None
+        return self.db.query(Role).filter(Role.id == parsed_id).first()
 
     def get_all_roles(self) -> list[Role]:
         return self.db.query(Role).all()

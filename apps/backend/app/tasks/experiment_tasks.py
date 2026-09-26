@@ -198,6 +198,7 @@ def submit_experiment_task(
     timeout_seconds: int = 600,
     run_async: bool = True,
     db: Session | None = None,
+    commit_on_submit: bool = True,
 ) -> DurableTaskRecord:
     """
     Submits an experiment task into the durable database queue.
@@ -224,8 +225,11 @@ def submit_experiment_task(
         )
         model = _record_to_model(record)
         db.add(model)
-        db.commit()
-        db.refresh(model)
+        if commit_on_submit:
+            db.commit()
+            db.refresh(model)
+        else:
+            db.flush()
         return _model_to_record(model)
     finally:
         if close_db:

@@ -87,34 +87,40 @@ def create_experiment(
         "deployment_threshold": dep_threshold,
     }
 
-    # Single atomic transaction: Experiment (CONFIGURED) + DurableTask (QUEUED)
-    experiment = exp_repo.create_experiment(
-        project_id=project.id,
-        task_type=project.task_type,
-        fold_count=payload.folds,
-        cv_seed=cv_seed,
-        selection_metric=eff_metric,
-        selection_direction=eff_direction,
-        status=ExperimentState.CONFIGURED.value,
-        experiment_config=frozen_config,
-        dataset_content_hash=getattr(project, "dataset_content_hash", None),
-        deployment_threshold_frozen_at_creation=True,
-    )
+    # Single atomic transaction boundary: Experiment (CONFIGURED) + DurableTask (QUEUED)
+    try:
+        experiment = exp_repo.create_experiment(
+            project_id=project.id,
+            task_type=project.task_type,
+            fold_count=payload.folds,
+            cv_seed=cv_seed,
+            selection_metric=eff_metric,
+            selection_direction=eff_direction,
+            status=ExperimentState.CONFIGURED.value,
+            experiment_config=frozen_config,
+            dataset_content_hash=getattr(project, "dataset_content_hash", None),
+            deployment_threshold_frozen_at_creation=True,
+            commit=False,
+        )
 
-    # Submit task to durable execution queue in QUEUED state within the same DB session
-    submit_experiment_task(
-        project_id=project.id,
-        experiment_id=experiment.id,
-        algorithms=canonical_algs,
-        folds=payload.folds,
-        seed=cv_seed,
-        selection_metric=eff_metric,
-        selection_direction=eff_direction,
-        deployment_threshold=dep_threshold,
-        db=db,
-    )
+        submit_experiment_task(
+            project_id=project.id,
+            experiment_id=experiment.id,
+            algorithms=canonical_algs,
+            folds=payload.folds,
+            seed=cv_seed,
+            selection_metric=eff_metric,
+            selection_direction=eff_direction,
+            deployment_threshold=dep_threshold,
+            db=db,
+            commit_on_submit=False,
+        )
 
-    db.commit()
+        db.commit()
+        db.refresh(experiment)
+    except Exception:
+        db.rollback()
+        raise
 
     return ExperimentCreateResponse(
         experiment_id=experiment.id,

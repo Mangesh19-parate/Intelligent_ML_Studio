@@ -28,15 +28,8 @@ import {
 } from '../types/api';
 
 const resolveApiBaseUrl = (): string => {
-  const envUrl = (import.meta as unknown as { env?: Record<string, string | undefined> }).env?.VITE_API_URL;
-  if (!envUrl || typeof envUrl !== 'string' || !envUrl.trim()) {
-    return '/api/v1';
-  }
-  const cleanUrl = envUrl.trim().replace(/\/+$/, '');
-  if (cleanUrl.endsWith('/api/v1')) {
-    return cleanUrl;
-  }
-  return `${cleanUrl}/api/v1`;
+  const envUrl = ((import.meta as unknown as { env?: Record<string, string | undefined> }).env?.VITE_API_URL || '').trim().replace(/\/+$/, '');
+  return !envUrl ? '/api/v1' : envUrl.endsWith('/api/v1') ? envUrl : `${envUrl}/api/v1`;
 };
 
 const API_BASE_URL = resolveApiBaseUrl();

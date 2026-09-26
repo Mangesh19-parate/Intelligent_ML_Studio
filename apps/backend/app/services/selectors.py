@@ -29,20 +29,12 @@ def compute_evidence_strength(
     total_count: int = 4,
     min_required: int = 2,
 ) -> EvidenceStrength:
-    """
-    Computes evidence strength band based on number of contributing techniques (SRS §2.7, §8).
-    - STRONG: 4 of 4 techniques applied (applied_count >= 4)
-    - MODERATE: 3 of 4 techniques applied (applied_count == 3)
-    - LIMITED: 2 of 4 techniques applied (applied_count == 2)
-    - INSUFFICIENT_EVIDENCE: < 2 techniques applied (applied_count < min_required)
-    """
+    """Computes evidence strength band based on number of contributing techniques (SRS §2.7, §8)."""
     if applied_count < min_required:
         return EvidenceStrength.INSUFFICIENT_EVIDENCE
-    if applied_count >= total_count:
-        return EvidenceStrength.STRONG
-    if applied_count == 3:
-        return EvidenceStrength.MODERATE
-    return EvidenceStrength.LIMITED
+    return {4: EvidenceStrength.STRONG, 3: EvidenceStrength.MODERATE, 2: EvidenceStrength.LIMITED}.get(
+        applied_count, EvidenceStrength.STRONG if applied_count >= total_count else EvidenceStrength.LIMITED
+    )
 
 
 def calculate_srs_rank_scores(

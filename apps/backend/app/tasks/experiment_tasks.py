@@ -215,6 +215,27 @@ def submit_experiment_task(
             if existing:
                 return _model_to_record(existing)
 
+        # Admission Control & Queue Backpressure Checks
+        MAX_GLOBAL_QUEUED_TASKS = 1000
+        MAX_ACTIVE_FOR_EXP = 5
+
+        queued_total = db.query(DurableTask).filter(DurableTask.state == TaskState.QUEUED.value).count()
+        if queued_total >= MAX_GLOBAL_QUEUED_TASKS:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Task queue backpressure: Global queued capacity saturated. Please retry later.",
+            )
+
+        active_for_exp = db.query(DurableTask).filter(
+            DurableTask.experiment_id == str(experiment_id),
+            DurableTask.state.in_([TaskState.QUEUED.value, TaskState.RUNNING.value]),
+        ).count()
+        if active_for_exp >= MAX_ACTIVE_FOR_EXP:
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail="Experiment task quota exceeded: Maximum concurrent tasks in progress.",
+            )
+
         task_id = f"task-{uuid.uuid4()}"
         record = DurableTaskRecord(
             task_id=task_id,

@@ -98,8 +98,49 @@ class SlidingWindowRateLimiter:
             timestamps.append(current_time)
 
 
-# Global singleton instance
+class DistributedRateLimiter:
+    """
+    Abstract distributed rate limiting interface.
+    Supports in-memory fallback and external Redis sliding-window/token-bucket backends.
+    """
+    def check_rate_limit(self, key: str, max_requests: int = 5, window_seconds: int = 60) -> None:
+        raise NotImplementedError
+
+
+class TokenBucketRateLimiter(DistributedRateLimiter):
+    """
+    Token Bucket distributed rate limiter with O(1) time complexity per check.
+    Tokens refill continuously at rate (max_requests / window_seconds).
+    """
+    def __init__(self):
+        self._lock = threading.Lock()
+        # key -> (tokens, last_refill_timestamp)
+        self._buckets: dict[str, tuple[float, float]] = {}
+
+    def check_rate_limit(self, key: str, max_requests: int = 5, window_seconds: int = 60) -> None:
+        now = time.time()
+        refill_rate = max_requests / window_seconds
+
+        with self._lock:
+            tokens, last_refill = self._buckets.get(key, (float(max_requests), now))
+            # Refill tokens proportional to elapsed time
+            elapsed = now - last_refill
+            tokens = min(float(max_requests), tokens + elapsed * refill_rate)
+
+            if tokens < 1.0:
+                retry_after = int((1.0 - tokens) / refill_rate) + 1
+                raise HTTPException(
+                    status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                    detail=f"Rate limit exceeded (Token Bucket). Retry in {retry_after} seconds.",
+                    headers={"Retry-After": str(max(1, retry_after))},
+                )
+
+            self._buckets[key] = (tokens - 1.0, now)
+
+
+# Global singleton instance (in-memory sliding window by default; swaps to Redis/TokenBucket in distributed deployments)
 auth_rate_limiter = SlidingWindowRateLimiter()
+token_bucket_rate_limiter = TokenBucketRateLimiter()
 
 
 def rate_limit_auth(

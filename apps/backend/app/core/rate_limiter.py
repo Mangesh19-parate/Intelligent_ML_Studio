@@ -1,7 +1,7 @@
 import time
 import ipaddress
 import threading
-from collections import defaultdict
+from collections import defaultdict, deque
 from fastapi import Request, HTTPException, status
 
 
@@ -46,21 +46,26 @@ def get_trusted_client_ip(request: Request, trusted_proxies: list[str]) -> str:
 
 class SlidingWindowRateLimiter:
     """
-    Thread-safe in-memory sliding-window rate limiter.
+    Thread-safe in-memory sliding-window rate limiter using collections.deque.
+    Complexity:
+      - Check/Record: Amortized O(1) time per request (each timestamp is pushed once and popped once).
+      - Memory: O(R) where R is active request volume in sliding window across all active keys.
     Protects auth and inference endpoints against brute-force attacks and volumetric floods.
     """
     def __init__(self):
         self._lock = threading.Lock()
-        # Maps key -> list of timestamps
-        self._requests: dict[str, list[float]] = defaultdict(list)
+        # Maps key -> deque of monotonic timestamps
+        self._requests: dict[str, deque[float]] = defaultdict(deque)
         self._last_cleanup = time.time()
 
     def _cleanup(self, current_time: float, max_window: float = 3600.0):
         if current_time - self._last_cleanup > 300.0:
             stale_cutoff = current_time - max_window
             for key in list(self._requests.keys()):
-                self._requests[key] = [t for t in self._requests[key] if t > stale_cutoff]
-                if not self._requests[key]:
+                timestamps = self._requests[key]
+                while timestamps and timestamps[0] <= stale_cutoff:
+                    timestamps.popleft()
+                if not timestamps:
                     del self._requests[key]
             self._last_cleanup = current_time
 
@@ -76,11 +81,13 @@ class SlidingWindowRateLimiter:
         with self._lock:
             self._cleanup(current_time)
             timestamps = self._requests[key]
-            # Remove timestamps outside the sliding window
-            self._requests[key] = [t for t in timestamps if t > window_start]
+            
+            # Amortized O(1) eviction of expired timestamps from the left
+            while timestamps and timestamps[0] <= window_start:
+                timestamps.popleft()
 
-            if len(self._requests[key]) >= max_requests:
-                oldest_in_window = self._requests[key][0]
+            if len(timestamps) >= max_requests:
+                oldest_in_window = timestamps[0]
                 retry_after = int(window_seconds - (current_time - oldest_in_window)) + 1
                 raise HTTPException(
                     status_code=status.HTTP_429_TOO_MANY_REQUESTS,
@@ -88,7 +95,7 @@ class SlidingWindowRateLimiter:
                     headers={"Retry-After": str(max(1, retry_after))},
                 )
 
-            self._requests[key].append(current_time)
+            timestamps.append(current_time)
 
 
 # Global singleton instance

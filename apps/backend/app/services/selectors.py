@@ -132,6 +132,48 @@ def resolve_top_k(
     return min(clamped_k, p)
 
 
+import heapq
+
+
+class TopKRanker:
+    """
+    Algorithmic Top-K feature ranker with deterministic 3-tier tie breaking (SRS §2.7):
+    1. Higher EnsembleScore descending (-score)
+    2. Lower aggregate rank sum across applied methods ascending (+rank_sum)
+    3. Lexicographical column name ascending (+name)
+    
+    Complexity Contract:
+      - Full sorting: O(p log p) time, O(p) memory
+      - Heap Top-K (p > 2k): O(p log k) time, O(k) working memory via min-heap
+    """
+
+    @staticmethod
+    def _rank_key(item: tuple[str, float, float]) -> tuple[float, float, str]:
+        # Item: (name, score, rank_sum)
+        # Key: (-score, rank_sum, name)
+        return (-item[1], item[2], item[0])
+
+    @classmethod
+    def select_top_k(
+        cls,
+        items: list[tuple[str, float, float]],
+        k: int,
+    ) -> list[tuple[str, float, float]]:
+        """
+        Selects top k items in deterministic order.
+        Uses O(p log k) min-heap when p > 2k, otherwise O(p log p) sort.
+        """
+        p = len(items)
+        if p == 0 or k <= 0:
+            return []
+        if k >= p:
+            return sorted(items, key=cls._rank_key)
+
+        if p > 2 * k:
+            return heapq.nsmallest(k, items, key=cls._rank_key)
+        return sorted(items, key=cls._rank_key)[:k]
+
+
 def sort_features_with_tie_break(
     feature_names: list[str],
     ensemble_scores: dict[str, float] | np.ndarray,
@@ -167,8 +209,7 @@ def sort_features_with_tie_break(
         for i in range(p)
     ]
     # 3-tier sort key: (-score, rank_sum, name)
-    sorted_items = sorted(items, key=lambda item: (-item[1], item[2], item[0]))
-    return sorted_items
+    return sorted(items, key=TopKRanker._rank_key)
 
 
 def apply_top_k_percent_selection(
@@ -227,8 +268,9 @@ def apply_top_k_percent_selection(
     k = resolve_top_k(p, alpha=alpha, k_min=k_min, k_max=k_max)
 
     sorted_items = sort_features_with_tie_break(feature_names, scores, rank_sums)
+    top_k_items = TopKRanker.select_top_k(sorted_items, k)
 
-    selected_features = [item[0] for item in sorted_items[:k]]
+    selected_features = [item[0] for item in top_k_items]
     selected_set = set(selected_features)
 
     is_selected_map = {col: (col in selected_set) for col in feature_names}

@@ -15,8 +15,11 @@ from pathlib import Path
 import pandas as pd
 
 WORKSPACE_ROOT = Path(__file__).resolve().parent.parent
+BACKEND_ROOT = WORKSPACE_ROOT / "apps" / "backend"
 if str(WORKSPACE_ROOT) not in sys.path:
     sys.path.insert(0, str(WORKSPACE_ROOT))
+if str(BACKEND_ROOT) not in sys.path:
+    sys.path.insert(0, str(BACKEND_ROOT))
 
 from research.config import (
     DATASETS,

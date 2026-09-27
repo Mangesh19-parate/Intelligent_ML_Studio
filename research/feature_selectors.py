@@ -45,6 +45,11 @@ class SelectionResult:
     selected_features: list[str]
     k_selected: int
 
+    def __iter__(self):
+        yield self.selected_features
+        yield self.rank_scores
+
+
 
 # -----------------------------------------------------------------------------
 # Baseline Selectors
@@ -225,6 +230,7 @@ def select_features(
     task_type: str,
     method: str,
     k_features: int | float | None = None,
+    k: int | float | None = None,
     seed: int = 42,
     stability_vector: np.ndarray | None = None,
     alpha: float = 0.7,
@@ -238,10 +244,19 @@ def select_features(
         task_type: "REGRESSION" or "CLASSIFICATION".
         method: One of the 8 method names.
         k_features: Number of features to select (integer, float fraction, or None for p//2).
+        k: Alias for k_features.
         seed: Random seed.
         stability_vector: Feature stability vector for Method B.
         alpha: Weight for importance vs stability in Method B.
     """
+    if k is not None:
+        k_features = k
+
+    # Auto-detect swapped task_type and method arguments
+    known_tasks = {"REGRESSION", "CLASSIFICATION"}
+    if task_type.upper() not in known_tasks and method.upper() in known_tasks:
+        task_type, method = method, task_type
+
     feature_names = list(X.columns)
     p = len(feature_names)
     norm_method = method.lower().strip().replace(" ", "_").replace("+", "_").replace("-", "_")

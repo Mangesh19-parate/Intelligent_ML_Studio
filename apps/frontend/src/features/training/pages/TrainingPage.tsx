@@ -85,7 +85,9 @@ export const TrainingPage: React.FC = () => {
             </span>
           </h1>
           <p className="text-sm text-[var(--color-text-muted)] mt-1.5 max-w-3xl">
-            Train baseline and non-linear ensemble models with strict out-of-fold cross-validation. Rank models strictly by primary metric and evaluate the winning model against the Locked Test partition.
+            Train baseline and non-linear ensemble models with strict out-of-fold cross-validation.
+            Rank models strictly by primary metric and evaluate the winning model against the Locked
+            Test partition.
           </p>
         </div>
 
@@ -142,9 +144,7 @@ export const TrainingPage: React.FC = () => {
               <div className="text-[11px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider">
                 Leakage Guard
               </div>
-              <div className="text-sm font-bold text-emerald-400 mt-0.5">
-                Strict CV Isolation
-              </div>
+              <div className="text-sm font-bold text-emerald-400 mt-0.5">Strict CV Isolation</div>
             </div>
           </div>
 
@@ -157,7 +157,9 @@ export const TrainingPage: React.FC = () => {
                 Locked Test Partition
               </div>
               <div className="text-sm font-bold text-[var(--color-text)] mt-0.5">
-                {splitInfo ? `${Math.round((splitInfo.test_rows / (splitInfo.train_rows + splitInfo.test_rows)) * 100)}% Holdout` : 'Configured'}
+                {splitInfo
+                  ? `${Math.round((splitInfo.test_rows / (splitInfo.train_rows + splitInfo.test_rows)) * 100)}% Holdout`
+                  : 'Configured'}
               </div>
             </div>
           </div>

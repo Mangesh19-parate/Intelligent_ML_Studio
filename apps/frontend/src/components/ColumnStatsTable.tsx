@@ -42,9 +42,10 @@ export const ColumnStatsTable: React.FC<ColumnStatsTableProps> = ({ columnStats 
     ...stats,
   }));
 
-  const filteredColumns = columnsList.filter((col) =>
-    col.name.toLowerCase().includes(search.toLowerCase()) ||
-    col.type.toLowerCase().includes(search.toLowerCase())
+  const filteredColumns = columnsList.filter(
+    (col) =>
+      col.name.toLowerCase().includes(search.toLowerCase()) ||
+      col.type.toLowerCase().includes(search.toLowerCase())
   );
 
   return (
@@ -55,7 +56,9 @@ export const ColumnStatsTable: React.FC<ColumnStatsTableProps> = ({ columnStats 
             <Table className="w-5 h-5" />
           </div>
           <div>
-            <h4 className="text-lg font-bold text-[var(--color-text)]">Feature Profiling & Column Diagnostics</h4>
+            <h4 className="text-lg font-bold text-[var(--color-text)]">
+              Feature Profiling & Column Diagnostics
+            </h4>
             <p className="text-xs text-[var(--color-text-muted)]">
               Descriptive statistics computed strictly on Development rows
             </p>
@@ -117,29 +120,49 @@ export const ColumnStatsTable: React.FC<ColumnStatsTableProps> = ({ columnStats 
                       )}
                     </td>
                     <td className="py-3 px-3 font-mono">
-                      <span className={col.missing_pct > 0 ? 'text-amber-600 dark:text-amber-400 font-bold' : 'text-[var(--color-text-muted)]'}>
+                      <span
+                        className={
+                          col.missing_pct > 0
+                            ? 'text-amber-600 dark:text-amber-400 font-bold'
+                            : 'text-[var(--color-text-muted)]'
+                        }
+                      >
                         {col.missing_pct}% ({col.missing_count})
                       </span>
                     </td>
-                    <td className="py-3 px-3 font-mono text-[var(--color-text)]">{col.unique_count}</td>
+                    <td className="py-3 px-3 font-mono text-[var(--color-text)]">
+                      {col.unique_count}
+                    </td>
                     <td className="py-3 px-3 font-mono text-[var(--color-text)] font-medium">
                       {col.type === 'numeric'
-                        ? col.mean !== null && col.mean !== undefined ? col.mean.toFixed(2) : '-'
+                        ? col.mean !== null && col.mean !== undefined
+                          ? col.mean.toFixed(2)
+                          : '-'
                         : col.mode || '-'}
                     </td>
                     <td className="py-3 px-3 font-mono text-[var(--color-text-muted)]">
                       {col.type === 'numeric'
-                        ? col.std !== null && col.std !== undefined ? col.std.toFixed(2) : '-'
+                        ? col.std !== null && col.std !== undefined
+                          ? col.std.toFixed(2)
+                          : '-'
                         : col.granularity || '-'}
                     </td>
                     <td className="py-3 px-3 font-mono text-[var(--color-text-muted)]">
                       {col.type === 'numeric'
-                        ? col.skew !== null && col.skew !== undefined ? `skew: ${col.skew.toFixed(2)}` : '-'
+                        ? col.skew !== null && col.skew !== undefined
+                          ? `skew: ${col.skew.toFixed(2)}`
+                          : '-'
                         : '-'}
                     </td>
                     <td className="py-3 px-3 font-mono">
                       {col.type === 'numeric' ? (
-                        <span className={(col.outlier_pct ?? 0) > 0 ? 'text-rose-600 dark:text-rose-400 font-bold' : 'text-[var(--color-text-muted)]'}>
+                        <span
+                          className={
+                            (col.outlier_pct ?? 0) > 0
+                              ? 'text-rose-600 dark:text-rose-400 font-bold'
+                              : 'text-[var(--color-text-muted)]'
+                          }
+                        >
                           {col.outlier_pct}% ({col.outlier_count})
                         </span>
                       ) : (
@@ -151,7 +174,10 @@ export const ColumnStatsTable: React.FC<ColumnStatsTableProps> = ({ columnStats 
                   {/* Expanded detail row */}
                   {isSelected && (
                     <tr className="bg-[var(--color-surface-hover)]/40">
-                      <td colSpan={8} className="p-4 border-t border-b border-[var(--color-border)]">
+                      <td
+                        colSpan={8}
+                        className="p-4 border-t border-b border-[var(--color-border)]"
+                      >
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
                           {col.type === 'numeric' ? (
                             <div className="space-y-1.5 font-mono text-[var(--color-text)] bg-[var(--color-surface-card)] p-3.5 rounded-xl border border-[var(--color-border)] shadow-2xs">
@@ -159,12 +185,42 @@ export const ColumnStatsTable: React.FC<ColumnStatsTableProps> = ({ columnStats 
                                 Five-Number Summary & Moments
                               </span>
                               <div className="grid grid-cols-2 gap-2 text-xs">
-                                <div>Min: <strong className="font-bold text-[var(--color-text)]">{col.min}</strong></div>
-                                <div>Max: <strong className="font-bold text-[var(--color-text)]">{col.max}</strong></div>
-                                <div>Q25: <strong className="font-bold text-[var(--color-text)]">{col.q25}</strong></div>
-                                <div>Q75: <strong className="font-bold text-[var(--color-text)]">{col.q75}</strong></div>
-                                <div>Median: <strong className="font-bold text-[var(--color-accent)]">{col.median}</strong></div>
-                                <div>IQR: <strong className="font-bold text-[var(--color-text)]">{col.iqr}</strong></div>
+                                <div>
+                                  Min:{' '}
+                                  <strong className="font-bold text-[var(--color-text)]">
+                                    {col.min}
+                                  </strong>
+                                </div>
+                                <div>
+                                  Max:{' '}
+                                  <strong className="font-bold text-[var(--color-text)]">
+                                    {col.max}
+                                  </strong>
+                                </div>
+                                <div>
+                                  Q25:{' '}
+                                  <strong className="font-bold text-[var(--color-text)]">
+                                    {col.q25}
+                                  </strong>
+                                </div>
+                                <div>
+                                  Q75:{' '}
+                                  <strong className="font-bold text-[var(--color-text)]">
+                                    {col.q75}
+                                  </strong>
+                                </div>
+                                <div>
+                                  Median:{' '}
+                                  <strong className="font-bold text-[var(--color-accent)]">
+                                    {col.median}
+                                  </strong>
+                                </div>
+                                <div>
+                                  IQR:{' '}
+                                  <strong className="font-bold text-[var(--color-text)]">
+                                    {col.iqr}
+                                  </strong>
+                                </div>
                               </div>
                             </div>
                           ) : col.frequency_table && col.frequency_table.length > 0 ? (
@@ -175,8 +231,13 @@ export const ColumnStatsTable: React.FC<ColumnStatsTableProps> = ({ columnStats 
                               </span>
                               <div className="space-y-1.5">
                                 {col.frequency_table.map((freq, fIdx) => (
-                                  <div key={fIdx} className="flex items-center justify-between text-xs">
-                                    <span className="text-[var(--color-text)] font-mono truncate max-w-[150px]">{freq.value}</span>
+                                  <div
+                                    key={fIdx}
+                                    className="flex items-center justify-between text-xs"
+                                  >
+                                    <span className="text-[var(--color-text)] font-mono truncate max-w-[150px]">
+                                      {freq.value}
+                                    </span>
                                     <div className="flex items-center gap-2">
                                       <div className="w-20 bg-[var(--color-border)] rounded-full h-1.5 overflow-hidden">
                                         <div
@@ -193,7 +254,9 @@ export const ColumnStatsTable: React.FC<ColumnStatsTableProps> = ({ columnStats 
                               </div>
                             </div>
                           ) : (
-                            <div className="text-[var(--color-text-muted)] font-mono">No frequency table available</div>
+                            <div className="text-[var(--color-text-muted)] font-mono">
+                              No frequency table available
+                            </div>
                           )}
 
                           <div className="bg-[var(--color-surface-card)] p-3.5 rounded-xl border border-[var(--color-border)] text-xs text-[var(--color-text)] shadow-2xs">
@@ -201,13 +264,32 @@ export const ColumnStatsTable: React.FC<ColumnStatsTableProps> = ({ columnStats 
                               Data Quality Observations
                             </span>
                             <ul className="space-y-1 text-[var(--color-text-muted)]">
-                              <li>• Missing cell count: <strong className="text-[var(--color-text)] font-bold">{col.missing_count}</strong> ({col.missing_pct}%)</li>
-                              <li>• Distinct values count: <strong className="text-[var(--color-text)] font-bold">{col.unique_count}</strong></li>
+                              <li>
+                                • Missing cell count:{' '}
+                                <strong className="text-[var(--color-text)] font-bold">
+                                  {col.missing_count}
+                                </strong>{' '}
+                                ({col.missing_pct}%)
+                              </li>
+                              <li>
+                                • Distinct values count:{' '}
+                                <strong className="text-[var(--color-text)] font-bold">
+                                  {col.unique_count}
+                                </strong>
+                              </li>
                               {col.type === 'numeric' && (
-                                <li>• IQR Outlier cells: <strong className="text-[var(--color-text)] font-bold">{col.outlier_count}</strong> ({col.outlier_pct}%)</li>
+                                <li>
+                                  • IQR Outlier cells:{' '}
+                                  <strong className="text-[var(--color-text)] font-bold">
+                                    {col.outlier_count}
+                                  </strong>{' '}
+                                  ({col.outlier_pct}%)
+                                </li>
                               )}
                               {col.is_mixed_type && (
-                                <li className="text-rose-600 dark:text-rose-400 font-bold">• Mixed data types detected across string/numeric values.</li>
+                                <li className="text-rose-600 dark:text-rose-400 font-bold">
+                                  • Mixed data types detected across string/numeric values.
+                                </li>
                               )}
                             </ul>
                           </div>

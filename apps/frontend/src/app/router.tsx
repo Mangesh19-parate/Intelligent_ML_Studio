@@ -130,8 +130,14 @@ export const AppRoutes: React.FC = () => {
         }
       />
       <Route path="/features" element={<Navigate to="/feature-engineering" replace />} />
-      <Route path="/analysis/feature-selection" element={<Navigate to="/feature-engineering" replace />} />
-      <Route path="/analysis/feature-engineering" element={<Navigate to="/feature-engineering" replace />} />
+      <Route
+        path="/analysis/feature-selection"
+        element={<Navigate to="/feature-engineering" replace />}
+      />
+      <Route
+        path="/analysis/feature-engineering"
+        element={<Navigate to="/feature-engineering" replace />}
+      />
 
       <Route
         path="/ml"
@@ -157,7 +163,10 @@ export const AppRoutes: React.FC = () => {
         }
       />
       <Route path="/intelligence/diagnostics" element={<Navigate to="/diagnostics" replace />} />
-      <Route path="/intelligence/recommendations" element={<Navigate to="/diagnostics" replace />} />
+      <Route
+        path="/intelligence/recommendations"
+        element={<Navigate to="/diagnostics" replace />}
+      />
       <Route path="/intelligence/explainability" element={<Navigate to="/diagnostics" replace />} />
       <Route path="/explainability" element={<Navigate to="/diagnostics" replace />} />
 

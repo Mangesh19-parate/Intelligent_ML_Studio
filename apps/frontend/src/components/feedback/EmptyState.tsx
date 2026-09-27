@@ -32,9 +32,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
       </div>
       <h3 className="text-base font-semibold text-slate-200">{title}</h3>
       {description && (
-        <p className="mt-1.5 text-sm text-slate-400 max-w-sm leading-relaxed">
-          {description}
-        </p>
+        <p className="mt-1.5 text-sm text-slate-400 max-w-sm leading-relaxed">{description}</p>
       )}
       {actionLabel && onAction && (
         <div className="mt-5">

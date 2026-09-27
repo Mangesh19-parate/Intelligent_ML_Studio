@@ -89,7 +89,10 @@ export const OtpInput: React.FC<OtpInputProps> = ({
 
   const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
     e.preventDefault();
-    const pastedData = e.clipboardData.getData('text').replace(/[^0-9]/g, '').slice(0, length);
+    const pastedData = e.clipboardData
+      .getData('text')
+      .replace(/[^0-9]/g, '')
+      .slice(0, length);
     if (!pastedData) return;
 
     const newDigits = [...digits];

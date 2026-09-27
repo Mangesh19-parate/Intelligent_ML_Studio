@@ -22,7 +22,9 @@ export const UploadZone: React.FC<UploadZoneProps> = ({
   const handleFile = (file: File) => {
     setUploadError('');
     if (file.size > MAX_SIZE_BYTES) {
-      setUploadError(`File exceeds maximum allowed upload size of 50MB (${(file.size / (1024 * 1024)).toFixed(1)}MB).`);
+      setUploadError(
+        `File exceeds maximum allowed upload size of 50MB (${(file.size / (1024 * 1024)).toFixed(1)}MB).`
+      );
       return;
     }
     if (!file.name.endsWith('.csv')) {
@@ -81,7 +83,9 @@ export const UploadZone: React.FC<UploadZoneProps> = ({
           </div>
           <div>
             <h3 className="text-sm font-bold text-[var(--color-text)]">
-              {uploading ? 'Uploading and streaming tabular dataset...' : 'Upload Tabular Dataset (CSV)'}
+              {uploading
+                ? 'Uploading and streaming tabular dataset...'
+                : 'Upload Tabular Dataset (CSV)'}
             </h3>
             <p className="text-xs text-[var(--color-text-muted)] mt-1">
               Drag and drop your file here, or click to browse. Max size: 50MB.

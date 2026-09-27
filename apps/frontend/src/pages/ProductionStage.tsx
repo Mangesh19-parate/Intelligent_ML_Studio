@@ -84,8 +84,8 @@ export const ProductionStage: React.FC = () => {
     Array.isArray(user?.permissions)
       ? user.permissions
       : user?.role?.permissions
-      ? user.role.permissions.map((p) => (typeof p === 'string' ? p : p.permission_key))
-      : []
+        ? user.role.permissions.map((p) => (typeof p === 'string' ? p : p.permission_key))
+        : []
   );
   const canDeploy = userPerms.has('DEPLOY') || userPerms.has('MANAGE_USERS');
 
@@ -126,8 +126,13 @@ export const ProductionStage: React.FC = () => {
         // Find winning model
         const expRes = await modelApi.getLeaderboard(selectedProjectId);
         const rawLb = expRes.data;
-        const modelsList: ModelItem[] = Array.isArray(rawLb) ? rawLb : (rawLb?.models || rawLb?.leaderboard || []);
-        const winner = modelsList.find((m: ModelItem) => m.is_winning_model || m.is_selected_champion || m.is_winner) || (modelsList.length ? modelsList[0] : null);
+        const modelsList: ModelItem[] = Array.isArray(rawLb)
+          ? rawLb
+          : rawLb?.models || rawLb?.leaderboard || [];
+        const winner =
+          modelsList.find(
+            (m: ModelItem) => m.is_winning_model || m.is_selected_champion || m.is_winner
+          ) || (modelsList.length ? modelsList[0] : null);
         setWinningModel(winner);
 
         if (winner && winner.id) {
@@ -140,8 +145,12 @@ export const ProductionStage: React.FC = () => {
         }
 
         // Check active deployment
-        if ((projRes.data as unknown as { active_deployment?: DeploymentData })?.active_deployment) {
-          setDeployment((projRes.data as unknown as { active_deployment: DeploymentData }).active_deployment);
+        if (
+          (projRes.data as unknown as { active_deployment?: DeploymentData })?.active_deployment
+        ) {
+          setDeployment(
+            (projRes.data as unknown as { active_deployment: DeploymentData }).active_deployment
+          );
         } else {
           setDeployment(null);
         }
@@ -261,7 +270,8 @@ export const ProductionStage: React.FC = () => {
             <span>Production Serving & Observability</span>
           </h1>
           <p className="text-sm text-[var(--color-text-muted)] mt-1.5 max-w-3xl">
-            Strict 6-condition pre-deployment verification gatekeeper, high-performance REST inference API, and real-time latency & drift monitoring.
+            Strict 6-condition pre-deployment verification gatekeeper, high-performance REST
+            inference API, and real-time latency & drift monitoring.
           </p>
         </div>
 
@@ -337,9 +347,12 @@ export const ProductionStage: React.FC = () => {
           <div className="space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
-                <h3 className="text-base font-bold text-[var(--color-text)]">Mandatory Verification Checklist (6 Rules)</h3>
+                <h3 className="text-base font-bold text-[var(--color-text)]">
+                  Mandatory Verification Checklist (6 Rules)
+                </h3>
                 <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
-                  All 6 automated criteria must evaluate to PASS before a model artifact can be served in production.
+                  All 6 automated criteria must evaluate to PASS before a model artifact can be
+                  served in production.
                 </p>
               </div>
 
@@ -353,12 +366,36 @@ export const ProductionStage: React.FC = () => {
 
             <div className="space-y-3">
               {[
-                { title: '1. Locked Test Evaluated', desc: 'Evaluated once on locked holdout data (never reused diagnostic split).', passed: gate?.locked_test_evaluated },
-                { title: '2. Feature Schema Locked', desc: 'Input feature schema matches dataset columns and transformation pipeline.', passed: gate?.schema_locked },
-                { title: '3. Artifact Cryptographically Verified', desc: 'Disk artifact SHA-256 checksum matches database hash record.', passed: gate?.artifact_verified },
-                { title: '4. Lineage Capture Complete', desc: 'Software environment (Python, scikit-learn, numpy) & git commit SHA recorded.', passed: gate?.lineage_complete },
-                { title: '5. Performance Threshold Met', desc: 'Performance metric satisfies baseline business criteria on test split.', passed: gate?.performance_threshold_passed },
-                { title: '6. User Approved Sign-Off', desc: 'Explicit approval by authorized DEPLOYMENT_MANAGER or ADMIN.', passed: gate?.user_approved },
+                {
+                  title: '1. Locked Test Evaluated',
+                  desc: 'Evaluated once on locked holdout data (never reused diagnostic split).',
+                  passed: gate?.locked_test_evaluated,
+                },
+                {
+                  title: '2. Feature Schema Locked',
+                  desc: 'Input feature schema matches dataset columns and transformation pipeline.',
+                  passed: gate?.schema_locked,
+                },
+                {
+                  title: '3. Artifact Cryptographically Verified',
+                  desc: 'Disk artifact SHA-256 checksum matches database hash record.',
+                  passed: gate?.artifact_verified,
+                },
+                {
+                  title: '4. Lineage Capture Complete',
+                  desc: 'Software environment (Python, scikit-learn, numpy) & git commit SHA recorded.',
+                  passed: gate?.lineage_complete,
+                },
+                {
+                  title: '5. Performance Threshold Met',
+                  desc: 'Performance metric satisfies baseline business criteria on test split.',
+                  passed: gate?.performance_threshold_passed,
+                },
+                {
+                  title: '6. User Approved Sign-Off',
+                  desc: 'Explicit approval by authorized DEPLOYMENT_MANAGER or ADMIN.',
+                  passed: gate?.user_approved,
+                },
               ].map((rule, idx) => (
                 <div
                   key={idx}
@@ -372,15 +409,19 @@ export const ProductionStage: React.FC = () => {
                     )}
                     <div>
                       <div className="text-sm font-bold text-[var(--color-text)]">{rule.title}</div>
-                      <div className="text-xs text-[var(--color-text-muted)] mt-0.5">{rule.desc}</div>
+                      <div className="text-xs text-[var(--color-text-muted)] mt-0.5">
+                        {rule.desc}
+                      </div>
                     </div>
                   </div>
 
-                  <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold ${
-                    rule.passed
-                      ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                      : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
-                  }`}>
+                  <span
+                    className={`px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold ${
+                      rule.passed
+                        ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                        : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+                    }`}
+                  >
                     {rule.passed ? 'PASS' : 'FAIL'}
                   </span>
                 </div>
@@ -431,15 +472,25 @@ export const ProductionStage: React.FC = () => {
                       onClick={copyEndpoint}
                       className="p-1 text-[var(--color-text-muted)] hover:text-[var(--color-text)] cursor-pointer"
                     >
-                      {copiedUrl ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                      {copiedUrl ? (
+                        <Check className="w-3.5 h-3.5 text-emerald-400" />
+                      ) : (
+                        <Copy className="w-3.5 h-3.5" />
+                      )}
                     </button>
                   </div>
                   <div className="text-xs text-[var(--color-text-muted)] flex items-center gap-2">
-                    <span>Status: <strong className="text-emerald-400 font-bold">{deployment.status}</strong></span>
+                    <span>
+                      Status:{' '}
+                      <strong className="text-emerald-400 font-bold">{deployment.status}</strong>
+                    </span>
                     {measuredLatency !== null ? (
                       <>
                         <span>&bull;</span>
-                        <span>Roundtrip Latency: <strong className="text-slate-200 font-mono">{measuredLatency}ms</strong></span>
+                        <span>
+                          Roundtrip Latency:{' '}
+                          <strong className="text-slate-200 font-mono">{measuredLatency}ms</strong>
+                        </span>
                       </>
                     ) : (
                       <>
@@ -456,12 +507,15 @@ export const ProductionStage: React.FC = () => {
               </div>
             ) : (
               <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs">
-                No active deployment found. Please verify the 6 pre-deployment gates on Tab 1 and click Deploy.
+                No active deployment found. Please verify the 6 pre-deployment gates on Tab 1 and
+                click Deploy.
               </div>
             )}
 
             <div className="space-y-3">
-              <label className="text-xs font-bold text-[var(--color-text)]">Test Payload (JSON)</label>
+              <label className="text-xs font-bold text-[var(--color-text)]">
+                Test Payload (JSON)
+              </label>
               <textarea
                 rows={5}
                 value={inputPayload}
@@ -493,8 +547,12 @@ export const ProductionStage: React.FC = () => {
             {predictResult && (
               <div className="p-5 rounded-2xl bg-[var(--color-surface-card)] border border-[var(--color-accent-border)] space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-[var(--color-accent)]">Prediction Result</span>
-                  <span className="text-xs font-mono text-emerald-400 font-bold">{predictResult.latency_ms} ms</span>
+                  <span className="text-xs font-bold text-[var(--color-accent)]">
+                    Prediction Result
+                  </span>
+                  <span className="text-xs font-mono text-emerald-400 font-bold">
+                    {predictResult.latency_ms} ms
+                  </span>
                 </div>
                 <div className="text-2xl font-black text-[var(--color-text)] font-mono">
                   {String(predictResult.prediction)}
@@ -509,7 +567,9 @@ export const ProductionStage: React.FC = () => {
           <div className="space-y-6">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-base font-bold text-[var(--color-text)]">Live Inference Audit Stream</h3>
+                <h3 className="text-base font-bold text-[var(--color-text)]">
+                  Live Inference Audit Stream
+                </h3>
                 <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
                   Immutable request logs with latency metrics and payload hashes.
                 </p>
@@ -525,7 +585,8 @@ export const ProductionStage: React.FC = () => {
 
             {logs.length === 0 ? (
               <div className="p-8 text-center text-[var(--color-text-muted)] text-xs bg-[var(--color-surface-card)] rounded-xl border border-[var(--color-border)]">
-                No inference audit records logged yet. Run predictions from Tab 2 to populate stream.
+                No inference audit records logged yet. Run predictions from Tab 2 to populate
+                stream.
               </div>
             ) : (
               <div className="overflow-x-auto rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-card)]">
@@ -541,8 +602,12 @@ export const ProductionStage: React.FC = () => {
                   <tbody className="divide-y divide-[var(--color-border)]">
                     {logs.map((l) => (
                       <tr key={l.id} className="hover:bg-[var(--color-surface-hover)]">
-                        <td className="p-3 text-[var(--color-text-muted)]">{new Date(l.requested_at).toLocaleTimeString()}</td>
-                        <td className="p-3 text-[var(--color-text)]">{l.request_id?.slice(0, 8)}...</td>
+                        <td className="p-3 text-[var(--color-text-muted)]">
+                          {new Date(l.requested_at).toLocaleTimeString()}
+                        </td>
+                        <td className="p-3 text-[var(--color-text)]">
+                          {l.request_id?.slice(0, 8)}...
+                        </td>
                         <td className="p-3 text-emerald-400 font-bold">{l.status}</td>
                         <td className="p-3 text-[var(--color-accent)]">{l.latency_ms} ms</td>
                       </tr>

@@ -19,7 +19,11 @@ export const projectsApi = {
     return res.data;
   },
 
-  createProject: async (projectName: string, taskType?: string, targetColumn?: string): Promise<Project> => {
+  createProject: async (
+    projectName: string,
+    taskType?: string,
+    targetColumn?: string
+  ): Promise<Project> => {
     const res = await httpClient.post<Project>('/projects', {
       project_name: projectName,
       task_type: taskType,

@@ -66,7 +66,10 @@ export const LegalLayout: React.FC<LegalLayoutProps> = ({
 
             <div className="flex items-center space-x-2">
               <span className="w-3 h-3 rounded-full bg-[var(--color-accent)] shrink-0" />
-              <Link to="/legal" className="text-xs font-bold text-[var(--color-text)] hover:text-[var(--color-accent)] transition-colors">
+              <Link
+                to="/legal"
+                className="text-xs font-bold text-[var(--color-text)] hover:text-[var(--color-accent)] transition-colors"
+              >
                 Legal & Governance Center
               </Link>
             </div>
@@ -114,9 +117,7 @@ export const LegalLayout: React.FC<LegalLayoutProps> = ({
                 <div className="text-[10px] font-mono font-bold uppercase tracking-widest text-[var(--color-accent)]">
                   On this page
                 </div>
-                <h4 className="text-xs font-bold text-[var(--color-text)]">
-                  Table of Contents
-                </h4>
+                <h4 className="text-xs font-bold text-[var(--color-text)]">Table of Contents</h4>
               </div>
 
               <nav className="space-y-1 text-xs max-h-[calc(100vh-200px)] overflow-y-auto pr-2">
@@ -192,10 +193,18 @@ export const LegalLayout: React.FC<LegalLayoutProps> = ({
           </div>
 
           <div className="flex items-center space-x-6">
-            <Link to="/privacy" className="hover:text-[var(--color-text)]">Privacy Policy</Link>
-            <Link to="/terms" className="hover:text-[var(--color-text)]">Terms of Service</Link>
-            <Link to="/legal" className="hover:text-[var(--color-text)]">Legal Center</Link>
-            <Link to="/" className="hover:text-[var(--color-text)]">Platform Home</Link>
+            <Link to="/privacy" className="hover:text-[var(--color-text)]">
+              Privacy Policy
+            </Link>
+            <Link to="/terms" className="hover:text-[var(--color-text)]">
+              Terms of Service
+            </Link>
+            <Link to="/legal" className="hover:text-[var(--color-text)]">
+              Legal Center
+            </Link>
+            <Link to="/" className="hover:text-[var(--color-text)]">
+              Platform Home
+            </Link>
           </div>
         </div>
       </footer>

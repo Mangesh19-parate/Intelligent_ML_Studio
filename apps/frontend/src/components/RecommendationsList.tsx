@@ -1,5 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Lightbulb, ArrowRight, ShieldAlert, CheckCircle2, XCircle, Check, RotateCcw } from 'lucide-react';
+import {
+  Lightbulb,
+  ArrowRight,
+  ShieldAlert,
+  CheckCircle2,
+  XCircle,
+  Check,
+  RotateCcw,
+} from 'lucide-react';
 import { projectApi } from '../api/client';
 import { TransformationRecommendation } from '../types/api';
 
@@ -37,7 +45,9 @@ export const RecommendationsList: React.FC<RecommendationsListProps> = ({
     try {
       await projectApi.updateRecommendationStatus(projectId, recId, newStatus);
       setLocalRecs((prev) =>
-        prev.map((r) => (r.id === recId ? { ...r, status: newStatus as TransformationRecommendation['status'] } : r))
+        prev.map((r) =>
+          r.id === recId ? { ...r, status: newStatus as TransformationRecommendation['status'] } : r
+        )
       );
       if (onStatusChange) onStatusChange(recId, newStatus);
     } catch (err) {
@@ -50,22 +60,46 @@ export const RecommendationsList: React.FC<RecommendationsListProps> = ({
   const getConfidenceBadge = (confidence?: string): React.ReactNode => {
     switch (confidence) {
       case 'HIGH':
-        return <span className="px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-mono">HIGH CONFIDENCE</span>;
+        return (
+          <span className="px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-mono">
+            HIGH CONFIDENCE
+          </span>
+        );
       case 'MEDIUM':
-        return <span className="px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 font-mono">MEDIUM CONFIDENCE</span>;
+        return (
+          <span className="px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 font-mono">
+            MEDIUM CONFIDENCE
+          </span>
+        );
       default:
-        return <span className="px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-[var(--color-surface-hover)] text-[var(--color-text-muted)] border border-[var(--color-border)] font-mono">LOW CONFIDENCE</span>;
+        return (
+          <span className="px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-[var(--color-surface-hover)] text-[var(--color-text-muted)] border border-[var(--color-border)] font-mono">
+            LOW CONFIDENCE
+          </span>
+        );
     }
   };
 
   const getStatusBadge = (status?: string): React.ReactNode => {
     switch (status) {
       case 'APPLIED':
-        return <span className="px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 font-mono flex items-center gap-1"><Check className="w-3 h-3" /> APPLIED</span>;
+        return (
+          <span className="px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 font-mono flex items-center gap-1">
+            <Check className="w-3 h-3" /> APPLIED
+          </span>
+        );
       case 'IGNORED':
-        return <span className="px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-zinc-500/10 text-zinc-500 border border-zinc-500/20 font-mono flex items-center gap-1"><XCircle className="w-3 h-3" /> IGNORED</span>;
+        return (
+          <span className="px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-zinc-500/10 text-zinc-500 border border-zinc-500/20 font-mono flex items-center gap-1">
+            <XCircle className="w-3 h-3" /> IGNORED
+          </span>
+        );
       default:
-        return <span className="px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 font-mono">SUGGESTED</span>;
+        return (
+          <span className="px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 font-mono">
+            SUGGESTED
+          </span>
+        );
     }
   };
 
@@ -77,7 +111,9 @@ export const RecommendationsList: React.FC<RecommendationsListProps> = ({
             <Lightbulb className="w-5 h-5" />
           </div>
           <div>
-            <h4 className="text-lg font-bold text-[var(--color-text)]">Diagnostics & Transformation Recommendations</h4>
+            <h4 className="text-lg font-bold text-[var(--color-text)]">
+              Diagnostics & Transformation Recommendations
+            </h4>
             <p className="text-xs text-[var(--color-text-muted)]">
               Traceable prescriptive actions generated from DQI diagnostics (SRS §2.16)
             </p>
@@ -99,7 +135,9 @@ export const RecommendationsList: React.FC<RecommendationsListProps> = ({
             {/* Header: Finding & Badges */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2.5 border-b border-[var(--color-border)]">
               <div className="flex items-center gap-2">
-                <span className={`w-2 h-2 rounded-full ${rec.status === 'APPLIED' ? 'bg-blue-500' : rec.status === 'IGNORED' ? 'bg-zinc-400' : 'bg-amber-500'} shrink-0`} />
+                <span
+                  className={`w-2 h-2 rounded-full ${rec.status === 'APPLIED' ? 'bg-blue-500' : rec.status === 'IGNORED' ? 'bg-zinc-400' : 'bg-amber-500'} shrink-0`}
+                />
                 <h5 className="text-sm font-bold text-[var(--color-text)]">{rec.finding}</h5>
               </div>
               <div className="flex items-center gap-2">
@@ -121,7 +159,9 @@ export const RecommendationsList: React.FC<RecommendationsListProps> = ({
                 <span className="text-[var(--color-accent)] uppercase font-mono text-[10px] tracking-wider block mb-1 flex items-center gap-1 font-bold">
                   <ArrowRight className="w-3 h-3" /> Recommended Action (Day 4+)
                 </span>
-                <p className="text-[var(--color-text)] leading-relaxed font-medium">{rec.recommended_action}</p>
+                <p className="text-[var(--color-text)] leading-relaxed font-medium">
+                  {rec.recommended_action}
+                </p>
               </div>
             </div>
 

@@ -145,9 +145,7 @@ export const FeatureImportanceTable: React.FC<FeatureImportanceTableProps> = ({
             <span>Deselect All</span>
           </button>
         </div>
-        <div className="text-[11px] font-mono">
-          Showing {features.length} features
-        </div>
+        <div className="text-[11px] font-mono">Showing {features.length} features</div>
       </div>
 
       {/* Table */}
@@ -170,7 +168,9 @@ export const FeatureImportanceTable: React.FC<FeatureImportanceTableProps> = ({
                   key={feat.column_name}
                   onClick={() => onToggleFeature(feat.column_name)}
                   className={`cursor-pointer transition-colors ${
-                    isSelected ? 'bg-[var(--color-accent-soft)]/20' : 'hover:bg-[var(--color-surface-hover)]'
+                    isSelected
+                      ? 'bg-[var(--color-accent-soft)]/20'
+                      : 'hover:bg-[var(--color-surface-hover)]'
                   }`}
                 >
                   <td className="px-4 py-3 text-center" onClick={(e) => e.stopPropagation()}>
@@ -191,7 +191,9 @@ export const FeatureImportanceTable: React.FC<FeatureImportanceTableProps> = ({
                     <div className="w-36 bg-[var(--color-surface-hover)] rounded-full h-2 overflow-hidden">
                       <div
                         className="bg-[var(--color-accent)] h-2 rounded-full"
-                        style={{ width: `${Math.min(100, Math.max(0, feat.avg_rank_score * 100))}%` }}
+                        style={{
+                          width: `${Math.min(100, Math.max(0, feat.avg_rank_score * 100))}%`,
+                        }}
                       />
                     </div>
                   </td>

@@ -81,7 +81,9 @@ export const FoldInspectionModal: React.FC<FoldInspectionModalProps> = ({
                 {currentFold.features.map((feat) => (
                   <tr key={feat.column_name} className="hover:bg-[var(--color-surface-hover)]">
                     <td className="px-4 py-2 text-[var(--color-text-muted)]">{feat.rank}</td>
-                    <td className="px-4 py-2 font-bold text-[var(--color-text)]">{feat.column_name}</td>
+                    <td className="px-4 py-2 font-bold text-[var(--color-text)]">
+                      {feat.column_name}
+                    </td>
                     <td className="px-4 py-2 text-right font-extrabold text-[var(--color-accent)]">
                       {Number(feat.importance_score).toFixed(5)}
                     </td>

@@ -79,12 +79,15 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     [projects]
   );
 
-  const updateActiveProject = useCallback((updated: Partial<Project>) => {
-    setActiveProject((prev) => (prev ? { ...prev, ...updated } : null));
-    setProjects((prev) =>
-      prev.map((p) => (p.id === activeProject?.id ? { ...p, ...updated } : p))
-    );
-  }, [activeProject]);
+  const updateActiveProject = useCallback(
+    (updated: Partial<Project>) => {
+      setActiveProject((prev) => (prev ? { ...prev, ...updated } : null));
+      setProjects((prev) =>
+        prev.map((p) => (p.id === activeProject?.id ? { ...p, ...updated } : p))
+      );
+    },
+    [activeProject]
+  );
 
   const currentProjectId = activeProject?.id ? String(activeProject.id) : null;
 

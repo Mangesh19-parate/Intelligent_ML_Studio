@@ -39,9 +39,7 @@ export const ErrorState: React.FC<ErrorStateProps> = ({
               </span>
             )}
           </div>
-          <p className="mt-1 text-xs text-slate-300 leading-relaxed break-words">
-            {message}
-          </p>
+          <p className="mt-1 text-xs text-slate-300 leading-relaxed break-words">{message}</p>
         </div>
       </div>
 

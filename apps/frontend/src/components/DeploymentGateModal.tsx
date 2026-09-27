@@ -77,8 +77,8 @@ export const DeploymentGateModal: React.FC<DeploymentGateModalProps> = ({
     Array.isArray(user?.permissions)
       ? user.permissions
       : user?.role?.permissions
-      ? user.role.permissions.map((p) => (typeof p === 'string' ? p : p.permission_key))
-      : []
+        ? user.role.permissions.map((p) => (typeof p === 'string' ? p : p.permission_key))
+        : []
   );
   const canDeploy = userPerms.has('DEPLOY') || userPerms.has('MANAGE_USERS');
   const canExport = userPerms.has('EXPORT') || userPerms.has('MANAGE_USERS');
@@ -158,7 +158,10 @@ export const DeploymentGateModal: React.FC<DeploymentGateModalProps> = ({
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', `model_${model.algorithm_name}_${model.id.slice(0, 8)}.${format}`);
+      link.setAttribute(
+        'download',
+        `model_${model.algorithm_name}_${model.id.slice(0, 8)}.${format}`
+      );
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -259,12 +262,20 @@ export const DeploymentGateModal: React.FC<DeploymentGateModalProps> = ({
     isTriState = false
   ): React.ReactNode => {
     let icon = <XCircle className="w-5 h-5 text-rose-400" />;
-    let badge = <span className="px-2.5 py-1 text-xs font-bold rounded-full bg-rose-500/10 text-rose-400 border border-rose-500/20">FAIL</span>;
+    let badge = (
+      <span className="px-2.5 py-1 text-xs font-bold rounded-full bg-rose-500/10 text-rose-400 border border-rose-500/20">
+        FAIL
+      </span>
+    );
 
     if (isTriState) {
       if (statusVal === 'PASS') {
         icon = <CheckCircle className="w-5 h-5 text-emerald-400" />;
-        badge = <span className="px-2.5 py-1 text-xs font-bold rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">PASS</span>;
+        badge = (
+          <span className="px-2.5 py-1 text-xs font-bold rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+            PASS
+          </span>
+        );
       } else if (statusVal === 'UNVERIFIABLE') {
         icon = <AlertTriangle className="w-5 h-5 text-amber-400" />;
         badge = (
@@ -274,7 +285,9 @@ export const DeploymentGateModal: React.FC<DeploymentGateModalProps> = ({
               <HelpCircle className="w-3.5 h-3.5" />
             </span>
             <div className="absolute right-0 bottom-full mb-2 hidden group-hover:block w-72 p-3 bg-[var(--color-surface)] border border-[var(--color-border)] text-xs text-[var(--color-text)] rounded-xl shadow-xl z-50">
-              No frozen threshold was configured at experiment creation, or min_value was left null. A real evaluation threshold must be set before fold execution to guarantee verifiable deployment.
+              No frozen threshold was configured at experiment creation, or min_value was left null.
+              A real evaluation threshold must be set before fold execution to guarantee verifiable
+              deployment.
             </div>
           </div>
         );
@@ -282,7 +295,11 @@ export const DeploymentGateModal: React.FC<DeploymentGateModalProps> = ({
     } else {
       if (statusVal === true) {
         icon = <CheckCircle className="w-5 h-5 text-emerald-400" />;
-        badge = <span className="px-2.5 py-1 text-xs font-bold rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">PASS</span>;
+        badge = (
+          <span className="px-2.5 py-1 text-xs font-bold rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+            PASS
+          </span>
+        );
       }
     }
 
@@ -379,13 +396,23 @@ export const DeploymentGateModal: React.FC<DeploymentGateModalProps> = ({
         {errorMsg && (
           <div className="mx-6 mt-4 p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs flex items-center justify-between">
             <span>{errorMsg}</span>
-            <button onClick={() => setErrorMsg(null)} className="text-rose-300 hover:text-white cursor-pointer">✕</button>
+            <button
+              onClick={() => setErrorMsg(null)}
+              className="text-rose-300 hover:text-white cursor-pointer"
+            >
+              ✕
+            </button>
           </div>
         )}
         {successMsg && (
           <div className="mx-6 mt-4 p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs flex items-center justify-between">
             <span>{successMsg}</span>
-            <button onClick={() => setSuccessMsg(null)} className="text-emerald-300 hover:text-white cursor-pointer">✕</button>
+            <button
+              onClick={() => setSuccessMsg(null)}
+              className="text-emerald-300 hover:text-white cursor-pointer"
+            >
+              ✕
+            </button>
           </div>
         )}
 
@@ -409,7 +436,9 @@ export const DeploymentGateModal: React.FC<DeploymentGateModalProps> = ({
               </div>
 
               {loadingGate && !gate ? (
-                <div className="p-12 text-center text-[var(--color-text-muted)] text-sm">Evaluating gate conditions...</div>
+                <div className="p-12 text-center text-[var(--color-text-muted)] text-sm">
+                  Evaluating gate conditions...
+                </div>
               ) : (
                 <div className="space-y-2.5">
                   {renderGateRow(
@@ -514,11 +543,22 @@ export const DeploymentGateModal: React.FC<DeploymentGateModalProps> = ({
                       className="p-1.5 hover:text-[var(--color-text)] text-[var(--color-text-muted)] transition-colors cursor-pointer"
                       title="Copy Endpoint"
                     >
-                      {copiedUrl ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                      {copiedUrl ? (
+                        <Check className="w-3.5 h-3.5 text-emerald-400" />
+                      ) : (
+                        <Copy className="w-3.5 h-3.5" />
+                      )}
                     </button>
                   </div>
                   <div className="text-xs text-[var(--color-text-muted)] mt-1.5 flex items-center gap-3">
-                    <span>Status: <strong className={`font-semibold ${deployment?.status === 'LIVE' ? 'text-emerald-400' : 'text-amber-400'}`}>{deployment?.status}</strong></span>
+                    <span>
+                      Status:{' '}
+                      <strong
+                        className={`font-semibold ${deployment?.status === 'LIVE' ? 'text-emerald-400' : 'text-amber-400'}`}
+                      >
+                        {deployment?.status}
+                      </strong>
+                    </span>
                     <span>•</span>
                     <span>Retention: {deployment?.log_retention_days} Days</span>
                   </div>
@@ -558,7 +598,9 @@ export const DeploymentGateModal: React.FC<DeploymentGateModalProps> = ({
               {/* Inference Input */}
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <label className="text-xs font-bold text-[var(--color-text)]">Input Payload (JSON format)</label>
+                  <label className="text-xs font-bold text-[var(--color-text)]">
+                    Input Payload (JSON format)
+                  </label>
                   <button
                     onClick={() => {
                       setRawJsonInput('{\n  "feature_1": 10,\n  "feature_2": 2.5\n}');
@@ -593,7 +635,11 @@ export const DeploymentGateModal: React.FC<DeploymentGateModalProps> = ({
                   className="w-full sm:flex-1 py-3 px-5 rounded-full bg-[var(--color-surface-hover)] hover:bg-[var(--color-surface)] text-[var(--color-text)] border border-[var(--color-border)] font-bold text-xs flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
                 >
                   <Cpu className="w-4 h-4 text-[var(--color-accent)]" />
-                  <span>{predictingExplain ? 'Explaining...' : 'Predict + Explain (/predict/.../explain)'}</span>
+                  <span>
+                    {predictingExplain
+                      ? 'Explaining...'
+                      : 'Predict + Explain (/predict/.../explain)'}
+                  </span>
                 </button>
               </div>
 
@@ -644,16 +690,29 @@ export const DeploymentGateModal: React.FC<DeploymentGateModalProps> = ({
                   </div>
 
                   <div className="space-y-2 border-t border-[var(--color-border)] pt-3">
-                    <span className="text-xs font-bold text-[var(--color-text)]">Feature Contributions (SHAP)</span>
+                    <span className="text-xs font-bold text-[var(--color-text)]">
+                      Feature Contributions (SHAP)
+                    </span>
                     <div className="space-y-1.5 max-h-48 overflow-y-auto">
-                      {Object.entries(explainResult.explanation?.contributions || {}).map(([feat, val]) => (
-                        <div key={feat} className="flex items-center justify-between text-xs font-mono p-2 bg-[var(--color-surface)] rounded-xl border border-[var(--color-border)]">
-                          <span className="text-[var(--color-text)]">{feat}</span>
-                          <span className={Number(val) >= 0 ? 'text-emerald-400 font-bold' : 'text-rose-400 font-bold'}>
-                            {Number(val) >= 0 ? `+${val}` : String(val)}
-                          </span>
-                        </div>
-                      ))}
+                      {Object.entries(explainResult.explanation?.contributions || {}).map(
+                        ([feat, val]) => (
+                          <div
+                            key={feat}
+                            className="flex items-center justify-between text-xs font-mono p-2 bg-[var(--color-surface)] rounded-xl border border-[var(--color-border)]"
+                          >
+                            <span className="text-[var(--color-text)]">{feat}</span>
+                            <span
+                              className={
+                                Number(val) >= 0
+                                  ? 'text-emerald-400 font-bold'
+                                  : 'text-rose-400 font-bold'
+                              }
+                            >
+                              {Number(val) >= 0 ? `+${val}` : String(val)}
+                            </span>
+                          </div>
+                        )
+                      )}
                     </div>
                     <div className="text-xs text-[var(--color-text-muted)] flex justify-between font-mono pt-1">
                       <span>Base Value: {explainResult.explanation?.base_value}</span>
@@ -683,9 +742,13 @@ export const DeploymentGateModal: React.FC<DeploymentGateModalProps> = ({
               </div>
 
               {loadingLogs && logs.length === 0 ? (
-                <div className="p-8 text-center text-[var(--color-text-muted)] text-xs">Loading logs...</div>
+                <div className="p-8 text-center text-[var(--color-text-muted)] text-xs">
+                  Loading logs...
+                </div>
               ) : logs.length === 0 ? (
-                <div className="p-8 text-center text-[var(--color-text-muted)] text-xs">No prediction requests logged yet.</div>
+                <div className="p-8 text-center text-[var(--color-text-muted)] text-xs">
+                  No prediction requests logged yet.
+                </div>
               ) : (
                 <div className="overflow-x-auto rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-card)]">
                   <table className="w-full text-left text-xs">
@@ -705,19 +768,25 @@ export const DeploymentGateModal: React.FC<DeploymentGateModalProps> = ({
                           <td className="p-3 text-[var(--color-text-muted)]">
                             {new Date(log.requested_at).toLocaleTimeString()}
                           </td>
-                          <td className="p-3 text-[var(--color-text)]">{log.request_id.slice(0, 8)}...</td>
+                          <td className="p-3 text-[var(--color-text)]">
+                            {log.request_id.slice(0, 8)}...
+                          </td>
                           <td className="p-3">
-                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                              log.status === 'SUCCESS'
-                                ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                                : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
-                            }`}>
+                            <span
+                              className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                log.status === 'SUCCESS'
+                                  ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                                  : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+                              }`}
+                            >
                               {log.status}
                             </span>
                           </td>
                           <td className="p-3 text-[var(--color-accent)]">{log.latency_ms} ms</td>
                           <td className="p-3 text-cyan-400">
-                            {log.explanation_latency_ms != null ? `${log.explanation_latency_ms} ms` : '—'}
+                            {log.explanation_latency_ms != null
+                              ? `${log.explanation_latency_ms} ms`
+                              : '—'}
                           </td>
                           <td className="p-3 text-[var(--color-text-muted)]">{log.payload_mode}</td>
                         </tr>

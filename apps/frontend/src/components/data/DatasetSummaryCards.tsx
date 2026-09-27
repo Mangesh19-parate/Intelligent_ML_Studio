@@ -65,7 +65,13 @@ export const DatasetSummaryCards: React.FC<DatasetSummaryCardsProps> = ({
           </select>
           <div className="text-[11px] text-[var(--color-text-muted)] flex items-center space-x-1 truncate font-medium">
             <Clock className="w-3 h-3 shrink-0 text-[var(--color-text-muted)]" />
-            <span className="truncate">Ingested {new Date(selectedDataset.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+            <span className="truncate">
+              Ingested{' '}
+              {new Date(selectedDataset.created_at).toLocaleTimeString([], {
+                hour: '2-digit',
+                minute: '2-digit',
+              })}
+            </span>
           </div>
         </div>
       </div>

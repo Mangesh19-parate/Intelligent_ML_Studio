@@ -40,7 +40,9 @@ export const ProjectContextHeader: React.FC<ProjectContextHeaderProps> = ({
     return () => document.removeEventListener('mousedown', handleOutsideClick);
   }, []);
 
-  const getStageVariant = (stage?: string): 'success' | 'warning' | 'info' | 'primary' | 'neutral' => {
+  const getStageVariant = (
+    stage?: string
+  ): 'success' | 'warning' | 'info' | 'primary' | 'neutral' => {
     switch (stage) {
       case 'DEPLOYED':
         return 'success';
@@ -110,7 +112,9 @@ export const ProjectContextHeader: React.FC<ProjectContextHeaderProps> = ({
 
               <div className="max-h-60 overflow-y-auto p-1 divide-y divide-slate-800/40">
                 {projects.length === 0 ? (
-                  <div className="p-3 text-xs text-slate-500 text-center">No projects available</div>
+                  <div className="p-3 text-xs text-slate-500 text-center">
+                    No projects available
+                  </div>
                 ) : (
                   projects.map((p) => {
                     const isSelected = p.id === activeProject?.id;
@@ -130,7 +134,10 @@ export const ProjectContextHeader: React.FC<ProjectContextHeaderProps> = ({
                       >
                         <div className="flex items-center gap-2 min-w-0">
                           <FolderKanban
-                            className={cn('w-4 h-4 shrink-0', isSelected ? 'text-indigo-400' : 'text-slate-500')}
+                            className={cn(
+                              'w-4 h-4 shrink-0',
+                              isSelected ? 'text-indigo-400' : 'text-slate-500'
+                            )}
                           />
                           <div className="min-w-0">
                             <p className="text-xs truncate">{p.project_name}</p>

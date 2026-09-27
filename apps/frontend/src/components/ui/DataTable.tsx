@@ -1,5 +1,12 @@
 import React, { useState, useMemo } from 'react';
-import { ChevronDown, ChevronUp, ChevronsUpDown, Search, ChevronLeft, ChevronRight } from 'lucide-react';
+import {
+  ChevronDown,
+  ChevronUp,
+  ChevronsUpDown,
+  Search,
+  ChevronLeft,
+  ChevronRight,
+} from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Button } from './Button';
 
@@ -51,7 +58,9 @@ export function DataTable<T extends Record<string, any>>({
         return val.toLowerCase().includes(lowerSearch);
       }
       return Object.values(row).some((val) =>
-        String(val ?? '').toLowerCase().includes(lowerSearch)
+        String(val ?? '')
+          .toLowerCase()
+          .includes(lowerSearch)
       );
     });
   }, [data, searchTerm, searchKey]);
@@ -172,10 +181,15 @@ export function DataTable<T extends Record<string, any>>({
               ))
             ) : paginatedData.length === 0 ? (
               <tr>
-                <td colSpan={columns.length} className="px-4 py-12 text-center text-[var(--color-text-muted)]">
+                <td
+                  colSpan={columns.length}
+                  className="px-4 py-12 text-center text-[var(--color-text-muted)]"
+                >
                   {emptyState || (
                     <div className="flex flex-col items-center justify-center gap-2">
-                      <p className="text-sm font-medium text-[var(--color-text)]">No records found</p>
+                      <p className="text-sm font-medium text-[var(--color-text)]">
+                        No records found
+                      </p>
                       <p className="text-xs text-[var(--color-text-muted)]">
                         {searchTerm ? 'Try adjusting your search criteria' : 'No data available'}
                       </p>
@@ -194,7 +208,10 @@ export function DataTable<T extends Record<string, any>>({
                   )}
                 >
                   {columns.map((col) => (
-                    <td key={col.key} className={cn('px-4 py-3.5 text-[var(--color-text)]', col.className)}>
+                    <td
+                      key={col.key}
+                      className={cn('px-4 py-3.5 text-[var(--color-text)]', col.className)}
+                    >
                       {col.cell ? col.cell(row, idx) : row[col.key]}
                     </td>
                   ))}

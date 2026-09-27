@@ -8,7 +8,15 @@ import { RecommendationsList } from '../components/RecommendationsList';
 import { ColumnStatsTable } from '../components/ColumnStatsTable';
 import { TransformationsTable } from '../components/TransformationsTable';
 import { ModelTraining } from '../components/ModelTraining';
-import { Project, Dataset, DatasetColumn, SplitResponse, RecommendationItem, TaskType, TaskTypeConfidence } from '../types/api';
+import {
+  Project,
+  Dataset,
+  DatasetColumn,
+  SplitResponse,
+  RecommendationItem,
+  TaskType,
+  TaskTypeConfidence,
+} from '../types/api';
 import {
   Upload,
   Database,
@@ -30,7 +38,7 @@ import {
   RefreshCw,
   Table,
   Wand2,
-  Cpu
+  Cpu,
 } from 'lucide-react';
 
 interface DevPreviewData {
@@ -49,7 +57,7 @@ export const ProjectDetail: React.FC = () => {
   const [columns, setColumns] = useState<DatasetColumn[]>([]);
   const [splitSummary, setSplitSummary] = useState<SplitResponse | null>(null);
   const [devPreview, setDevPreview] = useState<DevPreviewData | null>(null);
-  
+
   // Profiling & Diagnostics State
   const [profilingReport, setProfilingReport] = useState<any>(null);
   const [recommendations, setRecommendations] = useState<RecommendationItem[]>([]);
@@ -180,8 +188,10 @@ export const ProjectDetail: React.FC = () => {
       };
       const res = await datasetSplitApi.createSplit(selectedDataset.id, payload);
       setSplitSummary(res.data);
-      setSuccessMsg(`Outer split partition created successfully (${res.data.development_rows} Dev rows, ${res.data.locked_test_rows} Locked Test rows).`);
-      
+      setSuccessMsg(
+        `Outer split partition created successfully (${res.data.development_rows} Dev rows, ${res.data.locked_test_rows} Locked Test rows).`
+      );
+
       const previewRes = await datasetSplitApi.getDevelopmentPreview(selectedDataset.id, 10);
       setDevPreview(previewRes.data);
 
@@ -209,8 +219,10 @@ export const ProjectDetail: React.FC = () => {
     try {
       const res = await datasetApi.profile(selectedDataset.id);
       setProfilingReport(res.data);
-      setSuccessMsg('Data profiling and DQI diagnostics completed successfully on the Development partition.');
-      
+      setSuccessMsg(
+        'Data profiling and DQI diagnostics completed successfully on the Development partition.'
+      );
+
       // Reload project and recommendations
       const projRes = await projectApi.get(id);
       setProject(projRes.data);
@@ -260,7 +272,9 @@ export const ProjectDetail: React.FC = () => {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <div className="flex items-center space-x-3">
-              <h1 className="text-2xl font-extrabold text-white">{project?.project_name || project?.name}</h1>
+              <h1 className="text-2xl font-extrabold text-white">
+                {project?.project_name || project?.name}
+              </h1>
               <span className="px-3 py-1 rounded-full text-xs font-semibold bg-indigo-500/10 border border-indigo-500/20 text-indigo-400">
                 {project?.task_type}
               </span>
@@ -272,13 +286,29 @@ export const ProjectDetail: React.FC = () => {
             </div>
             <div className="flex flex-wrap items-center gap-4 mt-2 text-xs text-slate-400">
               {project?.target_column && (
-                <span>Target Column: <strong className="text-white font-mono">{project.target_column}</strong></span>
+                <span>
+                  Target Column:{' '}
+                  <strong className="text-white font-mono">{project.target_column}</strong>
+                </span>
               )}
-              <span>Pipeline Stage: <strong className="text-emerald-400 font-mono font-bold">{project?.pipeline_stage}</strong></span>
-              {project?.data_quality_index !== null && project?.data_quality_index !== undefined && (
-                <span>Overall DQI: <strong className="text-indigo-300 font-mono font-bold">{Number(project.data_quality_index).toFixed(1)}/100</strong></span>
-              )}
-              <span>Dataset Versions: <strong className="text-white">{datasets.length}</strong></span>
+              <span>
+                Pipeline Stage:{' '}
+                <strong className="text-emerald-400 font-mono font-bold">
+                  {project?.pipeline_stage}
+                </strong>
+              </span>
+              {project?.data_quality_index !== null &&
+                project?.data_quality_index !== undefined && (
+                  <span>
+                    Overall DQI:{' '}
+                    <strong className="text-indigo-300 font-mono font-bold">
+                      {Number(project.data_quality_index).toFixed(1)}/100
+                    </strong>
+                  </span>
+                )}
+              <span>
+                Dataset Versions: <strong className="text-white">{datasets.length}</strong>
+              </span>
             </div>
           </div>
 
@@ -290,7 +320,9 @@ export const ProjectDetail: React.FC = () => {
                 className="inline-flex items-center space-x-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-semibold shadow-lg shadow-emerald-500/20 transition-all cursor-pointer disabled:opacity-50"
               >
                 <RefreshCw className={`w-4 h-4 ${profilingRunning ? 'animate-spin' : ''}`} />
-                <span>{profilingRunning ? 'Profiling Development Data...' : 'Run Data Profiling & DQI'}</span>
+                <span>
+                  {profilingRunning ? 'Profiling Development Data...' : 'Run Data Profiling & DQI'}
+                </span>
               </button>
             )}
 
@@ -343,8 +375,15 @@ export const ProjectDetail: React.FC = () => {
       <div className="p-4 rounded-xl bg-indigo-500/5 border border-indigo-500/15 text-xs text-indigo-300 flex items-start space-x-3">
         <ShieldCheck className="w-4 h-4 text-indigo-400 shrink-0 mt-0.5" />
         <div>
-          <strong className="font-semibold text-white">The Sixth Invariant (Strict Locked-Test Isolation): </strong>
-          No data-dependent decisions, descriptive profiling, or feature engineering occur before the Outer Split. Profiling operates exclusively on <code className="text-indigo-300 bg-slate-950 px-1 py-0.5 rounded font-mono">DatasetSplitService.get_development_data()</code>.
+          <strong className="font-semibold text-white">
+            The Sixth Invariant (Strict Locked-Test Isolation):{' '}
+          </strong>
+          No data-dependent decisions, descriptive profiling, or feature engineering occur before
+          the Outer Split. Profiling operates exclusively on{' '}
+          <code className="text-indigo-300 bg-slate-950 px-1 py-0.5 rounded font-mono">
+            DatasetSplitService.get_development_data()
+          </code>
+          .
         </div>
       </div>
 
@@ -374,9 +413,7 @@ export const ProjectDetail: React.FC = () => {
                       <FileSpreadsheet className="w-4 h-4 shrink-0" />
                       <span>Version {ds.version_number}</span>
                     </div>
-                    <span className="text-[10px] text-slate-500">
-                      {ds.row_count} rows
-                    </span>
+                    <span className="text-[10px] text-slate-500">{ds.row_count} rows</span>
                   </button>
                 ))}
               </div>
@@ -385,7 +422,10 @@ export const ProjectDetail: React.FC = () => {
 
           {/* Upload Drop Zone */}
           <div
-            onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+            onDragOver={(e) => {
+              e.preventDefault();
+              setDragOver(true);
+            }}
             onDragLeave={() => setDragOver(false)}
             onDrop={(e) => {
               e.preventDefault();
@@ -393,16 +433,12 @@ export const ProjectDetail: React.FC = () => {
               handleFileUpload(e.dataTransfer.files?.[0]);
             }}
             className={`border-2 border-dashed rounded-2xl p-6 text-center transition-all ${
-              dragOver
-                ? 'border-indigo-500 bg-indigo-500/5'
-                : 'border-slate-800 bg-slate-900/60'
+              dragOver ? 'border-indigo-500 bg-indigo-500/5' : 'border-slate-800 bg-slate-900/60'
             }`}
           >
             <Upload className="w-8 h-8 mx-auto text-slate-500 mb-2" />
             <p className="text-xs font-semibold text-white">Drag & drop dataset</p>
-            <p className="text-[11px] text-slate-400 mt-1">
-              Supports .csv, .xlsx, .json
-            </p>
+            <p className="text-[11px] text-slate-400 mt-1">Supports .csv, .xlsx, .json</p>
           </div>
 
           {/* Dataset Integrity Card */}
@@ -493,9 +529,12 @@ export const ProjectDetail: React.FC = () => {
               {!splitSummary ? (
                 <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-8 text-center space-y-4">
                   <Split className="w-12 h-12 mx-auto text-amber-400" />
-                  <h3 className="text-base font-bold text-white">Outer Split Required Before Profiling</h3>
+                  <h3 className="text-base font-bold text-white">
+                    Outer Split Required Before Profiling
+                  </h3>
                   <p className="text-xs text-slate-400 max-w-md mx-auto">
-                    To enforce leakage prevention, Data Profiling and DQI calculations require an active train/test split.
+                    To enforce leakage prevention, Data Profiling and DQI calculations require an
+                    active train/test split.
                   </p>
                   <button
                     onClick={() => setActiveTab('SPLIT')}
@@ -507,9 +546,12 @@ export const ProjectDetail: React.FC = () => {
               ) : !profilingReport ? (
                 <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-8 text-center space-y-4">
                   <Sparkles className="w-12 h-12 mx-auto text-indigo-400" />
-                  <h3 className="text-base font-bold text-white">Development Partition Ready to Profile</h3>
+                  <h3 className="text-base font-bold text-white">
+                    Development Partition Ready to Profile
+                  </h3>
                   <p className="text-xs text-slate-400 max-w-md mx-auto">
-                    Run Stage B distributional profiling, compute the Data Quality Index (DQI), and infer optimal task type.
+                    Run Stage B distributional profiling, compute the Data Quality Index (DQI), and
+                    infer optimal task type.
                   </p>
                   <button
                     onClick={handleTriggerProfile}
@@ -525,7 +567,9 @@ export const ProjectDetail: React.FC = () => {
                   <TaskTypeSelector
                     projectId={id}
                     currentTaskType={project?.task_type}
-                    taskTypeConfidence={project?.task_type_confidence as TaskTypeConfidence | undefined}
+                    taskTypeConfidence={
+                      project?.task_type_confidence as TaskTypeConfidence | undefined
+                    }
                     taskTypeSuggestion={profilingReport.task_type_suggestion}
                     onTaskTypeConfirmed={handleTaskTypeConfirmed}
                   />
@@ -555,9 +599,12 @@ export const ProjectDetail: React.FC = () => {
                     <Split className="w-5 h-5" />
                   </div>
                   <div>
-                    <h2 className="text-base font-bold text-white">Outer Split: Development / Locked Test Partition</h2>
+                    <h2 className="text-base font-bold text-white">
+                      Outer Split: Development / Locked Test Partition
+                    </h2>
                     <p className="text-xs text-slate-400 mt-0.5">
-                      Freeze and isolate the final test partition before Stage B profiling and training.
+                      Freeze and isolate the final test partition before Stage B profiling and
+                      training.
                     </p>
                   </div>
                 </div>
@@ -642,7 +689,9 @@ export const ProjectDetail: React.FC = () => {
                       className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-md shadow-indigo-500/20 transition-all flex items-center space-x-2 disabled:opacity-50 cursor-pointer"
                     >
                       <Split className="w-4 h-4" />
-                      <span>{creatingSplit ? 'Creating Partition...' : 'Create Train/Test Split'}</span>
+                      <span>
+                        {creatingSplit ? 'Creating Partition...' : 'Create Train/Test Split'}
+                      </span>
                     </button>
                   </div>
                 </form>
@@ -693,7 +742,9 @@ export const ProjectDetail: React.FC = () => {
                         )}
                       </div>
                       <div className="text-[10px] text-slate-500">
-                        {splitSummary.is_stratified ? 'Proportional class balance' : 'Uniform random partition'}
+                        {splitSummary.is_stratified
+                          ? 'Proportional class balance'
+                          : 'Uniform random partition'}
                       </div>
                     </div>
 
@@ -704,9 +755,7 @@ export const ProjectDetail: React.FC = () => {
                       <div className="text-xl font-extrabold text-white font-mono">
                         {splitSummary.split_seed}
                       </div>
-                      <div className="text-[10px] text-slate-500">
-                        Deterministic & reproducible
-                      </div>
+                      <div className="text-[10px] text-slate-500">Deterministic & reproducible</div>
                     </div>
                   </div>
 
@@ -716,7 +765,8 @@ export const ProjectDetail: React.FC = () => {
                         <div className="flex items-center space-x-2">
                           <Eye className="w-4 h-4 text-indigo-400" />
                           <h3 className="text-xs font-bold text-white uppercase tracking-wider">
-                            Development Partition Data Preview (Top {devPreview.preview_rows.length} rows)
+                            Development Partition Data Preview (Top {devPreview.preview_rows.length}{' '}
+                            rows)
                           </h3>
                         </div>
                         <span className="text-[10px] text-slate-400 font-mono">
@@ -739,12 +789,15 @@ export const ProjectDetail: React.FC = () => {
                           <tbody className="divide-y divide-slate-800 font-mono text-[11px]">
                             {devPreview.preview_rows.map((row, idx) => (
                               <tr key={idx} className="hover:bg-slate-800/40 transition-colors">
-                                <td className="px-4 py-2.5 text-slate-500 font-bold">
-                                  {idx + 1}
-                                </td>
+                                <td className="px-4 py-2.5 text-slate-500 font-bold">{idx + 1}</td>
                                 {devPreview.columns.map((col) => (
-                                  <td key={col} className="px-4 py-2.5 text-slate-200 truncate max-w-[200px]">
-                                    {row[col] !== null && row[col] !== undefined ? String(row[col]) : (
+                                  <td
+                                    key={col}
+                                    className="px-4 py-2.5 text-slate-200 truncate max-w-[200px]"
+                                  >
+                                    {row[col] !== null && row[col] !== undefined ? (
+                                      String(row[col])
+                                    ) : (
                                       <span className="text-slate-500 italic">null</span>
                                     )}
                                   </td>
@@ -806,7 +859,8 @@ export const ProjectDetail: React.FC = () => {
               <div className="p-5 border-b border-slate-800 flex items-center justify-between">
                 <div>
                   <h3 className="text-sm font-bold text-white">
-                    Structural Schema Metadata {selectedDataset && `(Version ${selectedDataset.version_number})`}
+                    Structural Schema Metadata{' '}
+                    {selectedDataset && `(Version ${selectedDataset.version_number})`}
                   </h3>
                   <p className="text-xs text-slate-400 mt-0.5">
                     {selectedDataset
@@ -839,15 +893,17 @@ export const ProjectDetail: React.FC = () => {
                             {col.column_name}
                           </td>
                           <td className="px-6 py-4">
-                            <span className={`px-2.5 py-1 rounded-full text-[11px] font-semibold ${
-                              col.data_type === 'NUMERIC'
-                                ? 'bg-blue-500/10 text-blue-400'
-                                : col.data_type === 'DATETIME'
-                                ? 'bg-purple-500/10 text-purple-400'
-                                : col.data_type === 'CATEGORICAL'
-                                ? 'bg-amber-500/10 text-amber-400'
-                                : 'bg-rose-500/10 text-rose-400'
-                            }`}>
+                            <span
+                              className={`px-2.5 py-1 rounded-full text-[11px] font-semibold ${
+                                col.data_type === 'NUMERIC'
+                                  ? 'bg-blue-500/10 text-blue-400'
+                                  : col.data_type === 'DATETIME'
+                                    ? 'bg-purple-500/10 text-purple-400'
+                                    : col.data_type === 'CATEGORICAL'
+                                      ? 'bg-amber-500/10 text-amber-400'
+                                      : 'bg-rose-500/10 text-rose-400'
+                              }`}
+                            >
                               {col.data_type}
                             </span>
                           </td>

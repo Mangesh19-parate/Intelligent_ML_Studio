@@ -39,11 +39,11 @@ export const SplitPanel: React.FC<SplitPanelProps> = ({
   const isSplitCreated = Boolean(splitSummary);
 
   const devRows = isSplitCreated
-    ? splitSummary?.dev_row_count ?? Math.round(totalRows * ((100 - lockedTestPct) / 100))
+    ? (splitSummary?.dev_row_count ?? Math.round(totalRows * ((100 - lockedTestPct) / 100)))
     : Math.round(totalRows * ((100 - lockedTestPct) / 100));
 
   const testRows = isSplitCreated
-    ? splitSummary?.locked_test_row_count ?? Math.round(totalRows * (lockedTestPct / 100))
+    ? (splitSummary?.locked_test_row_count ?? Math.round(totalRows * (lockedTestPct / 100)))
     : Math.round(totalRows * (lockedTestPct / 100));
 
   return (
@@ -140,8 +140,12 @@ export const SplitPanel: React.FC<SplitPanelProps> = ({
             {/* Development Partition */}
             <div className="space-y-1">
               <div className="flex items-center justify-between text-xs">
-                <span className="font-bold text-[var(--color-text)]">Development Partition (100 - {lockedTestPct}%)</span>
-                <span className="font-mono text-emerald-400 font-bold">{Number(devRows).toLocaleString()} rows</span>
+                <span className="font-bold text-[var(--color-text)]">
+                  Development Partition (100 - {lockedTestPct}%)
+                </span>
+                <span className="font-mono text-emerald-400 font-bold">
+                  {Number(devRows).toLocaleString()} rows
+                </span>
               </div>
               <div className="w-full bg-[var(--color-surface-hover)] rounded-full h-2 overflow-hidden">
                 <div
@@ -150,7 +154,8 @@ export const SplitPanel: React.FC<SplitPanelProps> = ({
                 />
               </div>
               <p className="text-[10px] text-[var(--color-text-muted)]">
-                Used for EDA, feature selection, transformation fitting, and cross-validation training.
+                Used for EDA, feature selection, transformation fitting, and cross-validation
+                training.
               </p>
             </div>
 
@@ -161,7 +166,9 @@ export const SplitPanel: React.FC<SplitPanelProps> = ({
                   <Lock className="w-3 h-3" />
                   <span>Locked Test Partition ({lockedTestPct}%)</span>
                 </span>
-                <span className="font-mono text-rose-400 font-bold">{Number(testRows).toLocaleString()} rows</span>
+                <span className="font-mono text-rose-400 font-bold">
+                  {Number(testRows).toLocaleString()} rows
+                </span>
               </div>
               <div className="w-full bg-[var(--color-surface-hover)] rounded-full h-2 overflow-hidden">
                 <div
@@ -170,7 +177,8 @@ export const SplitPanel: React.FC<SplitPanelProps> = ({
                 />
               </div>
               <p className="text-[10px] text-[var(--color-text-muted)]">
-                Isolated behind cryptographic gate. Evaluated exactly once during final model promotion.
+                Isolated behind cryptographic gate. Evaluated exactly once during final model
+                promotion.
               </p>
             </div>
           </div>

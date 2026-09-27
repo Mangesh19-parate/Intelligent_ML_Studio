@@ -105,7 +105,9 @@ export const DeploymentMonitoring: React.FC = () => {
 
   const userPerms = new Set(
     user?.permissions ||
-    (user?.role?.permissions ? user.role.permissions.map((p) => (typeof p === 'string' ? p : p.permission_key)) : [])
+      (user?.role?.permissions
+        ? user.role.permissions.map((p) => (typeof p === 'string' ? p : p.permission_key))
+        : [])
   );
   const canDeploy = userPerms.has('DEPLOY') || userPerms.has('MANAGE_USERS');
 
@@ -177,9 +179,31 @@ export const DeploymentMonitoring: React.FC = () => {
     }
   };
 
-  const baseStats: LatencyStats = monitoringData?.latency_summary?.base_predictions || { avg_ms: 0, p50_ms: 0, p95_ms: 0, count: 0, min_ms: 0, max_ms: 0 };
-  const explainStats: LatencyStats = monitoringData?.latency_summary?.explained_predictions || { avg_ms: 0, p50_ms: 0, p95_ms: 0, count: 0, min_ms: 0, max_ms: 0 };
-  const errorStats: ErrorRateStats = monitoringData?.error_rate || { total_requests: 0, success_count: 0, validation_error_count: 0, server_error_count: 0, error_rate: 0, validation_error_rate: 0, server_error_rate: 0 };
+  const baseStats: LatencyStats = monitoringData?.latency_summary?.base_predictions || {
+    avg_ms: 0,
+    p50_ms: 0,
+    p95_ms: 0,
+    count: 0,
+    min_ms: 0,
+    max_ms: 0,
+  };
+  const explainStats: LatencyStats = monitoringData?.latency_summary?.explained_predictions || {
+    avg_ms: 0,
+    p50_ms: 0,
+    p95_ms: 0,
+    count: 0,
+    min_ms: 0,
+    max_ms: 0,
+  };
+  const errorStats: ErrorRateStats = monitoringData?.error_rate || {
+    total_requests: 0,
+    success_count: 0,
+    validation_error_count: 0,
+    server_error_count: 0,
+    error_rate: 0,
+    validation_error_rate: 0,
+    server_error_rate: 0,
+  };
   const volumeBuckets: VolumeBucket[] = monitoringData?.volume_over_time || [];
 
   return (
@@ -196,7 +220,9 @@ export const DeploymentMonitoring: React.FC = () => {
               <span>Workspace</span>
             </Link>
             <ChevronRight className="w-3.5 h-3.5 text-[var(--color-text-muted)]" />
-            <span className="text-xs font-semibold text-[var(--color-accent)]">Deployment Monitoring</span>
+            <span className="text-xs font-semibold text-[var(--color-accent)]">
+              Deployment Monitoring
+            </span>
           </div>
           <h1 className="text-2xl font-black tracking-tight text-text mt-1 flex items-center space-x-2.5">
             <Activity className="w-6 h-6 text-[var(--color-accent)]" />
@@ -277,15 +303,16 @@ export const DeploymentMonitoring: React.FC = () => {
                   monitoringData.status === 'LIVE'
                     ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
                     : monitoringData.status === 'PAUSED'
-                    ? 'bg-amber-500/10 text-amber-500 border-amber-500/20'
-                    : 'bg-rose-500/10 text-rose-500 border-rose-500/20'
+                      ? 'bg-amber-500/10 text-amber-500 border-amber-500/20'
+                      : 'bg-rose-500/10 text-rose-500 border-rose-500/20'
                 }`}
               >
                 {monitoringData.status}
               </span>
               <div>
                 <div className="font-mono text-xs font-bold text-text">
-                  Endpoint: <span className="text-[var(--color-accent)]">{monitoringData.endpoint_path}</span>
+                  Endpoint:{' '}
+                  <span className="text-[var(--color-accent)]">{monitoringData.endpoint_path}</span>
                 </div>
                 <div className="text-[11px] text-[var(--color-text-muted)] mt-0.5">
                   Deployment ID: <span className="font-mono">{monitoringData.deployment_id}</span>
@@ -317,7 +344,11 @@ export const DeploymentMonitoring: React.FC = () => {
                 {monitoringData.status !== 'RETIRED' && (
                   <button
                     onClick={() => {
-                      if (window.confirm('Are you sure you want to permanently RETIRE this deployment? Retired endpoints cannot be reactivated.')) {
+                      if (
+                        window.confirm(
+                          'Are you sure you want to permanently RETIRE this deployment? Retired endpoints cannot be reactivated.'
+                        )
+                      ) {
                         handleUpdateStatus('RETIRED');
                       }
                     }}
@@ -343,7 +374,9 @@ export const DeploymentMonitoring: React.FC = () => {
                 {errorStats.total_requests.toLocaleString()}
               </div>
               <div className="flex items-center space-x-3 text-xs text-[var(--color-text-muted)] pt-1">
-                <span className="text-emerald-500 font-semibold">{errorStats.success_count} Success</span>
+                <span className="text-emerald-500 font-semibold">
+                  {errorStats.success_count} Success
+                </span>
                 <span>&bull;</span>
                 <span className="text-rose-500 font-semibold">
                   {errorStats.validation_error_count + errorStats.server_error_count} Errors
@@ -362,7 +395,8 @@ export const DeploymentMonitoring: React.FC = () => {
               </div>
               <div className="flex items-center justify-between text-xs pt-1">
                 <span className="text-amber-500">
-                  Validation: <strong>{(errorStats.validation_error_rate * 100).toFixed(1)}%</strong>
+                  Validation:{' '}
+                  <strong>{(errorStats.validation_error_rate * 100).toFixed(1)}%</strong>
                 </span>
                 <span className="text-rose-500">
                   Server (500): <strong>{(errorStats.server_error_rate * 100).toFixed(1)}%</strong>
@@ -386,7 +420,8 @@ export const DeploymentMonitoring: React.FC = () => {
                 </span>
               </div>
               <div className="text-[11px] text-[var(--color-text-muted)] pt-1">
-                Base Avg: <strong className="text-text">{baseStats.avg_ms}ms</strong> &bull; Explain Avg: <strong className="text-text">{explainStats.avg_ms}ms</strong>
+                Base Avg: <strong className="text-text">{baseStats.avg_ms}ms</strong> &bull; Explain
+                Avg: <strong className="text-text">{explainStats.avg_ms}ms</strong>
               </div>
             </div>
           </div>
@@ -400,7 +435,8 @@ export const DeploymentMonitoring: React.FC = () => {
                   <span>Decoupled Latency Profile Breakdown</span>
                 </h3>
                 <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
-                  Demonstrates the exact compute cost decoupling between low-latency inference and SHAP explainability
+                  Demonstrates the exact compute cost decoupling between low-latency inference and
+                  SHAP explainability
                 </p>
               </div>
             </div>
@@ -424,10 +460,14 @@ export const DeploymentMonitoring: React.FC = () => {
                       <span>Base Fast Inference</span>
                     </td>
                     <td className="px-5 py-3.5 text-text">{baseStats.count}</td>
-                    <td className="px-5 py-3.5 font-bold text-emerald-500">{baseStats.avg_ms} ms</td>
+                    <td className="px-5 py-3.5 font-bold text-emerald-500">
+                      {baseStats.avg_ms} ms
+                    </td>
                     <td className="px-5 py-3.5 text-text">{baseStats.p50_ms} ms</td>
                     <td className="px-5 py-3.5 font-bold text-text">{baseStats.p95_ms} ms</td>
-                    <td className="px-5 py-3.5 text-[var(--color-text-muted)]">{baseStats.min_ms ?? 0} / {baseStats.max_ms ?? 0} ms</td>
+                    <td className="px-5 py-3.5 text-[var(--color-text-muted)]">
+                      {baseStats.min_ms ?? 0} / {baseStats.max_ms ?? 0} ms
+                    </td>
                   </tr>
                   <tr className="hover:bg-[var(--color-surface)]/50 transition-colors">
                     <td className="px-5 py-3.5 font-sans font-bold text-purple-400 flex items-center space-x-1.5">
@@ -435,10 +475,14 @@ export const DeploymentMonitoring: React.FC = () => {
                       <span>Inference + SHAP Explanation</span>
                     </td>
                     <td className="px-5 py-3.5 text-text">{explainStats.count}</td>
-                    <td className="px-5 py-3.5 font-bold text-purple-400">{explainStats.avg_ms} ms</td>
+                    <td className="px-5 py-3.5 font-bold text-purple-400">
+                      {explainStats.avg_ms} ms
+                    </td>
                     <td className="px-5 py-3.5 text-text">{explainStats.p50_ms} ms</td>
                     <td className="px-5 py-3.5 font-bold text-text">{explainStats.p95_ms} ms</td>
-                    <td className="px-5 py-3.5 text-[var(--color-text-muted)]">{explainStats.min_ms ?? 0} / {explainStats.max_ms ?? 0} ms</td>
+                    <td className="px-5 py-3.5 text-[var(--color-text-muted)]">
+                      {explainStats.min_ms ?? 0} / {explainStats.max_ms ?? 0} ms
+                    </td>
                   </tr>
                 </tbody>
               </table>
@@ -456,7 +500,12 @@ export const DeploymentMonitoring: React.FC = () => {
                 {volumeBuckets.map((b, idx) => (
                   <div key={idx} className="flex items-center space-x-4 text-xs">
                     <span className="font-mono text-[11px] text-[var(--color-text-muted)] w-36 shrink-0">
-                      {new Date(b.timestamp).toLocaleTimeString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                      {new Date(b.timestamp).toLocaleTimeString([], {
+                        month: 'short',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
                     </span>
                     <div className="flex-1 flex items-center h-5 rounded-lg bg-[var(--color-bg)] overflow-hidden border border-[var(--color-border)]">
                       {b.success_count > 0 && (
@@ -468,7 +517,9 @@ export const DeploymentMonitoring: React.FC = () => {
                       )}
                       {b.validation_error_count > 0 && (
                         <div
-                          style={{ width: `${(b.validation_error_count / b.total_requests) * 100}%` }}
+                          style={{
+                            width: `${(b.validation_error_count / b.total_requests) * 100}%`,
+                          }}
                           className="h-full bg-amber-500/70"
                           title={`Validation Error: ${b.validation_error_count}`}
                         />
@@ -498,7 +549,8 @@ export const DeploymentMonitoring: React.FC = () => {
                 <span>Test Inference Payload</span>
               </h3>
               <p className="text-xs text-[var(--color-text-muted)]">
-                Execute live requests against the endpoint to test base latency and SHAP explanation paths
+                Execute live requests against the endpoint to test base latency and SHAP explanation
+                paths
               </p>
 
               <textarea
@@ -549,7 +601,10 @@ export const DeploymentMonitoring: React.FC = () => {
                 <div className="p-4 rounded-xl bg-[var(--color-bg)] border border-purple-500/30 font-mono text-xs space-y-2">
                   <div className="flex items-center justify-between text-purple-400 font-bold">
                     <span>Explain Predict Completed</span>
-                    <span>Base: {explainResult.latency_ms}ms | SHAP: {explainResult.explanation_latency_ms}ms</span>
+                    <span>
+                      Base: {explainResult.latency_ms}ms | SHAP:{' '}
+                      {explainResult.explanation_latency_ms}ms
+                    </span>
                   </div>
                   <pre className="text-text text-[11px] overflow-x-auto whitespace-pre-wrap">
                     {JSON.stringify(explainResult, null, 2)}
@@ -559,7 +614,8 @@ export const DeploymentMonitoring: React.FC = () => {
 
               {!fastResult && !explainResult && (
                 <div className="text-center py-12 text-xs text-[var(--color-text-muted)] italic">
-                  Run a prediction on the left to inspect raw inference response and latency metrics.
+                  Run a prediction on the left to inspect raw inference response and latency
+                  metrics.
                 </div>
               )}
             </div>
@@ -571,7 +627,9 @@ export const DeploymentMonitoring: React.FC = () => {
               <h3 className="text-sm font-bold text-text">Recent Inference Audit Logs</h3>
               <div className="flex items-center space-x-2 text-[11px] text-[var(--color-text-muted)] bg-[var(--color-bg)] px-3 py-1.5 rounded-lg border border-[var(--color-border)]">
                 <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                <span>Default Payload Mode: <strong className="text-text font-mono">HASHED</strong></span>
+                <span>
+                  Default Payload Mode: <strong className="text-text font-mono">HASHED</strong>
+                </span>
               </div>
             </div>
 
@@ -579,9 +637,17 @@ export const DeploymentMonitoring: React.FC = () => {
             <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-300/90 flex items-start space-x-2.5">
               <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
               <div>
-                <strong className="text-amber-300 font-semibold">Privacy Notice: Correlation & Integrity, Not Anonymization.</strong>{' '}
+                <strong className="text-amber-300 font-semibold">
+                  Privacy Notice: Correlation & Integrity, Not Anonymization.
+                </strong>{' '}
                 <span>
-                  The default <code className="bg-black/30 px-1 py-0.5 rounded font-mono text-[11px]">HASHED</code> mode stores a SHA-256 hash of input feature names to verify schema integrity while keeping input payloads null. Note that structured low-cardinality values can be brute-forced; full payload capture requires explicit admin opt-in.
+                  The default{' '}
+                  <code className="bg-black/30 px-1 py-0.5 rounded font-mono text-[11px]">
+                    HASHED
+                  </code>{' '}
+                  mode stores a SHA-256 hash of input feature names to verify schema integrity while
+                  keeping input payloads null. Note that structured low-cardinality values can be
+                  brute-forced; full payload capture requires explicit admin opt-in.
                 </span>
               </div>
             </div>
@@ -602,7 +668,11 @@ export const DeploymentMonitoring: React.FC = () => {
                   {monitoringData.recent_logs?.map((l) => (
                     <tr key={l.id} className="hover:bg-[var(--color-surface)]/50 transition-colors">
                       <td className="px-4 py-2.5 text-[var(--color-text-muted)]">
-                        {new Date(l.requested_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                        {new Date(l.requested_at).toLocaleTimeString([], {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                          second: '2-digit',
+                        })}
                       </td>
                       <td className="px-4 py-2.5">
                         <span
@@ -610,8 +680,8 @@ export const DeploymentMonitoring: React.FC = () => {
                             l.status === 'SUCCESS'
                               ? 'bg-emerald-500/10 text-emerald-500'
                               : l.status === 'VALIDATION_ERROR'
-                              ? 'bg-amber-500/10 text-amber-500'
-                              : 'bg-rose-500/10 text-rose-500'
+                                ? 'bg-amber-500/10 text-amber-500'
+                                : 'bg-rose-500/10 text-rose-500'
                           }`}
                         >
                           {l.status}
@@ -621,8 +691,13 @@ export const DeploymentMonitoring: React.FC = () => {
                       <td className="px-4 py-2.5 text-purple-400">
                         {l.explanation_latency_ms ? `${l.explanation_latency_ms} ms` : '-'}
                       </td>
-                      <td className="px-4 py-2.5 text-[var(--color-text-muted)]">{l.payload_mode}</td>
-                      <td className="px-4 py-2.5 text-[var(--color-text-muted)] truncate max-w-[120px]" title={l.schema_hash}>
+                      <td className="px-4 py-2.5 text-[var(--color-text-muted)]">
+                        {l.payload_mode}
+                      </td>
+                      <td
+                        className="px-4 py-2.5 text-[var(--color-text-muted)] truncate max-w-[120px]"
+                        title={l.schema_hash}
+                      >
                         {l.schema_hash.substring(0, 12)}...
                       </td>
                     </tr>

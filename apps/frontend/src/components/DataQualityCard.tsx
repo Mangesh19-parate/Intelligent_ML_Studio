@@ -27,9 +27,20 @@ export const DataQualityCard: React.FC<DataQualityCardProps> = ({ dqiData }) => 
   };
 
   const getScoreBadge = (score: number): { label: string; color: string } => {
-    if (score >= 90) return { label: 'EXCELLENT', color: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' };
-    if (score >= 75) return { label: 'ACCEPTABLE', color: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20' };
-    return { label: 'REQUIRES ACTION', color: 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20' };
+    if (score >= 90)
+      return {
+        label: 'EXCELLENT',
+        color: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
+      };
+    if (score >= 75)
+      return {
+        label: 'ACCEPTABLE',
+        color: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20',
+      };
+    return {
+      label: 'REQUIRES ACTION',
+      color: 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20',
+    };
   };
 
   const badge = getScoreBadge(overall_index);
@@ -56,7 +67,7 @@ export const DataQualityCard: React.FC<DataQualityCardProps> = ({ dqiData }) => 
       name: 'Outlier Prevalence Score',
       score: sub_scores?.outlier_prevalence,
       weight: effective_weights?.outlier_prevalence,
-      defaultWeight: 0.20,
+      defaultWeight: 0.2,
       desc: '100 - (IQR-flagged cells / numeric cells) * 100',
       isNA: sub_scores?.outlier_prevalence === null,
     },
@@ -65,7 +76,7 @@ export const DataQualityCard: React.FC<DataQualityCardProps> = ({ dqiData }) => 
       name: 'Type Consistency Score',
       score: sub_scores?.type_consistency,
       weight: effective_weights?.type_consistency,
-      defaultWeight: 0.20,
+      defaultWeight: 0.2,
       desc: '100 - (mixed-dtype cols / total cols) * 100',
     },
   ];
@@ -81,7 +92,9 @@ export const DataQualityCard: React.FC<DataQualityCardProps> = ({ dqiData }) => 
             <div>
               <h3 className="text-xl font-bold text-[var(--color-text)] tracking-tight flex items-center gap-2">
                 Data Quality Index (DQI)
-                <span className={`text-xs px-2.5 py-0.5 rounded-full font-bold border ${badge.color}`}>
+                <span
+                  className={`text-xs px-2.5 py-0.5 rounded-full font-bold border ${badge.color}`}
+                >
                   {badge.label}
                 </span>
               </h3>
@@ -95,7 +108,9 @@ export const DataQualityCard: React.FC<DataQualityCardProps> = ({ dqiData }) => 
         {/* Big Score Display */}
         <div className="flex items-center gap-4 bg-[var(--color-surface-hover)] border border-[var(--color-border)] px-6 py-4 rounded-2xl">
           <div className="text-right">
-            <span className="text-[11px] font-mono uppercase tracking-wider text-[var(--color-text-muted)] block font-bold">Overall DQI</span>
+            <span className="text-[11px] font-mono uppercase tracking-wider text-[var(--color-text-muted)] block font-bold">
+              Overall DQI
+            </span>
             <span className={`text-4xl font-black tracking-tight ${getScoreColor(overall_index)}`}>
               {overall_index?.toFixed(1)}
             </span>
@@ -107,9 +122,10 @@ export const DataQualityCard: React.FC<DataQualityCardProps> = ({ dqiData }) => 
       {/* Sub-scores grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 my-6">
         {subScoreItems.map((item) => {
-          const formattedWeight = item.weight !== null && item.weight !== undefined
-            ? `${(item.weight * 100).toFixed(1)}%`
-            : 'N/A';
+          const formattedWeight =
+            item.weight !== null && item.weight !== undefined
+              ? `${(item.weight * 100).toFixed(1)}%`
+              : 'N/A';
 
           return (
             <div
@@ -119,7 +135,9 @@ export const DataQualityCard: React.FC<DataQualityCardProps> = ({ dqiData }) => 
               <div className="flex items-center justify-between mb-2">
                 <div>
                   <span className="text-xs font-bold text-[var(--color-text)]">{item.name}</span>
-                  <p className="text-[11px] text-[var(--color-text-muted)] font-mono mt-0.5">{item.desc}</p>
+                  <p className="text-[11px] text-[var(--color-text-muted)] font-mono mt-0.5">
+                    {item.desc}
+                  </p>
                 </div>
                 <div className="text-right">
                   {item.isNA ? (
@@ -160,7 +178,10 @@ export const DataQualityCard: React.FC<DataQualityCardProps> = ({ dqiData }) => 
         <div className="mb-4 p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-center gap-3 text-xs text-amber-700 dark:text-amber-300 font-medium">
           <Scale className="w-4 h-4 text-amber-500 shrink-0" />
           <span>
-            <strong>Adaptive Weight Renormalization:</strong> Since no numeric columns were present, Outlier Prevalence was excluded and remaining weights were renormalized (Missingness: 43.75%, Duplicate: 31.25%, Type Consistency: 25.0%) to preserve 100% total weight distribution.
+            <strong>Adaptive Weight Renormalization:</strong> Since no numeric columns were present,
+            Outlier Prevalence was excluded and remaining weights were renormalized (Missingness:
+            43.75%, Duplicate: 31.25%, Type Consistency: 25.0%) to preserve 100% total weight
+            distribution.
           </span>
         </div>
       )}
@@ -169,7 +190,9 @@ export const DataQualityCard: React.FC<DataQualityCardProps> = ({ dqiData }) => 
       <div className="p-3.5 bg-[var(--color-surface-hover)] border border-[var(--color-border)] rounded-xl flex items-start gap-3">
         <Info className="w-4 h-4 text-[var(--color-accent)] mt-0.5 shrink-0" />
         <p className="text-xs text-[var(--color-text-muted)] leading-relaxed">
-          <strong className="text-[var(--color-text)]">Interpretation Guard:</strong> This summarizes data condition, not fitness for a specific modeling task — e.g. high outlier prevalence is not inherently bad for problems like fraud detection.
+          <strong className="text-[var(--color-text)]">Interpretation Guard:</strong> This
+          summarizes data condition, not fitness for a specific modeling task — e.g. high outlier
+          prevalence is not inherently bad for problems like fraud detection.
         </p>
       </div>
     </div>

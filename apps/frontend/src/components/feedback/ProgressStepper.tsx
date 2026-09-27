@@ -32,10 +32,10 @@ export const ProgressStepper: React.FC<ProgressStepperProps> = ({ steps, classNa
                 className={cn(
                   'w-8 h-8 rounded-full flex items-center justify-center font-semibold text-xs border-2 transition-all duration-200 shadow-md',
                   isComplete && 'bg-emerald-500 border-emerald-500 text-white',
-                  isCurrent && 'bg-indigo-600 border-indigo-400 text-white ring-4 ring-indigo-500/20',
+                  isCurrent &&
+                    'bg-indigo-600 border-indigo-400 text-white ring-4 ring-indigo-500/20',
                   isError && 'bg-rose-600 border-rose-500 text-white',
-                  step.status === 'upcoming' &&
-                    'bg-slate-900 border-slate-700 text-slate-500'
+                  step.status === 'upcoming' && 'bg-slate-900 border-slate-700 text-slate-500'
                 )}
               >
                 {isComplete ? (

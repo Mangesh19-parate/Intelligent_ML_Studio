@@ -17,10 +17,15 @@ export const TaskTypeSelector: React.FC<TaskTypeSelectorProps> = ({
   taskTypeSuggestion,
   onTaskTypeConfirmed,
 }) => {
-  const isAmbiguous = taskTypeSuggestion?.is_ambiguous || taskTypeConfidence === 'AMBIGUOUS' || currentTaskType === 'UNDETERMINED';
+  const isAmbiguous =
+    taskTypeSuggestion?.is_ambiguous ||
+    taskTypeConfidence === 'AMBIGUOUS' ||
+    currentTaskType === 'UNDETERMINED';
   const initialChoice = isAmbiguous
     ? ''
-    : (currentTaskType && (currentTaskType as string) !== 'UNDETERMINED' ? currentTaskType : (taskTypeSuggestion?.suggested_task_type || ''));
+    : currentTaskType && (currentTaskType as string) !== 'UNDETERMINED'
+      ? currentTaskType
+      : taskTypeSuggestion?.suggested_task_type || '';
 
   const [selectedType, setSelectedType] = useState<string>(initialChoice);
   const [saving, setSaving] = useState<boolean>(false);
@@ -54,20 +59,34 @@ export const TaskTypeSelector: React.FC<TaskTypeSelectorProps> = ({
 
   const getConfidenceBadge = (confidence?: string): React.ReactNode => {
     if (confidence === 'HIGH') {
-      return <span className="px-2.5 py-0.5 text-xs font-bold rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">HIGH CONFIDENCE</span>;
+      return (
+        <span className="px-2.5 py-0.5 text-xs font-bold rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+          HIGH CONFIDENCE
+        </span>
+      );
     }
     if (confidence === 'MEDIUM') {
-      return <span className="px-2.5 py-0.5 text-xs font-bold rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">MEDIUM CONFIDENCE</span>;
+      return (
+        <span className="px-2.5 py-0.5 text-xs font-bold rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+          MEDIUM CONFIDENCE
+        </span>
+      );
     }
-    return <span className="px-2.5 py-0.5 text-xs font-bold rounded-full bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">AMBIGUOUS - MANUAL CHOICE REQUIRED</span>;
+    return (
+      <span className="px-2.5 py-0.5 text-xs font-bold rounded-full bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
+        AMBIGUOUS - MANUAL CHOICE REQUIRED
+      </span>
+    );
   };
 
   return (
-    <div className={`border rounded-2xl p-6 shadow-sm relative overflow-hidden transition-all duration-300 ${
-      isAmbiguous && !currentTaskType?.replace('UNDETERMINED', '')
-        ? 'bg-amber-500/5 border-amber-500/40 ring-1 ring-amber-500/20'
-        : 'bg-[var(--color-surface)] border-[var(--color-border)]'
-    }`}>
+    <div
+      className={`border rounded-2xl p-6 shadow-sm relative overflow-hidden transition-all duration-300 ${
+        isAmbiguous && !currentTaskType?.replace('UNDETERMINED', '')
+          ? 'bg-amber-500/5 border-amber-500/40 ring-1 ring-amber-500/20'
+          : 'bg-[var(--color-surface)] border-[var(--color-border)]'
+      }`}
+    >
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-[var(--color-border)]">
         <div className="flex items-center gap-3">
           <div className="p-2.5 bg-[var(--color-accent-soft)] border border-[var(--color-accent)]/20 rounded-xl text-[var(--color-accent)]">
@@ -79,7 +98,10 @@ export const TaskTypeSelector: React.FC<TaskTypeSelectorProps> = ({
               {getConfidenceBadge(taskTypeSuggestion?.confidence || taskTypeConfidence)}
             </h4>
             <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
-              Distributional inference on target column: <code className="text-[var(--color-accent)] bg-[var(--color-surface-hover)] px-1.5 py-0.5 rounded font-mono font-bold">{taskTypeSuggestion?.target_column || 'Target'}</code>
+              Distributional inference on target column:{' '}
+              <code className="text-[var(--color-accent)] bg-[var(--color-surface-hover)] px-1.5 py-0.5 rounded font-mono font-bold">
+                {taskTypeSuggestion?.target_column || 'Target'}
+              </code>
             </p>
           </div>
         </div>
@@ -102,23 +124,35 @@ export const TaskTypeSelector: React.FC<TaskTypeSelectorProps> = ({
                 Distribution is Ambiguous — Explicit User Choice Required
               </h5>
               <p className="text-xs text-amber-700 dark:text-amber-300 mt-1 leading-relaxed">
-                The target column has an intermediate cardinality and ratio that sits between standard continuous and discrete thresholds. To prevent silent assumption leakage, the platform requires you to explicitly choose the modeling task.
+                The target column has an intermediate cardinality and ratio that sits between
+                standard continuous and discrete thresholds. To prevent silent assumption leakage,
+                the platform requires you to explicitly choose the modeling task.
               </p>
 
               {/* Supporting Numbers */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3 pt-3 border-t border-amber-500/20 font-mono text-xs">
                 <div className="bg-[var(--color-surface)] p-2.5 rounded-xl border border-amber-500/20">
-                  <span className="text-[var(--color-text-muted)] block text-[11px]">Unique Target Count:</span>
-                  <strong className="text-amber-600 dark:text-amber-400 text-sm">{taskTypeSuggestion?.unique_count ?? 'N/A'}</strong>
-                </div>
-                <div className="bg-[var(--color-surface)] p-2.5 rounded-xl border border-amber-500/20">
-                  <span className="text-[var(--color-text-muted)] block text-[11px]">Unique / Total Ratio:</span>
+                  <span className="text-[var(--color-text-muted)] block text-[11px]">
+                    Unique Target Count:
+                  </span>
                   <strong className="text-amber-600 dark:text-amber-400 text-sm">
-                    {taskTypeSuggestion?.unique_ratio !== undefined ? `${(taskTypeSuggestion.unique_ratio * 100).toFixed(2)}%` : 'N/A'}
+                    {taskTypeSuggestion?.unique_count ?? 'N/A'}
                   </strong>
                 </div>
                 <div className="bg-[var(--color-surface)] p-2.5 rounded-xl border border-amber-500/20">
-                  <span className="text-[var(--color-text-muted)] block text-[11px]">Sample Target Values:</span>
+                  <span className="text-[var(--color-text-muted)] block text-[11px]">
+                    Unique / Total Ratio:
+                  </span>
+                  <strong className="text-amber-600 dark:text-amber-400 text-sm">
+                    {taskTypeSuggestion?.unique_ratio !== undefined
+                      ? `${(taskTypeSuggestion.unique_ratio * 100).toFixed(2)}%`
+                      : 'N/A'}
+                  </strong>
+                </div>
+                <div className="bg-[var(--color-surface)] p-2.5 rounded-xl border border-amber-500/20">
+                  <span className="text-[var(--color-text-muted)] block text-[11px]">
+                    Sample Target Values:
+                  </span>
                   <span className="text-[var(--color-accent)] text-xs truncate block font-bold">
                     {taskTypeSuggestion?.sample_values?.slice(0, 4).join(', ') || 'N/A'}
                   </span>
@@ -208,7 +242,8 @@ export const TaskTypeSelector: React.FC<TaskTypeSelectorProps> = ({
       {/* Actions */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
         <span className="text-xs text-[var(--color-text-muted)]">
-          Task type dictates downstream feature encoding, evaluation metrics, and model search spaces.
+          Task type dictates downstream feature encoding, evaluation metrics, and model search
+          spaces.
         </span>
 
         <button

@@ -62,7 +62,8 @@ export const NotFound: React.FC = () => {
         </h2>
 
         <p className="text-sm text-[var(--color-text-muted)] mt-2 max-w-lg mx-auto leading-relaxed">
-          The pipeline stage, experiment artifact, or dataset endpoint you requested does not exist or has been archived. Check the URL or return to an active workspace stage.
+          The pipeline stage, experiment artifact, or dataset endpoint you requested does not exist
+          or has been archived. Check the URL or return to an active workspace stage.
         </p>
 
         {/* Quick Navigation Cards */}

@@ -21,7 +21,11 @@ describe('Badge Component', () => {
   });
 
   it('renders dot indicator when hasDot is true', () => {
-    const { container } = render(<Badge variant="success" hasDot>ONLINE</Badge>);
+    const { container } = render(
+      <Badge variant="success" hasDot>
+        ONLINE
+      </Badge>
+    );
     const dot = container.querySelector('.rounded-full.bg-emerald-400');
     expect(dot).toBeInTheDocument();
   });

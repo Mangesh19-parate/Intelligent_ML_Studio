@@ -100,7 +100,8 @@ export const Login: React.FC = () => {
     } catch (err: unknown) {
       if (axios.isAxiosError(err)) {
         setError(
-          err.response?.data?.detail || 'Invalid verification code. Please enter the 6-digit code sent to your email.'
+          err.response?.data?.detail ||
+            'Invalid verification code. Please enter the 6-digit code sent to your email.'
         );
       } else {
         setError('Verification failed. Please try again.');
@@ -180,11 +181,7 @@ export const Login: React.FC = () => {
               </label>
 
               <div className="py-2">
-                <OtpInput
-                  value={twoFactorCode}
-                  onChange={setTwoFactorCode}
-                  disabled={submitting}
-                />
+                <OtpInput value={twoFactorCode} onChange={setTwoFactorCode} disabled={submitting} />
               </div>
             </div>
 
@@ -210,8 +207,8 @@ export const Login: React.FC = () => {
                   {resendCooldown > 0
                     ? `Resend code in ${resendCooldown}s`
                     : resending
-                    ? 'Sending fresh OTP...'
-                    : 'Resend Verification Code to Email'}
+                      ? 'Sending fresh OTP...'
+                      : 'Resend Verification Code to Email'}
                 </span>
               </button>
 
@@ -286,7 +283,9 @@ export const Login: React.FC = () => {
               disabled={submitting}
               className="w-full mt-2 py-3 px-4 rounded-xl bg-[var(--color-accent)] hover:bg-[var(--color-accent-hover)] text-white font-semibold text-sm shadow-md shadow-[var(--color-accent)]/20 flex items-center justify-center space-x-2 transition-all disabled:opacity-50 cursor-pointer"
             >
-              <span>{submitting ? 'Processing...' : isRegister ? 'Create Account' : 'Sign In'}</span>
+              <span>
+                {submitting ? 'Processing...' : isRegister ? 'Create Account' : 'Sign In'}
+              </span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </form>
@@ -314,7 +313,10 @@ export const Login: React.FC = () => {
           <div>&copy; {new Date().getFullYear()} ML Studio Inc. All rights reserved.</div>
           <div>
             Need access? Contact{' '}
-            <a href="mailto:support@mlstudio.io" className="text-[var(--color-accent)] hover:underline">
+            <a
+              href="mailto:support@mlstudio.io"
+              className="text-[var(--color-accent)] hover:underline"
+            >
               support@mlstudio.io
             </a>
           </div>

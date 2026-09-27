@@ -186,7 +186,9 @@ export const TransformationsTable: React.FC<TransformationsTableProps> = ({
                 </span>
               </h2>
               <p className="text-xs text-slate-400 mt-0.5">
-                Define column transformation strategies. Generates fresh, unfit <code className="text-indigo-300 font-mono text-[11px]">ColumnTransformer</code> templates for per-fold cross-validation.
+                Define column transformation strategies. Generates fresh, unfit{' '}
+                <code className="text-indigo-300 font-mono text-[11px]">ColumnTransformer</code>{' '}
+                templates for per-fold cross-validation.
               </p>
             </div>
           </div>
@@ -209,14 +211,20 @@ export const TransformationsTable: React.FC<TransformationsTableProps> = ({
                 Leakage-Controlled Architectural Guarantee (SRS §2.6 / §4.2):
               </p>
               <p className="text-slate-400 text-[11px] leading-relaxed">
-                No transformer is fit on the entire Development partition. Strategies are stored as declared recipes in <code className="text-indigo-300 font-mono">transformation_configs</code>. The pipeline is instantiated and fit on each training CV fold independently during model training.
+                No transformer is fit on the entire Development partition. Strategies are stored as
+                declared recipes in{' '}
+                <code className="text-indigo-300 font-mono">transformation_configs</code>. The
+                pipeline is instantiated and fit on each training CV fold independently during model
+                training.
               </p>
             </div>
           </div>
 
           <div className="p-3.5 rounded-xl bg-slate-950/80 border border-slate-800 flex flex-col justify-between text-xs">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-semibold text-slate-300">Feature Dimension Policy Cap</span>
+              <span className="text-[11px] font-semibold text-slate-300">
+                Feature Dimension Policy Cap
+              </span>
               <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                 Max 250
               </span>
@@ -274,15 +282,13 @@ export const TransformationsTable: React.FC<TransformationsTableProps> = ({
               ) : (
                 configs.map((cfg) => {
                   const isNumeric = cfg.data_type === 'NUMERIC';
-                  const isCategorical = cfg.data_type === 'CATEGORICAL' || cfg.data_type === 'MIXED';
+                  const isCategorical =
+                    cfg.data_type === 'CATEGORICAL' || cfg.data_type === 'MIXED';
                   const isSaving = savingColumn === cfg.column_name;
                   const isTarget = isTargetColumn && isTargetColumn(cfg.column_name);
 
                   return (
-                    <tr
-                      key={cfg.column_name}
-                      className="hover:bg-slate-900/40 transition-colors"
-                    >
+                    <tr key={cfg.column_name} className="hover:bg-slate-900/40 transition-colors">
                       {/* Column Name & Type Badge */}
                       <td className="py-3.5 px-4">
                         <div className="flex items-center space-x-2">
@@ -368,9 +374,7 @@ export const TransformationsTable: React.FC<TransformationsTableProps> = ({
                             ))}
                           </select>
                         ) : (
-                          <span className="text-[11px] text-slate-600 italic">
-                            N/A (Numeric)
-                          </span>
+                          <span className="text-[11px] text-slate-600 italic">N/A (Numeric)</span>
                         )}
                       </td>
 
@@ -557,8 +561,14 @@ export const TransformationsTable: React.FC<TransformationsTableProps> = ({
                                   null
                                 </span>
                               ) : (
-                                <span className={isChanged ? 'text-indigo-300 font-semibold' : 'text-slate-300'}>
-                                  {typeof afterVal === 'number' ? afterVal.toFixed(4) : String(afterVal)}
+                                <span
+                                  className={
+                                    isChanged ? 'text-indigo-300 font-semibold' : 'text-slate-300'
+                                  }
+                                >
+                                  {typeof afterVal === 'number'
+                                    ? afterVal.toFixed(4)
+                                    : String(afterVal)}
                                 </span>
                               )}
                             </td>

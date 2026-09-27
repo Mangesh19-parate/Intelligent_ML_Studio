@@ -99,7 +99,9 @@ export const Dashboard: React.FC = () => {
 
   const userPerms = new Set(
     user?.permissions ||
-    (user?.role?.permissions ? user.role.permissions.map((p) => (typeof p === 'string' ? p : p.permission_key)) : [])
+      (user?.role?.permissions
+        ? user.role.permissions.map((p) => (typeof p === 'string' ? p : p.permission_key))
+        : [])
   );
   const isAdmin = userPerms.has('MANAGE_USERS');
   const canEditData = isAdmin || userPerms.has('EDIT_DATA');
@@ -107,10 +109,7 @@ export const Dashboard: React.FC = () => {
   const loadDashboardData = async () => {
     try {
       setLoading(true);
-      const [projRes, sumRes] = await Promise.all([
-        projectApi.list(),
-        workspaceApi.getSummary(),
-      ]);
+      const [projRes, sumRes] = await Promise.all([projectApi.list(), workspaceApi.getSummary()]);
       const projList = projRes.data || [];
       setProjects(projList);
       setSummary(sumRes.data);
@@ -189,7 +188,9 @@ export const Dashboard: React.FC = () => {
           experiments: exps,
           leaderboard: lbData,
           recommendations: recs,
-          deployment: (currentProjData as unknown as { active_deployment?: unknown })?.active_deployment || null,
+          deployment:
+            (currentProjData as unknown as { active_deployment?: unknown })?.active_deployment ||
+            null,
         });
       } catch (err) {
         console.error('Error loading deep project data', err);
@@ -243,7 +244,8 @@ export const Dashboard: React.FC = () => {
   // Filter projects for "My Projects" tab
   const filteredProjects = projects.filter((p) => {
     const pName = p.project_name || p.name || '';
-    const matchName = pName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    const matchName =
+      pName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (p.target_column || '').toLowerCase().includes(searchQuery.toLowerCase());
     const matchTask = taskFilter === 'ALL' || (p.task_type || '').toUpperCase() === taskFilter;
     return matchName && matchTask;
@@ -262,7 +264,8 @@ export const Dashboard: React.FC = () => {
             Machine Learning Studio
           </h1>
           <p className="text-sm text-[var(--color-text-muted)] mt-1 max-w-3xl">
-            Live pipeline stage tracking, zero-leakage protocol verification, and automated project diagnostics.
+            Live pipeline stage tracking, zero-leakage protocol verification, and automated project
+            diagnostics.
           </p>
         </div>
 
@@ -320,7 +323,9 @@ export const Dashboard: React.FC = () => {
             <div className="flex flex-wrap items-center gap-4">
               <div className="flex items-center space-x-2.5">
                 <FolderKanban className="w-4 h-4 text-[var(--color-accent)]" />
-                <span className="text-xs font-bold text-[var(--color-text-muted)]">Active Project:</span>
+                <span className="text-xs font-bold text-[var(--color-text-muted)]">
+                  Active Project:
+                </span>
                 <select
                   value={selectedProjectId}
                   onChange={handleProjectSelect}
@@ -392,8 +397,12 @@ export const Dashboard: React.FC = () => {
                       <Icon className="w-4 h-4" />
                     </div>
                     <div>
-                      <div className="text-[11px] font-bold text-[var(--color-text)]">{st.label}</div>
-                      <div className="text-[9px] font-mono text-[var(--color-text-muted)]">Stage {idx + 1}</div>
+                      <div className="text-[11px] font-bold text-[var(--color-text)]">
+                        {st.label}
+                      </div>
+                      <div className="text-[9px] font-mono text-[var(--color-text-muted)]">
+                        Stage {idx + 1}
+                      </div>
                     </div>
                   </Link>
                 );
@@ -408,10 +417,16 @@ export const Dashboard: React.FC = () => {
               <div className="flex items-center justify-between border-b border-[var(--color-border)] pb-3">
                 <div className="flex items-center space-x-2">
                   <Database className="w-4 h-4 text-[var(--color-accent)]" />
-                  <h4 className="text-sm font-bold text-[var(--color-text)]">Dataset Geometry & Health</h4>
+                  <h4 className="text-sm font-bold text-[var(--color-text)]">
+                    Dataset Geometry & Health
+                  </h4>
                 </div>
                 <Link
-                  to={selectedProjectId ? `/data-analysis?project_id=${selectedProjectId}` : '/data-analysis'}
+                  to={
+                    selectedProjectId
+                      ? `/data-analysis?project_id=${selectedProjectId}`
+                      : '/data-analysis'
+                  }
                   className="text-xs text-[var(--color-accent)] hover:underline font-semibold flex items-center space-x-1"
                 >
                   <span>Full Profiling</span>
@@ -423,25 +438,33 @@ export const Dashboard: React.FC = () => {
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs font-mono">
                     <div className="p-3 rounded-xl bg-[var(--color-surface-card)] border border-[var(--color-border)]">
-                      <span className="text-[10px] text-[var(--color-text-muted)] font-bold">TOTAL ROWS</span>
+                      <span className="text-[10px] text-[var(--color-text-muted)] font-bold">
+                        TOTAL ROWS
+                      </span>
                       <div className="text-sm font-extrabold text-[var(--color-text)] mt-0.5">
                         {activeProjectDetails.dataset.row_count?.toLocaleString() || 'N/A'}
                       </div>
                     </div>
                     <div className="p-3 rounded-xl bg-[var(--color-surface-card)] border border-[var(--color-border)]">
-                      <span className="text-[10px] text-[var(--color-text-muted)] font-bold">COLUMNS</span>
+                      <span className="text-[10px] text-[var(--color-text-muted)] font-bold">
+                        COLUMNS
+                      </span>
                       <div className="text-sm font-extrabold text-[var(--color-text)] mt-0.5">
                         {activeProjectDetails.dataset.column_count || 'N/A'}
                       </div>
                     </div>
                     <div className="p-3 rounded-xl bg-[var(--color-surface-card)] border border-[var(--color-border)]">
-                      <span className="text-[10px] text-[var(--color-text-muted)] font-bold">MISSING VALS</span>
+                      <span className="text-[10px] text-[var(--color-text-muted)] font-bold">
+                        MISSING VALS
+                      </span>
                       <div className="text-sm font-extrabold text-amber-400 mt-0.5">
                         {activeProjectDetails.profile?.total_missing_count ?? 0}
                       </div>
                     </div>
                     <div className="p-3 rounded-xl bg-[var(--color-surface-card)] border border-[var(--color-border)]">
-                      <span className="text-[10px] text-[var(--color-text-muted)] font-bold">INTEGRITY</span>
+                      <span className="text-[10px] text-[var(--color-text-muted)] font-bold">
+                        INTEGRITY
+                      </span>
                       <div className="text-sm font-extrabold text-emerald-400 mt-0.5">
                         SHA-256 OK
                       </div>
@@ -449,7 +472,12 @@ export const Dashboard: React.FC = () => {
                   </div>
 
                   <p className="text-xs text-[var(--color-text-muted)] leading-relaxed">
-                    Source: <span className="font-mono text-[var(--color-text)]">{activeProjectDetails.dataset.file_name}</span> &bull; Version v{activeProjectDetails.dataset.version_number} &bull; Uploaded {new Date(activeProjectDetails.dataset.created_at).toLocaleDateString()}
+                    Source:{' '}
+                    <span className="font-mono text-[var(--color-text)]">
+                      {activeProjectDetails.dataset.file_name}
+                    </span>{' '}
+                    &bull; Version v{activeProjectDetails.dataset.version_number} &bull; Uploaded{' '}
+                    {new Date(activeProjectDetails.dataset.created_at).toLocaleDateString()}
                   </p>
                 </div>
               ) : (
@@ -471,10 +499,16 @@ export const Dashboard: React.FC = () => {
               <div className="flex items-center justify-between border-b border-[var(--color-border)] pb-3">
                 <div className="flex items-center space-x-2">
                   <Trophy className="w-4 h-4 text-amber-400" />
-                  <h4 className="text-sm font-bold text-[var(--color-text)]">Model Leaderboard Snapshot</h4>
+                  <h4 className="text-sm font-bold text-[var(--color-text)]">
+                    Model Leaderboard Snapshot
+                  </h4>
                 </div>
                 <Link
-                  to={selectedProjectId ? `/machine-learning?project_id=${selectedProjectId}` : '/machine-learning'}
+                  to={
+                    selectedProjectId
+                      ? `/machine-learning?project_id=${selectedProjectId}`
+                      : '/machine-learning'
+                  }
                   className="text-xs text-[var(--color-accent)] hover:underline font-semibold flex items-center space-x-1"
                 >
                   <span>ML Studio</span>
@@ -494,9 +528,13 @@ export const Dashboard: React.FC = () => {
                       }`}
                     >
                       <div className="flex items-center space-x-3">
-                        <span className={`w-5 h-5 rounded-full flex items-center justify-center font-bold text-[10px] ${
-                          m.is_winner ? 'bg-[var(--color-accent)] text-white' : 'bg-[var(--color-surface)] text-[var(--color-text-muted)]'
-                        }`}>
+                        <span
+                          className={`w-5 h-5 rounded-full flex items-center justify-center font-bold text-[10px] ${
+                            m.is_winner
+                              ? 'bg-[var(--color-accent)] text-white'
+                              : 'bg-[var(--color-surface)] text-[var(--color-text-muted)]'
+                          }`}
+                        >
                           {idx + 1}
                         </span>
                         <div>
@@ -519,7 +557,9 @@ export const Dashboard: React.FC = () => {
                           {activeProjectDetails.leaderboard?.selection_metric?.toUpperCase()}
                         </span>
                         <div className="text-sm font-extrabold text-[var(--color-accent)]">
-                          {m.primary_metric_value !== null ? Number(m.primary_metric_value).toFixed(4) : 'N/A'}
+                          {m.primary_metric_value !== null
+                            ? Number(m.primary_metric_value).toFixed(4)
+                            : 'N/A'}
                         </div>
                       </div>
                     </div>
@@ -530,7 +570,11 @@ export const Dashboard: React.FC = () => {
                   <Cpu className="w-8 h-8 mx-auto opacity-50" />
                   <p className="text-xs">No trained models in this project yet.</p>
                   <Link
-                    to={selectedProjectId ? `/machine-learning?project_id=${selectedProjectId}` : '/machine-learning'}
+                    to={
+                      selectedProjectId
+                        ? `/machine-learning?project_id=${selectedProjectId}`
+                        : '/machine-learning'
+                    }
                     className="inline-block px-4 py-1.5 rounded-full bg-[var(--color-accent)] text-white text-xs font-bold mt-2 shadow-sm"
                   >
                     Launch Model Training
@@ -550,7 +594,11 @@ export const Dashboard: React.FC = () => {
                 </h4>
               </div>
               <Link
-                to={selectedProjectId ? `/diagnostics?project_id=${selectedProjectId}&tab=recommendations` : '/diagnostics'}
+                to={
+                  selectedProjectId
+                    ? `/diagnostics?project_id=${selectedProjectId}&tab=recommendations`
+                    : '/diagnostics'
+                }
                 className="text-xs text-[var(--color-accent)] hover:underline font-semibold"
               >
                 View All Diagnostics
@@ -560,8 +608,12 @@ export const Dashboard: React.FC = () => {
             {activeProjectDetails.recommendations.length === 0 ? (
               <div className="p-6 text-center text-[var(--color-text-muted)] space-y-1">
                 <CheckCircle2 className="w-6 h-6 text-emerald-400 mx-auto" />
-                <p className="text-xs font-bold text-[var(--color-text)]">All heuristics passing cleanly</p>
-                <p className="text-[11px]">No active data quality warnings or generalization gap alerts flagged.</p>
+                <p className="text-xs font-bold text-[var(--color-text)]">
+                  All heuristics passing cleanly
+                </p>
+                <p className="text-[11px]">
+                  No active data quality warnings or generalization gap alerts flagged.
+                </p>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
@@ -571,12 +623,16 @@ export const Dashboard: React.FC = () => {
                     className="p-4 rounded-xl bg-[var(--color-surface-card)] border border-[var(--color-border)] space-y-2"
                   >
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-[var(--color-text)]">{rec.finding}</span>
+                      <span className="text-xs font-bold text-[var(--color-text)]">
+                        {rec.finding}
+                      </span>
                       <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                         {rec.confidence_level || 'HIGH'}
                       </span>
                     </div>
-                    <p className="text-xs text-[var(--color-text-muted)]">{rec.recommended_action}</p>
+                    <p className="text-xs text-[var(--color-text-muted)]">
+                      {rec.recommended_action}
+                    </p>
                   </div>
                 ))}
               </div>
@@ -627,15 +683,21 @@ export const Dashboard: React.FC = () => {
           {loading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {[1, 2, 3].map((n) => (
-                <div key={n} className="h-44 rounded-2xl bg-[var(--color-surface)] border border-[var(--color-border)] animate-pulse p-6" />
+                <div
+                  key={n}
+                  className="h-44 rounded-2xl bg-[var(--color-surface)] border border-[var(--color-border)] animate-pulse p-6"
+                />
               ))}
             </div>
           ) : filteredProjects.length === 0 ? (
             <div className="text-center py-16 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl p-8 space-y-3 shadow-sm">
               <FolderGit2 className="w-12 h-12 mx-auto text-[var(--color-text-muted)] opacity-50" />
-              <h3 className="text-sm font-bold text-[var(--color-text)]">No matching projects found</h3>
+              <h3 className="text-sm font-bold text-[var(--color-text)]">
+                No matching projects found
+              </h3>
               <p className="text-xs text-[var(--color-text-muted)] max-w-sm mx-auto">
-                Try adjusting your search query or task filter, or create a brand new machine learning project.
+                Try adjusting your search query or task filter, or create a brand new machine
+                learning project.
               </p>
             </div>
           ) : (
@@ -651,7 +713,9 @@ export const Dashboard: React.FC = () => {
                         {proj.task_type || 'Unassigned'}
                       </span>
                       <span className="text-[10px] font-mono text-[var(--color-text-muted)]">
-                        {proj.created_at ? new Date(proj.created_at).toLocaleDateString() : 'Recent'}
+                        {proj.created_at
+                          ? new Date(proj.created_at).toLocaleDateString()
+                          : 'Recent'}
                       </span>
                     </div>
 
@@ -662,11 +726,15 @@ export const Dashboard: React.FC = () => {
                     <div className="space-y-1.5 text-xs text-[var(--color-text-muted)]">
                       <div className="flex justify-between">
                         <span>Target Column:</span>
-                        <strong className="text-[var(--color-text)] font-mono">{proj.target_column || 'None'}</strong>
+                        <strong className="text-[var(--color-text)] font-mono">
+                          {proj.target_column || 'None'}
+                        </strong>
                       </div>
                       <div className="flex justify-between">
                         <span>Pipeline Stage:</span>
-                        <span className="font-bold text-emerald-400">{proj.pipeline_stage || 'DATA'}</span>
+                        <span className="font-bold text-emerald-400">
+                          {proj.pipeline_stage || 'DATA'}
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -704,7 +772,9 @@ export const Dashboard: React.FC = () => {
             <div className="flex items-center justify-between border-b border-[var(--color-border)] pb-3">
               <div className="flex items-center space-x-2">
                 <Plus className="w-5 h-5 text-[var(--color-accent)]" />
-                <h3 className="text-base font-bold text-[var(--color-text)]">Create ML Studio Project</h3>
+                <h3 className="text-base font-bold text-[var(--color-text)]">
+                  Create ML Studio Project
+                </h3>
               </div>
               <button
                 onClick={() => setIsModalOpen(false)}
@@ -728,7 +798,9 @@ export const Dashboard: React.FC = () => {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-[var(--color-text)]">Target Column (Optional)</label>
+                <label className="text-xs font-bold text-[var(--color-text)]">
+                  Target Column (Optional)
+                </label>
                 <input
                   type="text"
                   placeholder="e.g. loan_status, interest_rate"

@@ -60,14 +60,11 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   );
 
   const toast = {
-    success: (title: string, message?: string) =>
-      addToast({ type: 'success', title, message }),
+    success: (title: string, message?: string) => addToast({ type: 'success', title, message }),
     error: (title: string, message?: string) =>
       addToast({ type: 'error', title, message, durationMs: 6000 }),
-    warning: (title: string, message?: string) =>
-      addToast({ type: 'warning', title, message }),
-    info: (title: string, message?: string) =>
-      addToast({ type: 'info', title, message }),
+    warning: (title: string, message?: string) => addToast({ type: 'warning', title, message }),
+    info: (title: string, message?: string) => addToast({ type: 'info', title, message }),
   };
 
   return (
@@ -134,9 +131,7 @@ const ToastCard: React.FC<{
       <div className="flex-1 min-w-0">
         <h4 className="text-sm font-semibold text-slate-100 leading-tight">{toast.title}</h4>
         {toast.message && (
-          <p className="mt-1 text-xs text-slate-400 leading-relaxed break-words">
-            {toast.message}
-          </p>
+          <p className="mt-1 text-xs text-slate-400 leading-relaxed break-words">{toast.message}</p>
         )}
         {toast.action && (
           <button

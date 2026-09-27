@@ -19,17 +19,23 @@ interface InteractiveEDAStudioProps {
 }
 
 export const InteractiveEDAStudio: React.FC<InteractiveEDAStudioProps> = ({ edaReport }) => {
-  const [analysisType, setAnalysisType] = useState<'UNIVARIATE' | 'BIVARIATE' | 'MULTIVARIATE'>('UNIVARIATE');
+  const [analysisType, setAnalysisType] = useState<'UNIVARIATE' | 'BIVARIATE' | 'MULTIVARIATE'>(
+    'UNIVARIATE'
+  );
 
   // Univariate controls
   const [uniColumn, setUniColumn] = useState<string>('');
-  const [uniChartType, setUniChartType] = useState<'HISTO' | 'KDE' | 'BOX' | 'COUNT' | 'PIE'>('HISTO');
+  const [uniChartType, setUniChartType] = useState<'HISTO' | 'KDE' | 'BOX' | 'COUNT' | 'PIE'>(
+    'HISTO'
+  );
   const [numBins, setNumBins] = useState<number>(25);
 
   // Bivariate controls
   const [bivX, setBivX] = useState<string>('');
   const [bivY, setBivY] = useState<string>('');
-  const [bivChartType, setBivChartType] = useState<'SCATTER' | 'LINE' | 'BAR' | 'BOX' | 'HEATMAP'>('SCATTER');
+  const [bivChartType, setBivChartType] = useState<'SCATTER' | 'LINE' | 'BAR' | 'BOX' | 'HEATMAP'>(
+    'SCATTER'
+  );
   const [colorHue, setColorHue] = useState<string>('');
 
   // Multivariate controls
@@ -39,8 +45,14 @@ export const InteractiveEDAStudio: React.FC<InteractiveEDAStudioProps> = ({ edaR
   const sampleData = useMemo(() => edaReport?.sample_records || [], [edaReport]);
   const columnsMeta = useMemo(() => edaReport?.columns_metadata || [], [edaReport]);
 
-  const numericCols = useMemo(() => columnsMeta.filter((c) => c.is_numeric).map((c) => c.name), [columnsMeta]);
-  const categoricalCols = useMemo(() => columnsMeta.filter((c) => !c.is_numeric).map((c) => c.name), [columnsMeta]);
+  const numericCols = useMemo(
+    () => columnsMeta.filter((c) => c.is_numeric).map((c) => c.name),
+    [columnsMeta]
+  );
+  const categoricalCols = useMemo(
+    () => columnsMeta.filter((c) => !c.is_numeric).map((c) => c.name),
+    [columnsMeta]
+  );
 
   // Set default selected columns if empty
   React.useEffect(() => {
@@ -68,7 +80,10 @@ export const InteractiveEDAStudio: React.FC<InteractiveEDAStudioProps> = ({ edaR
     if (activeUniMeta) {
       if (activeUniMeta.is_numeric && (uniChartType === 'COUNT' || uniChartType === 'PIE')) {
         setUniChartType('HISTO');
-      } else if (!activeUniMeta.is_numeric && (uniChartType === 'HISTO' || uniChartType === 'KDE' || uniChartType === 'BOX')) {
+      } else if (
+        !activeUniMeta.is_numeric &&
+        (uniChartType === 'HISTO' || uniChartType === 'KDE' || uniChartType === 'BOX')
+      ) {
         setUniChartType('COUNT');
       }
     }
@@ -77,10 +92,16 @@ export const InteractiveEDAStudio: React.FC<InteractiveEDAStudioProps> = ({ edaR
   // Generate Univariate Plot Data
   const renderUnivariatePlot = () => {
     if (!uniColumn || sampleData.length === 0) {
-      return <div className="text-center py-12 text-xs text-[var(--color-text-muted)]">No data available to plot.</div>;
+      return (
+        <div className="text-center py-12 text-xs text-[var(--color-text-muted)]">
+          No data available to plot.
+        </div>
+      );
     }
 
-    const rawValues = sampleData.map((d) => d[uniColumn]).filter((v) => v !== null && v !== undefined);
+    const rawValues = sampleData
+      .map((d) => d[uniColumn])
+      .filter((v) => v !== null && v !== undefined);
 
     let plotData: any[] = [];
     const layout: Record<string, unknown> = {
@@ -151,7 +172,9 @@ export const InteractiveEDAStudio: React.FC<InteractiveEDAStudioProps> = ({ edaR
             type: 'pie',
             hole: 0.4,
             textinfo: 'label+percent',
-            marker: { colors: ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ec4899', '#06b6d4', '#f97316'] },
+            marker: {
+              colors: ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ec4899', '#06b6d4', '#f97316'],
+            },
           },
         ];
       } else {
@@ -172,7 +195,13 @@ export const InteractiveEDAStudio: React.FC<InteractiveEDAStudioProps> = ({ edaR
 
     return (
       <div className="w-full h-[400px]">
-        <Plot data={plotData} layout={layout} useResizeHandler style={{ width: '100%', height: '100%' }} config={{ responsive: true }} />
+        <Plot
+          data={plotData}
+          layout={layout}
+          useResizeHandler
+          style={{ width: '100%', height: '100%' }}
+          config={{ responsive: true }}
+        />
       </div>
     );
   };
@@ -180,7 +209,11 @@ export const InteractiveEDAStudio: React.FC<InteractiveEDAStudioProps> = ({ edaR
   // Generate Bivariate Plot Data
   const renderBivariatePlot = () => {
     if (!bivX || !bivY || sampleData.length === 0) {
-      return <div className="text-center py-12 text-xs text-[var(--color-text-muted)]">Select variables to plot.</div>;
+      return (
+        <div className="text-center py-12 text-xs text-[var(--color-text-muted)]">
+          Select variables to plot.
+        </div>
+      );
     }
 
     const isXNum = numericCols.includes(bivX);
@@ -201,7 +234,9 @@ export const InteractiveEDAStudio: React.FC<InteractiveEDAStudioProps> = ({ edaR
     if (isXNum && isYNum) {
       // Numerical - Numerical (Scatter / Line)
       if (bivChartType === 'LINE') {
-        const sorted = [...sampleData].sort((a, b) => (Number(a[bivX]) || 0) - (Number(b[bivX]) || 0));
+        const sorted = [...sampleData].sort(
+          (a, b) => (Number(a[bivX]) || 0) - (Number(b[bivX]) || 0)
+        );
         plotData = [
           {
             x: sorted.map((d) => d[bivX]),
@@ -317,7 +352,13 @@ export const InteractiveEDAStudio: React.FC<InteractiveEDAStudioProps> = ({ edaR
 
     return (
       <div className="w-full h-[400px]">
-        <Plot data={plotData} layout={layout} useResizeHandler style={{ width: '100%', height: '100%' }} config={{ responsive: true }} />
+        <Plot
+          data={plotData}
+          layout={layout}
+          useResizeHandler
+          style={{ width: '100%', height: '100%' }}
+          config={{ responsive: true }}
+        />
       </div>
     );
   };
@@ -372,7 +413,13 @@ export const InteractiveEDAStudio: React.FC<InteractiveEDAStudioProps> = ({ edaR
 
     return (
       <div className="w-full h-[500px]">
-        <Plot data={plotData} layout={layout} useResizeHandler style={{ width: '100%', height: '100%' }} config={{ responsive: true }} />
+        <Plot
+          data={plotData}
+          layout={layout}
+          useResizeHandler
+          style={{ width: '100%', height: '100%' }}
+          config={{ responsive: true }}
+        />
       </div>
     );
   };
@@ -387,7 +434,8 @@ export const InteractiveEDAStudio: React.FC<InteractiveEDAStudioProps> = ({ edaR
             <span>Exploratory Data Analysis (EDA) Studio</span>
           </h2>
           <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
-            Interactive univariate distributions, bivariate correlations, and multivariate pair plot matrices
+            Interactive univariate distributions, bivariate correlations, and multivariate pair plot
+            matrices
           </p>
         </div>
 
@@ -488,7 +536,9 @@ export const InteractiveEDAStudio: React.FC<InteractiveEDAStudioProps> = ({ edaR
 
             {isUniNumeric && uniChartType === 'HISTO' && (
               <div className="flex items-center gap-2">
-                <label className="font-semibold text-[var(--color-text-muted)]">Bins ({numBins}):</label>
+                <label className="font-semibold text-[var(--color-text-muted)]">
+                  Bins ({numBins}):
+                </label>
                 <input
                   type="range"
                   min="5"
@@ -517,7 +567,9 @@ export const InteractiveEDAStudio: React.FC<InteractiveEDAStudioProps> = ({ edaR
                 className="px-3 py-1.5 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg font-bold text-[var(--color-text)] focus:outline-none cursor-pointer"
               >
                 {columnsMeta.map((c) => (
-                  <option key={c.name} value={c.name}>{c.name} ({c.type})</option>
+                  <option key={c.name} value={c.name}>
+                    {c.name} ({c.type})
+                  </option>
                 ))}
               </select>
             </div>
@@ -530,7 +582,9 @@ export const InteractiveEDAStudio: React.FC<InteractiveEDAStudioProps> = ({ edaR
                 className="px-3 py-1.5 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg font-bold text-[var(--color-text)] focus:outline-none cursor-pointer"
               >
                 {columnsMeta.map((c) => (
-                  <option key={c.name} value={c.name}>{c.name} ({c.type})</option>
+                  <option key={c.name} value={c.name}>
+                    {c.name} ({c.type})
+                  </option>
                 ))}
               </select>
             </div>
@@ -539,7 +593,9 @@ export const InteractiveEDAStudio: React.FC<InteractiveEDAStudioProps> = ({ edaR
               <label className="font-semibold text-[var(--color-text-muted)]">Plot Type:</label>
               <select
                 value={bivChartType}
-                onChange={(e) => setBivChartType(e.target.value as 'BOX' | 'SCATTER' | 'LINE' | 'BAR' | 'HEATMAP')}
+                onChange={(e) =>
+                  setBivChartType(e.target.value as 'BOX' | 'SCATTER' | 'LINE' | 'BAR' | 'HEATMAP')
+                }
                 className="px-3 py-1.5 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg font-bold text-[var(--color-text)] focus:outline-none cursor-pointer"
               >
                 <option value="SCATTER">Scatter Plot</option>
@@ -551,7 +607,9 @@ export const InteractiveEDAStudio: React.FC<InteractiveEDAStudioProps> = ({ edaR
             </div>
 
             <div className="flex items-center gap-2">
-              <label className="font-semibold text-[var(--color-text-muted)]">Color Hue (Class):</label>
+              <label className="font-semibold text-[var(--color-text-muted)]">
+                Color Hue (Class):
+              </label>
               <select
                 value={colorHue}
                 onChange={(e) => setColorHue(e.target.value)}
@@ -559,7 +617,9 @@ export const InteractiveEDAStudio: React.FC<InteractiveEDAStudioProps> = ({ edaR
               >
                 <option value="NONE">None</option>
                 {categoricalCols.map((c) => (
-                  <option key={c} value={c}>{c}</option>
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
                 ))}
               </select>
             </div>
@@ -612,7 +672,9 @@ export const InteractiveEDAStudio: React.FC<InteractiveEDAStudioProps> = ({ edaR
               >
                 <option value="NONE">None</option>
                 {categoricalCols.map((c) => (
-                  <option key={c} value={c}>{c}</option>
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
                 ))}
               </select>
             </div>

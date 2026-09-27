@@ -17,8 +17,12 @@ export const LeakagePanel: React.FC<LeakagePanelProps> = ({ experiment }) => {
             <ShieldCheck className="w-5 h-5" />
           </div>
           <div>
-            <h3 className="text-base font-semibold text-white">Leakage Control & Partition Invariants</h3>
-            <p className="text-xs text-slate-400">Strict isolation across train, validation, and locked test partitions</p>
+            <h3 className="text-base font-semibold text-white">
+              Leakage Control & Partition Invariants
+            </h3>
+            <p className="text-xs text-slate-400">
+              Strict isolation across train, validation, and locked test partitions
+            </p>
           </div>
         </div>
         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
@@ -33,7 +37,9 @@ export const LeakagePanel: React.FC<LeakagePanelProps> = ({ experiment }) => {
             <span>Fold Isolation</span>
           </div>
           <div className="text-sm font-semibold text-white">Outer Cross-Validation Isolated</div>
-          <div className="text-xs text-slate-500 mt-1">Preprocessors fitted strictly on training folds</div>
+          <div className="text-xs text-slate-500 mt-1">
+            Preprocessors fitted strictly on training folds
+          </div>
         </div>
 
         <div className="bg-slate-800/50 border border-slate-700/50 rounded-lg p-4">
@@ -42,7 +48,9 @@ export const LeakagePanel: React.FC<LeakagePanelProps> = ({ experiment }) => {
             <span>Feature Selection Guard</span>
           </div>
           <div className="text-sm font-semibold text-white">Permutation Isolation Verified</div>
-          <div className="text-xs text-slate-500 mt-1">Zero locked test access during rank aggregation</div>
+          <div className="text-xs text-slate-500 mt-1">
+            Zero locked test access during rank aggregation
+          </div>
         </div>
 
         <div className="bg-slate-800/50 border border-slate-700/50 rounded-lg p-4">

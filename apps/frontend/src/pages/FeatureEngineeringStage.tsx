@@ -106,7 +106,10 @@ export const FeatureEngineeringStage: React.FC = () => {
 
             if (imp.experiment_id) {
               try {
-                const foldsResp = await featureSelectionApi.getFolds(activeProjectId, imp.experiment_id);
+                const foldsResp = await featureSelectionApi.getFolds(
+                  activeProjectId,
+                  imp.experiment_id
+                );
                 setFoldData(foldsResp.data);
               } catch (foldErr) {
                 console.warn('No fold details found for experiment', foldErr);
@@ -238,7 +241,9 @@ export const FeatureEngineeringStage: React.FC = () => {
       });
 
       setImportanceData(resp.data);
-      setSuccessMsg(`Feature selection saved: ${selectedList.length} features active for model training.`);
+      setSuccessMsg(
+        `Feature selection saved: ${selectedList.length} features active for model training.`
+      );
     } catch (err: any) {
       console.error('Failed to save selection', err);
       setError(err.response?.data?.detail || 'Failed to update selection threshold.');
@@ -296,7 +301,10 @@ export const FeatureEngineeringStage: React.FC = () => {
     );
   }
 
-  const hasMissingPrerequisites = !currentProject?.target_column || !currentProject?.task_type || currentProject?.task_type === 'UNDETERMINED';
+  const hasMissingPrerequisites =
+    !currentProject?.target_column ||
+    !currentProject?.task_type ||
+    currentProject?.task_type === 'UNDETERMINED';
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto p-6">
@@ -312,7 +320,8 @@ export const FeatureEngineeringStage: React.FC = () => {
             </h1>
           </div>
           <p className="text-xs text-[var(--color-text-muted)] mt-1">
-            Leakage-controlled ensemble feature ranking evaluated strictly inside cross-validation splits.
+            Leakage-controlled ensemble feature ranking evaluated strictly inside cross-validation
+            splits.
           </p>
         </div>
 
@@ -328,7 +337,11 @@ export const FeatureEngineeringStage: React.FC = () => {
                 className="bg-transparent text-xs font-semibold text-[var(--color-text)] border-none focus:outline-none cursor-pointer pr-2"
               >
                 {projects.map((p) => (
-                  <option key={p.id} value={p.id} className="bg-[var(--color-surface)] text-[var(--color-text)]">
+                  <option
+                    key={p.id}
+                    value={p.id}
+                    className="bg-[var(--color-surface)] text-[var(--color-text)]"
+                  >
                     {p.project_name || (p as any).name || p.id}
                   </option>
                 ))}
@@ -355,7 +368,10 @@ export const FeatureEngineeringStage: React.FC = () => {
             <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0" />
             <div>
               <span className="font-bold">Project Target Column or Task Type Not Configured: </span>
-              <span>Feature selection requires a target column and valid task type (Classification or Regression).</span>
+              <span>
+                Feature selection requires a target column and valid task type (Classification or
+                Regression).
+              </span>
             </div>
           </div>
           <Link
@@ -369,11 +385,7 @@ export const FeatureEngineeringStage: React.FC = () => {
       )}
 
       {error && (
-        <ErrorState
-          title="Feature Selection Error"
-          message={error}
-          onRetry={() => setError('')}
-        />
+        <ErrorState title="Feature Selection Error" message={error} onRetry={() => setError('')} />
       )}
 
       {successMsg && (

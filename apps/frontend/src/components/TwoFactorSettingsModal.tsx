@@ -188,7 +188,9 @@ export const TwoFactorSettingsModal: React.FC<TwoFactorSettingsModalProps> = ({
               <div className="p-5 rounded-2xl bg-[var(--color-bg)] border border-[var(--color-border)] flex items-center justify-between">
                 <div className="space-y-1">
                   <div className="flex items-center space-x-2">
-                    <span className="text-xs text-[var(--color-text-muted)] font-medium">Protection Status:</span>
+                    <span className="text-xs text-[var(--color-text-muted)] font-medium">
+                      Protection Status:
+                    </span>
                     <span
                       className={`px-2.5 py-0.5 rounded-full text-xs font-bold font-mono ${
                         status?.is_two_factor_enabled
@@ -213,11 +215,12 @@ export const TwoFactorSettingsModal: React.FC<TwoFactorSettingsModalProps> = ({
                   <span>How Email Two-Factor Authentication Works</span>
                 </div>
                 <p>
-                  Whenever you sign in (or log out and log back in), a temporary 6-digit verification code is immediately dispatched to <strong>{user?.email}</strong>.
+                  Whenever you sign in (or log out and log back in), a temporary 6-digit
+                  verification code is immediately dispatched to <strong>{user?.email}</strong>.
                 </p>
                 <p className="text-[11px]">
-                  ✓ No authenticator app or QR code scan is required.<br />
-                  ✓ Protects against credential theft and unauthorized access attempts.
+                  ✓ No authenticator app or QR code scan is required.
+                  <br />✓ Protects against credential theft and unauthorized access attempts.
                 </p>
               </div>
 
@@ -261,13 +264,17 @@ export const TwoFactorSettingsModal: React.FC<TwoFactorSettingsModalProps> = ({
                     A verification code has been dispatched to <strong>{user?.email}</strong>.
                   </p>
                   <p className="text-[var(--color-text-muted)]">
-                    Please enter the 6-digit code received in your email to activate two-factor protection.
+                    Please enter the 6-digit code received in your email to activate two-factor
+                    protection.
                   </p>
                 </div>
               </div>
 
               {/* Confirmation Form */}
-              <form onSubmit={handleConfirmSetup} className="space-y-4 pt-2 border-t border-[var(--color-border)]">
+              <form
+                onSubmit={handleConfirmSetup}
+                className="space-y-4 pt-2 border-t border-[var(--color-border)]"
+              >
                 <div className="flex items-center justify-between">
                   <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--color-accent)]">
                     Enter 6-Digit Email Code
@@ -278,11 +285,7 @@ export const TwoFactorSettingsModal: React.FC<TwoFactorSettingsModalProps> = ({
                 </div>
 
                 <div className="py-2">
-                  <OtpInput
-                    value={confirmCode}
-                    onChange={setConfirmCode}
-                    disabled={submitting}
-                  />
+                  <OtpInput value={confirmCode} onChange={setConfirmCode} disabled={submitting} />
                 </div>
 
                 <div className="flex justify-end pt-2">
@@ -291,7 +294,9 @@ export const TwoFactorSettingsModal: React.FC<TwoFactorSettingsModalProps> = ({
                     disabled={submitting || confirmCode.trim().length !== 6}
                     className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-[var(--color-accent)] hover:bg-[var(--color-accent-hover)] text-white text-xs font-bold shadow-md shadow-[var(--color-accent)]/20 flex items-center justify-center space-x-2 transition-all disabled:opacity-50 cursor-pointer"
                   >
-                    <span>{submitting ? 'Activating Email 2FA...' : 'Verify & Activate Email 2FA'}</span>
+                    <span>
+                      {submitting ? 'Activating Email 2FA...' : 'Verify & Activate Email 2FA'}
+                    </span>
                     <ArrowRight className="w-4 h-4" />
                   </button>
                 </div>
@@ -305,7 +310,9 @@ export const TwoFactorSettingsModal: React.FC<TwoFactorSettingsModalProps> = ({
               <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 text-xs flex items-start space-x-2.5">
                 <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
                 <div>
-                  <strong className="font-bold">Warning:</strong> Disabling two-factor authentication makes your account vulnerable to credential stuffing and password theft.
+                  <strong className="font-bold">Warning:</strong> Disabling two-factor
+                  authentication makes your account vulnerable to credential stuffing and password
+                  theft.
                 </div>
               </div>
 

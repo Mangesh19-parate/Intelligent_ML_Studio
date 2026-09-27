@@ -18,7 +18,8 @@ export const StabilityRanker: React.FC<StabilityRankerProps> = ({
   averageStabilityScore,
   onOpenFoldModal,
 }) => {
-  const percentage = totalFeatures > 0 ? ((selectedFeaturesCount / totalFeatures) * 100).toFixed(1) : '0.0';
+  const percentage =
+    totalFeatures > 0 ? ((selectedFeaturesCount / totalFeatures) * 100).toFixed(1) : '0.0';
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 w-full">
@@ -48,7 +49,9 @@ export const StabilityRanker: React.FC<StabilityRankerProps> = ({
           <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0 ml-1" />
         </div>
         <div className="my-1.5 text-base font-bold text-[var(--color-text)] truncate leading-tight">
-          {selectionMethod === 'RANK_AGGREGATION' ? 'Rank Aggregation' : selectionMethod || 'Rank Aggregation'}
+          {selectionMethod === 'RANK_AGGREGATION'
+            ? 'Rank Aggregation'
+            : selectionMethod || 'Rank Aggregation'}
         </div>
         <div className="text-[11px] text-emerald-400 font-medium truncate">
           Fold-isolated importance
@@ -96,8 +99,8 @@ export const StabilityRanker: React.FC<StabilityRankerProps> = ({
           {averageStabilityScore !== null && averageStabilityScore !== undefined
             ? Number(averageStabilityScore).toFixed(3)
             : totalFeatures > 0
-            ? '1.000'
-            : '—'}
+              ? '1.000'
+              : '—'}
         </div>
         <div className="text-[11px] text-[var(--color-text-muted)] flex items-center space-x-1 truncate">
           <Info className="w-3 h-3 text-[var(--color-text-muted)] shrink-0" />

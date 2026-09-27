@@ -15,9 +15,14 @@ export const normalizeApiError = (error: unknown): ApiError => {
     return error;
   }
   if (typeof error === 'object' && error !== null && 'response' in error) {
-    const axiosError = error as { response?: { status?: number; data?: { detail?: string; message?: string } } };
+    const axiosError = error as {
+      response?: { status?: number; data?: { detail?: string; message?: string } };
+    };
     const status = axiosError.response?.status ?? 500;
-    const detail = axiosError.response?.data?.detail || axiosError.response?.data?.message || 'An unexpected API error occurred';
+    const detail =
+      axiosError.response?.data?.detail ||
+      axiosError.response?.data?.message ||
+      'An unexpected API error occurred';
     return new ApiError(detail, status, axiosError.response?.data);
   }
   if (error instanceof Error) {

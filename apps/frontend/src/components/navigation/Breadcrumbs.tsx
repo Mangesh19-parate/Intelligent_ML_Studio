@@ -94,9 +94,7 @@ export const Breadcrumbs: React.FC<BreadcrumbsProps> = ({ className }) => {
             <li key={segment + idx} className="flex items-center gap-1.5">
               <ChevronRight className="w-3.5 h-3.5 text-slate-600 shrink-0" />
               {isLast ? (
-                <span className="font-semibold text-slate-200 truncate max-w-[180px]">
-                  {label}
-                </span>
+                <span className="font-semibold text-slate-200 truncate max-w-[180px]">{label}</span>
               ) : (
                 <Link
                   to={routePath}

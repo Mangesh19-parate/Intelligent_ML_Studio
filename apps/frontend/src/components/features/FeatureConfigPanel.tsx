@@ -48,7 +48,9 @@ export const FeatureConfigPanel: React.FC<FeatureConfigPanelProps> = ({
             disabled={running || disabled}
             className="w-full px-3.5 py-2 text-xs rounded-full border border-[var(--color-border)] bg-[var(--color-bg)] text-[var(--color-text)] focus:outline-none focus:border-[var(--color-accent)] cursor-pointer"
           >
-            <option value="RANK_AGGREGATION">Rank Aggregation Ensemble (Correlation + Lasso + RF + Permutation)</option>
+            <option value="RANK_AGGREGATION">
+              Rank Aggregation Ensemble (Correlation + Lasso + RF + Permutation)
+            </option>
           </select>
         </div>
 
@@ -88,9 +90,7 @@ export const FeatureConfigPanel: React.FC<FeatureConfigPanelProps> = ({
 
         {/* Seed */}
         <div className="space-y-1.5">
-          <label className="text-xs font-bold text-[var(--color-text-muted)]">
-            Random Seed
-          </label>
+          <label className="text-xs font-bold text-[var(--color-text-muted)]">Random Seed</label>
           <input
             type="number"
             value={seed}

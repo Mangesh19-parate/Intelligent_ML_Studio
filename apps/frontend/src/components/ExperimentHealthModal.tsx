@@ -60,7 +60,10 @@ export interface ExperimentHealthModalProps {
   onClose: () => void;
 }
 
-export const ExperimentHealthModal: React.FC<ExperimentHealthModalProps> = ({ experimentId, onClose }) => {
+export const ExperimentHealthModal: React.FC<ExperimentHealthModalProps> = ({
+  experimentId,
+  onClose,
+}) => {
   const [healthData, setHealthData] = useState<ExperimentHealthData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>('');
@@ -100,13 +103,16 @@ export const ExperimentHealthModal: React.FC<ExperimentHealthModalProps> = ({ ex
             </div>
             <div>
               <div className="flex items-center space-x-2">
-                <h3 className="text-base font-extrabold text-[var(--color-text)]">Experiment Health & Integrity Report</h3>
+                <h3 className="text-base font-extrabold text-[var(--color-text)]">
+                  Experiment Health & Integrity Report
+                </h3>
                 <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[var(--color-bg)] border border-[var(--color-border)] text-[var(--color-text-muted)] font-bold">
                   SRS v9 §13
                 </span>
               </div>
               <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
-                Multi-dimensional validation of statistical fit, feature evidence, cryptographic lineage, and 6 structural guarantees.
+                Multi-dimensional validation of statistical fit, feature evidence, cryptographic
+                lineage, and 6 structural guarantees.
               </p>
             </div>
           </div>
@@ -150,8 +156,8 @@ export const ExperimentHealthModal: React.FC<ExperimentHealthModalProps> = ({ ex
                   healthData.risks_flagged_count === 0
                     ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
                     : healthData.overall_health === 'WARNING'
-                    ? 'bg-amber-500/10 border-amber-500/30 text-amber-300'
-                    : 'bg-rose-500/10 border-rose-500/30 text-rose-300'
+                      ? 'bg-amber-500/10 border-amber-500/30 text-amber-300'
+                      : 'bg-rose-500/10 border-rose-500/30 text-rose-300'
                 }`}
               >
                 <div className="flex items-center space-x-3">
@@ -187,7 +193,10 @@ export const ExperimentHealthModal: React.FC<ExperimentHealthModalProps> = ({ ex
                   </span>
                   {healthData.champion_algorithm && (
                     <span className="text-[11px] text-[var(--color-text-muted)] font-mono">
-                      Champion: <strong className="text-[var(--color-text)]">{healthData.champion_algorithm}</strong>
+                      Champion:{' '}
+                      <strong className="text-[var(--color-text)]">
+                        {healthData.champion_algorithm}
+                      </strong>
                     </span>
                   )}
                 </div>
@@ -210,7 +219,11 @@ export const ExperimentHealthModal: React.FC<ExperimentHealthModalProps> = ({ ex
                       <span>{healthData.signals.fit_diagnosis}</span>
                     </div>
                     <div className="text-[11px] text-[var(--color-text-muted)]">
-                      Gap: {healthData.signals.generalization_gap !== null && healthData.signals.generalization_gap !== undefined ? healthData.signals.generalization_gap : 'N/A'}
+                      Gap:{' '}
+                      {healthData.signals.generalization_gap !== null &&
+                      healthData.signals.generalization_gap !== undefined
+                        ? healthData.signals.generalization_gap
+                        : 'N/A'}
                     </div>
                   </div>
 
@@ -226,8 +239,8 @@ export const ExperimentHealthModal: React.FC<ExperimentHealthModalProps> = ({ ex
                           healthData.signals.evidence_strength === 'STRONG'
                             ? 'bg-emerald-400'
                             : healthData.signals.evidence_strength === 'MODERATE'
-                            ? 'bg-teal-400'
-                            : 'bg-amber-400'
+                              ? 'bg-teal-400'
+                              : 'bg-amber-400'
                         }`}
                       />
                       <span>{healthData.signals.evidence_strength}</span>
@@ -254,7 +267,10 @@ export const ExperimentHealthModal: React.FC<ExperimentHealthModalProps> = ({ ex
                       <span>{healthData.signals.artifact_checksum_status}</span>
                     </div>
                     <div className="text-[11px] text-[var(--color-text-muted)] font-mono truncate">
-                      SHA-256: {healthData.signals.artifact_checksum ? healthData.signals.artifact_checksum.slice(0, 10) + '...' : 'Pending'}
+                      SHA-256:{' '}
+                      {healthData.signals.artifact_checksum
+                        ? healthData.signals.artifact_checksum.slice(0, 10) + '...'
+                        : 'Pending'}
                     </div>
                   </div>
 
@@ -267,7 +283,8 @@ export const ExperimentHealthModal: React.FC<ExperimentHealthModalProps> = ({ ex
                     <div className="text-xs font-extrabold text-[var(--color-text)] flex items-center space-x-1.5">
                       <span
                         className={`w-2 h-2 rounded-full ${
-                          healthData.signals.locked_test_status === 'CONSUMED' || healthData.signals.locked_test_status === 'EVALUATED'
+                          healthData.signals.locked_test_status === 'CONSUMED' ||
+                          healthData.signals.locked_test_status === 'EVALUATED'
                             ? 'bg-emerald-400'
                             : 'bg-amber-400'
                         }`}
@@ -275,7 +292,11 @@ export const ExperimentHealthModal: React.FC<ExperimentHealthModalProps> = ({ ex
                       <span>{healthData.signals.locked_test_status}</span>
                     </div>
                     <div className="text-[11px] text-[var(--color-text-muted)]">
-                      Score: {healthData.signals.locked_test_score !== null && healthData.signals.locked_test_score !== undefined ? healthData.signals.locked_test_score : 'Unconsumed'}
+                      Score:{' '}
+                      {healthData.signals.locked_test_score !== null &&
+                      healthData.signals.locked_test_score !== undefined
+                        ? healthData.signals.locked_test_score
+                        : 'Unconsumed'}
                     </div>
                   </div>
 
@@ -287,16 +308,28 @@ export const ExperimentHealthModal: React.FC<ExperimentHealthModalProps> = ({ ex
                     </div>
                     <div className="flex items-center justify-between">
                       <div className="text-xs font-extrabold text-[var(--color-text)]">
-                        Gate Status: <span className={healthData.signals.gate_status === 'PASSED' ? 'text-emerald-400' : 'text-amber-400'}>{healthData.signals.gate_status}</span>
+                        Gate Status:{' '}
+                        <span
+                          className={
+                            healthData.signals.gate_status === 'PASSED'
+                              ? 'text-emerald-400'
+                              : 'text-amber-400'
+                          }
+                        >
+                          {healthData.signals.gate_status}
+                        </span>
                       </div>
                       <span className="text-[11px] font-bold text-[var(--color-text-muted)]">
-                        {healthData.signals.gate_conditions_passed} of {healthData.signals.gate_conditions_total} conditions met
+                        {healthData.signals.gate_conditions_passed} of{' '}
+                        {healthData.signals.gate_conditions_total} conditions met
                       </span>
                     </div>
                     <div className="w-full h-1.5 bg-[var(--color-surface)] rounded-full overflow-hidden">
                       <div
                         className="h-full bg-emerald-500 rounded-full"
-                        style={{ width: `${(healthData.signals.gate_conditions_passed / 6) * 100}%` }}
+                        style={{
+                          width: `${(healthData.signals.gate_conditions_passed / 6) * 100}%`,
+                        }}
                       />
                     </div>
                   </div>
@@ -317,14 +350,16 @@ export const ExperimentHealthModal: React.FC<ExperimentHealthModalProps> = ({ ex
                         className="p-4 rounded-xl bg-[var(--color-bg)] border border-[var(--color-border)] space-y-2"
                       >
                         <div className="flex items-center justify-between">
-                          <span className="text-xs font-extrabold text-[var(--color-text)]">{risk.finding}</span>
+                          <span className="text-xs font-extrabold text-[var(--color-text)]">
+                            {risk.finding}
+                          </span>
                           <span
                             className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border ${
                               risk.severity === 'CRITICAL'
                                 ? 'bg-rose-500/10 text-rose-400 border-rose-500/30'
                                 : risk.severity === 'HIGH'
-                                ? 'bg-amber-500/10 text-amber-400 border-amber-500/30'
-                                : 'bg-blue-500/10 text-blue-400 border-blue-500/30'
+                                  ? 'bg-amber-500/10 text-amber-400 border-amber-500/30'
+                                  : 'bg-blue-500/10 text-blue-400 border-blue-500/30'
                             }`}
                           >
                             {risk.severity} Severity
@@ -365,7 +400,9 @@ export const ExperimentHealthModal: React.FC<ExperimentHealthModalProps> = ({ ex
                     >
                       <div className="flex items-center space-x-2">
                         <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                        <span className="text-xs font-bold text-[var(--color-text)]">{item.title}</span>
+                        <span className="text-xs font-bold text-[var(--color-text)]">
+                          {item.title}
+                        </span>
                       </div>
                       <p className="text-[11px] text-[var(--color-text-muted)] leading-relaxed pl-5.5">
                         {item.description}

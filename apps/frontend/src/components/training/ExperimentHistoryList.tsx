@@ -37,15 +37,19 @@ export const ExperimentHistoryList: React.FC<ExperimentHistoryListProps> = ({
             }`}
           >
             <div className="truncate font-mono text-[11px]">
-              {new Date(exp.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • {exp.fold_count || 5} folds
+              {new Date(exp.created_at).toLocaleTimeString([], {
+                hour: '2-digit',
+                minute: '2-digit',
+              })}{' '}
+              • {exp.fold_count || 5} folds
             </div>
             <span
               className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
                 exp.status === 'COMPLETED'
                   ? 'bg-emerald-500/10 text-emerald-400'
                   : exp.status === 'RUNNING'
-                  ? 'bg-[var(--color-accent-soft)] text-[var(--color-accent)] animate-pulse'
-                  : 'bg-rose-500/10 text-rose-400'
+                    ? 'bg-[var(--color-accent-soft)] text-[var(--color-accent)] animate-pulse'
+                    : 'bg-rose-500/10 text-rose-400'
               }`}
             >
               {exp.status}

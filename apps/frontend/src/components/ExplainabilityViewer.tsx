@@ -73,7 +73,8 @@ export const ExplainabilityViewer: React.FC<ExplainabilityViewerProps> = ({
     } catch (err: unknown) {
       console.error('Failed to load explainability summary:', err);
       const e = err as { response?: { data?: { detail?: string } } };
-      const msg = e.response?.data?.detail || 'Failed to load explainability summary for this model.';
+      const msg =
+        e.response?.data?.detail || 'Failed to load explainability summary for this model.';
       setError(msg);
     } finally {
       setLoading(false);
@@ -118,12 +119,8 @@ export const ExplainabilityViewer: React.FC<ExplainabilityViewerProps> = ({
   };
 
   // Prepare plot data for Global Bar Chart
-  const features = summaryData?.shap_values
-    ? Object.keys(summaryData.shap_values).reverse()
-    : [];
-  const shapVals = summaryData?.shap_values
-    ? Object.values(summaryData.shap_values).reverse()
-    : [];
+  const features = summaryData?.shap_values ? Object.keys(summaryData.shap_values).reverse() : [];
+  const shapVals = summaryData?.shap_values ? Object.values(summaryData.shap_values).reverse() : [];
 
   return (
     <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl max-w-5xl w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden text-[var(--color-text)]">
@@ -219,7 +216,9 @@ export const ExplainabilityViewer: React.FC<ExplainabilityViewerProps> = ({
                   <span>Generated At</span>
                 </div>
                 <div className="text-xs font-mono text-[var(--color-text-muted)] truncate mt-1">
-                  {summaryData.generated_at ? new Date(summaryData.generated_at).toLocaleString() : ''}
+                  {summaryData.generated_at
+                    ? new Date(summaryData.generated_at).toLocaleString()
+                    : ''}
                 </div>
               </div>
             </div>
@@ -228,7 +227,8 @@ export const ExplainabilityViewer: React.FC<ExplainabilityViewerProps> = ({
             <div className="p-4 rounded-2xl bg-[var(--color-accent-soft)] border border-[var(--color-accent-border)] text-[var(--color-text)] text-xs flex items-center space-x-2.5 font-mono">
               <ShieldCheck className="w-4 h-4 text-[var(--color-accent)] flex-shrink-0" />
               <span>
-                <strong>Leakage-Safe Partitioning:</strong> Explainer background reference is strictly drawn from the Development partition. Locked Test data is never sampled.
+                <strong>Leakage-Safe Partitioning:</strong> Explainer background reference is
+                strictly drawn from the Development partition. Locked Test data is never sampled.
               </span>
             </div>
 
@@ -280,7 +280,10 @@ export const ExplainabilityViewer: React.FC<ExplainabilityViewerProps> = ({
                     paper_bgcolor: 'transparent',
                     plot_bgcolor: 'transparent',
                     xaxis: {
-                      title: { text: 'Mean |SHAP value| (Average Impact)', font: { size: 11, color: '#94a3b8' } },
+                      title: {
+                        text: 'Mean |SHAP value| (Average Impact)',
+                        font: { size: 11, color: '#94a3b8' },
+                      },
                       tickfont: { color: '#94a3b8', size: 10 },
                       gridcolor: 'rgba(255,255,255,0.06)',
                     },
@@ -300,9 +303,12 @@ export const ExplainabilityViewer: React.FC<ExplainabilityViewerProps> = ({
               <div className="flex items-center space-x-2 pb-2 border-b border-[var(--color-border)]">
                 <Calculator className="w-4 h-4 text-emerald-400" />
                 <div>
-                  <h4 className="text-sm font-bold text-[var(--color-text)]">Local Explanation & Additivity Inspector</h4>
+                  <h4 className="text-sm font-bold text-[var(--color-text)]">
+                    Local Explanation & Additivity Inspector
+                  </h4>
                   <p className="text-[11px] text-[var(--color-text-muted)]">
-                    Test instance-level feature contribution breakdown and verify exact SHAP additivity.
+                    Test instance-level feature contribution breakdown and verify exact SHAP
+                    additivity.
                   </p>
                 </div>
               </div>
@@ -331,9 +337,7 @@ export const ExplainabilityViewer: React.FC<ExplainabilityViewerProps> = ({
                     )}
                     <span>Compute Local Explanation</span>
                   </button>
-                  {localError && (
-                    <p className="text-xs text-rose-400 font-mono">{localError}</p>
-                  )}
+                  {localError && <p className="text-xs text-rose-400 font-mono">{localError}</p>}
                 </div>
 
                 {/* Local Explanation Output & Additivity Breakdown */}
@@ -347,11 +351,15 @@ export const ExplainabilityViewer: React.FC<ExplainabilityViewerProps> = ({
                       <div className="p-3 rounded-xl bg-[var(--color-surface-card)] border border-[var(--color-border)] space-y-1">
                         <div className="flex justify-between text-[var(--color-text-muted)]">
                           <span>Base / Expected Value:</span>
-                          <strong className="text-[var(--color-text)]">{localResult.base_value}</strong>
+                          <strong className="text-[var(--color-text)]">
+                            {localResult.base_value}
+                          </strong>
                         </div>
                         <div className="flex justify-between text-[var(--color-text-muted)]">
                           <span>Model Prediction:</span>
-                          <strong className="text-[var(--color-accent)]">{localResult.prediction ?? 'N/A'}</strong>
+                          <strong className="text-[var(--color-accent)]">
+                            {localResult.prediction ?? 'N/A'}
+                          </strong>
                         </div>
                         <div className="flex justify-between text-emerald-400 border-t border-[var(--color-border)] pt-1">
                           <span>Sum (Contribs + Base):</span>
@@ -365,14 +373,16 @@ export const ExplainabilityViewer: React.FC<ExplainabilityViewerProps> = ({
                             key={feat}
                             className="flex items-center justify-between text-[11px] p-2 rounded-lg bg-[var(--color-surface-card)] border border-[var(--color-border)]"
                           >
-                            <span className="text-[var(--color-text)] truncate max-w-[140px]">{feat}</span>
+                            <span className="text-[var(--color-text)] truncate max-w-[140px]">
+                              {feat}
+                            </span>
                             <span
                               className={`font-bold ${
                                 val > 0
                                   ? 'text-emerald-400'
                                   : val < 0
-                                  ? 'text-rose-400'
-                                  : 'text-[var(--color-text-muted)]'
+                                    ? 'text-rose-400'
+                                    : 'text-[var(--color-text-muted)]'
                               }`}
                             >
                               {val > 0 ? `+${val}` : val}
@@ -383,7 +393,8 @@ export const ExplainabilityViewer: React.FC<ExplainabilityViewerProps> = ({
                     </div>
                   ) : (
                     <p className="text-xs text-[var(--color-text-muted)] italic py-6 text-center">
-                      Click "Compute Local Explanation" to view instance feature pushes and additivity check.
+                      Click "Compute Local Explanation" to view instance feature pushes and
+                      additivity check.
                     </p>
                   )}
                 </div>

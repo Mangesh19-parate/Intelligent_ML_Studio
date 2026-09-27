@@ -49,10 +49,21 @@ describe('Admin Console Subcomponents', () => {
   describe('RolePermissionsMatrix', () => {
     it('renders capability catalogs for algorithms and metrics', () => {
       const algorithms = [
-        { id: '1', name: 'RandomForestRegressor', task_type: 'REGRESSION', description: 'Ensemble model' },
+        {
+          id: '1',
+          name: 'RandomForestRegressor',
+          task_type: 'REGRESSION',
+          description: 'Ensemble model',
+        },
       ];
       const metrics = [
-        { id: '1', name: 'RMSE', key: 'rmse', direction: 'MINIMIZE', description: 'Root mean squared error' },
+        {
+          id: '1',
+          name: 'RMSE',
+          key: 'rmse',
+          direction: 'MINIMIZE',
+          description: 'Root mean squared error',
+        },
       ];
 
       render(

@@ -81,10 +81,12 @@ export const AdminConsole: React.FC = () => {
     setLoadingAudits(true);
     try {
       const res = await adminApi.getAuditLogs(auditFilter, auditSearch);
-      setAuditLogs((res.data || []).map((log: any) => ({
-        ...log,
-        resource_type: log.resource_type ?? undefined,
-      })));
+      setAuditLogs(
+        (res.data || []).map((log: any) => ({
+          ...log,
+          resource_type: log.resource_type ?? undefined,
+        }))
+      );
     } catch (err) {
       console.error('Failed to load audit logs', err);
     } finally {
@@ -124,7 +126,6 @@ export const AdminConsole: React.FC = () => {
     }
   };
 
-
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -152,7 +153,8 @@ export const AdminConsole: React.FC = () => {
               Administration & Governance Console
             </h1>
             <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
-              Manage platform users, algorithms catalog, evaluation metrics, and immutable audit trails.
+              Manage platform users, algorithms catalog, evaluation metrics, and immutable audit
+              trails.
             </p>
           </div>
         </div>
@@ -196,11 +198,7 @@ export const AdminConsole: React.FC = () => {
       </div>
 
       {userError && (
-        <ErrorState
-          title="Admin Error"
-          message={userError}
-          onRetry={() => setUserError('')}
-        />
+        <ErrorState title="Admin Error" message={userError} onRetry={() => setUserError('')} />
       )}
 
       {userSuccess && (
@@ -211,8 +209,8 @@ export const AdminConsole: React.FC = () => {
       )}
 
       {/* Tab Panels */}
-      {activeTab === 'users' && (
-        loadingUsers ? (
+      {activeTab === 'users' &&
+        (loadingUsers ? (
           <Skeleton variant="rectangular" height="300px" className="rounded-2xl" />
         ) : (
           <UserManagementTable
@@ -225,23 +223,17 @@ export const AdminConsole: React.FC = () => {
             onResetPassword={handleResetPassword}
             onOpenAddUser={() => setShowAddUserModal(true)}
           />
-        )
-      )}
+        ))}
 
-      {activeTab === 'catalog' && (
-        loadingCatalog ? (
+      {activeTab === 'catalog' &&
+        (loadingCatalog ? (
           <Skeleton variant="rectangular" height="300px" className="rounded-2xl" />
         ) : (
-          <RolePermissionsMatrix
-            algorithms={algorithms}
-            metrics={metrics}
-            features={features}
-          />
-        )
-      )}
+          <RolePermissionsMatrix algorithms={algorithms} metrics={metrics} features={features} />
+        ))}
 
-      {activeTab === 'audits' && (
-        loadingAudits ? (
+      {activeTab === 'audits' &&
+        (loadingAudits ? (
           <Skeleton variant="rectangular" height="300px" className="rounded-2xl" />
         ) : (
           <AuditLogViewer
@@ -251,8 +243,7 @@ export const AdminConsole: React.FC = () => {
             search={auditSearch}
             onSearchChange={setAuditSearch}
           />
-        )
-      )}
+        ))}
 
       {/* Add User Modal */}
       {showAddUserModal && (
@@ -294,7 +285,9 @@ export const AdminConsole: React.FC = () => {
               </div>
 
               <div className="space-y-1">
-                <label className="text-xs font-bold text-[var(--color-text)]">Temporary Password</label>
+                <label className="text-xs font-bold text-[var(--color-text)]">
+                  Temporary Password
+                </label>
                 <input
                   type="password"
                   required

@@ -86,7 +86,7 @@ describe('Training Module Subcomponents', () => {
         primary_metric_value: 0.12345,
         fit_diagnosis: 'GOOD_FIT',
         decision_threshold: null,
-        locked_test_score: 0.12500,
+        locked_test_score: 0.125,
       };
 
       const leaderboard = {

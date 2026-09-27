@@ -7,7 +7,12 @@ export const adminApi = {
     return res.data;
   },
 
-  createUser: async (payload: { email: string; full_name?: string; role_name: string; password?: string }): Promise<User> => {
+  createUser: async (payload: {
+    email: string;
+    full_name?: string;
+    role_name: string;
+    password?: string;
+  }): Promise<User> => {
     const res = await httpClient.post<User>('/admin/users', payload);
     return res.data;
   },
@@ -22,12 +27,22 @@ export const adminApi = {
     return res.data;
   },
 
-  resetUserPassword: async (userId: string): Promise<{ message: string; temporary_password?: string; email?: string }> => {
-    const res = await httpClient.post<{ message: string; temporary_password?: string; email?: string }>(`/admin/users/${userId}/reset-password`);
+  resetUserPassword: async (
+    userId: string
+  ): Promise<{ message: string; temporary_password?: string; email?: string }> => {
+    const res = await httpClient.post<{
+      message: string;
+      temporary_password?: string;
+      email?: string;
+    }>(`/admin/users/${userId}/reset-password`);
     return res.data;
   },
 
-  setPermissionOverride: async (userId: string, permissionKey: string, isGranted: boolean): Promise<void> => {
+  setPermissionOverride: async (
+    userId: string,
+    permissionKey: string,
+    isGranted: boolean
+  ): Promise<void> => {
     await httpClient.put(`/admin/users/${userId}/overrides`, {
       permission_key: permissionKey,
       is_granted: isGranted,

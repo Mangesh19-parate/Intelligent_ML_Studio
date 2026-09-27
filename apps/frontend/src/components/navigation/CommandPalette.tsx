@@ -267,7 +267,11 @@ export const CommandPalette: React.FC<{
         subtitle: `Stage: ${p.pipeline_stage || 'NEW'} • Task: ${p.task_type || 'Unassigned'}${
           p.target_column ? ` • Target: ${p.target_column}` : ''
         }${isCurrent ? ' (Active)' : ''}`,
-        icon: <FolderKanban className={cn('w-4 h-4', isCurrent ? 'text-[var(--color-accent)]' : 'text-slate-400')} />,
+        icon: (
+          <FolderKanban
+            className={cn('w-4 h-4', isCurrent ? 'text-[var(--color-accent)]' : 'text-slate-400')}
+          />
+        ),
         category: 'Projects',
         onSelect: () => {
           selectProject(String(p.id));
@@ -351,65 +355,67 @@ export const CommandPalette: React.FC<{
               <div className="font-mono font-bold text-[var(--color-text)]">"{query}"</div>
             </div>
           ) : (
-            (['Actions', 'Navigation', 'Projects', 'Legal & Governance'] as const).map((category) => {
-              const categoryItems = filteredItems.filter((i) => i.category === category);
-              if (categoryItems.length === 0) return null;
+            (['Actions', 'Navigation', 'Projects', 'Legal & Governance'] as const).map(
+              (category) => {
+                const categoryItems = filteredItems.filter((i) => i.category === category);
+                if (categoryItems.length === 0) return null;
 
-              return (
-                <div key={category} className="py-2 first:pt-1 last:pb-1 space-y-1">
-                  <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)]">
-                    {category}
-                  </div>
-                  {categoryItems.map((item) => {
-                    const globalIdx = filteredItems.indexOf(item);
-                    const isSelected = globalIdx === selectedIndex;
+                return (
+                  <div key={category} className="py-2 first:pt-1 last:pb-1 space-y-1">
+                    <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)]">
+                      {category}
+                    </div>
+                    {categoryItems.map((item) => {
+                      const globalIdx = filteredItems.indexOf(item);
+                      const isSelected = globalIdx === selectedIndex;
 
-                    return (
-                      <div
-                        key={item.id}
-                        onClick={item.onSelect}
-                        onMouseEnter={() => setSelectedIndex(globalIdx)}
-                        className={cn(
-                          'flex items-center justify-between px-3 py-2 rounded-xl cursor-pointer transition-all',
-                          isSelected
-                            ? 'bg-[var(--color-accent-soft)] text-[var(--color-accent)] border border-[var(--color-accent)]/30 font-medium'
-                            : 'text-[var(--color-text)] hover:bg-[var(--color-surface-hover)] border border-transparent'
-                        )}
-                      >
-                        <div className="flex items-center gap-3 min-w-0">
-                          <div
-                            className={cn(
-                              'p-1.5 rounded-lg shrink-0 transition-colors',
-                              isSelected
-                                ? 'bg-[var(--color-accent)]/20 text-[var(--color-accent)]'
-                                : 'bg-[var(--color-surface-hover)] text-[var(--color-text-muted)]'
-                            )}
-                          >
-                            {item.icon}
-                          </div>
-                          <div className="min-w-0">
-                            <p className="text-xs font-bold truncate text-[var(--color-text)]">
-                              {item.title}
-                            </p>
-                            {item.subtitle && (
-                              <p className="text-[11px] text-[var(--color-text-muted)] truncate">
-                                {item.subtitle}
+                      return (
+                        <div
+                          key={item.id}
+                          onClick={item.onSelect}
+                          onMouseEnter={() => setSelectedIndex(globalIdx)}
+                          className={cn(
+                            'flex items-center justify-between px-3 py-2 rounded-xl cursor-pointer transition-all',
+                            isSelected
+                              ? 'bg-[var(--color-accent-soft)] text-[var(--color-accent)] border border-[var(--color-accent)]/30 font-medium'
+                              : 'text-[var(--color-text)] hover:bg-[var(--color-surface-hover)] border border-transparent'
+                          )}
+                        >
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div
+                              className={cn(
+                                'p-1.5 rounded-lg shrink-0 transition-colors',
+                                isSelected
+                                  ? 'bg-[var(--color-accent)]/20 text-[var(--color-accent)]'
+                                  : 'bg-[var(--color-surface-hover)] text-[var(--color-text-muted)]'
+                              )}
+                            >
+                              {item.icon}
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-xs font-bold truncate text-[var(--color-text)]">
+                                {item.title}
                               </p>
-                            )}
+                              {item.subtitle && (
+                                <p className="text-[11px] text-[var(--color-text-muted)] truncate">
+                                  {item.subtitle}
+                                </p>
+                              )}
+                            </div>
                           </div>
-                        </div>
 
-                        {item.shortcut && (
-                          <kbd className="hidden sm:inline-flex items-center px-1.5 py-0.5 text-[10px] font-mono text-[var(--color-text-muted)] bg-[var(--color-surface-hover)] border border-[var(--color-border)] rounded shadow-xs">
-                            {item.shortcut}
-                          </kbd>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              );
-            })
+                          {item.shortcut && (
+                            <kbd className="hidden sm:inline-flex items-center px-1.5 py-0.5 text-[10px] font-mono text-[var(--color-text-muted)] bg-[var(--color-surface-hover)] border border-[var(--color-border)] rounded shadow-xs">
+                              {item.shortcut}
+                            </kbd>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              }
+            )
           )}
         </div>
 

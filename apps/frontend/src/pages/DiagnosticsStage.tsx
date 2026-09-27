@@ -38,7 +38,9 @@ export const DiagnosticsStage: React.FC = () => {
   const [error, setError] = useState<string>('');
 
   // Active tab state: 'fit_diagnosis' | 'why_not' | 'recommendations'
-  const [activeTab, setActiveTab] = useState<'fit_diagnosis' | 'why_not' | 'recommendations'>('fit_diagnosis');
+  const [activeTab, setActiveTab] = useState<'fit_diagnosis' | 'why_not' | 'recommendations'>(
+    'fit_diagnosis'
+  );
 
   const [passportModalOpen, setPassportModalOpen] = useState<boolean>(false);
   const [selectedPassportModelId, setSelectedPassportModelId] = useState<string | null>(null);
@@ -104,7 +106,7 @@ export const DiagnosticsStage: React.FC = () => {
           try {
             const lbRes = await modelApi.getLeaderboard(selectedProjectId, latestExp.id);
             const raw = lbRes.data;
-            const list = Array.isArray(raw) ? raw : (raw?.leaderboard || raw?.models || []);
+            const list = Array.isArray(raw) ? raw : raw?.leaderboard || raw?.models || [];
             setLeaderboard(list);
           } catch {
             setLeaderboard([]);
@@ -141,13 +143,22 @@ export const DiagnosticsStage: React.FC = () => {
   };
 
   // Helper to extract primary CV metric from model record
-  const getPrimaryCvMetric = (model: ModelItem | null | undefined, metricName: string | undefined): number | null => {
+  const getPrimaryCvMetric = (
+    model: ModelItem | null | undefined,
+    metricName: string | undefined
+  ): number | null => {
     if (!model) return null;
-    const mMetrics = (model as unknown as { metrics?: Array<{ split?: string; metric_name?: string; metric_value?: number }> }).metrics;
+    const mMetrics = (
+      model as unknown as {
+        metrics?: Array<{ split?: string; metric_name?: string; metric_value?: number }>;
+      }
+    ).metrics;
     if (!mMetrics) {
       return (model as unknown as { quick_cv_score?: number }).quick_cv_score != null
         ? Number((model as unknown as { quick_cv_score?: number }).quick_cv_score)
-        : model.primary_metric_value != null ? Number(model.primary_metric_value) : null;
+        : model.primary_metric_value != null
+          ? Number(model.primary_metric_value)
+          : null;
     }
     const targetMetric = metricName?.toLowerCase();
     const cvMean = mMetrics.find(
@@ -161,13 +172,22 @@ export const DiagnosticsStage: React.FC = () => {
     }
     return (model as unknown as { quick_cv_score?: number }).quick_cv_score != null
       ? Number((model as unknown as { quick_cv_score?: number }).quick_cv_score)
-      : model.primary_metric_value != null ? Number(model.primary_metric_value) : null;
+      : model.primary_metric_value != null
+        ? Number(model.primary_metric_value)
+        : null;
   };
 
   // Helper to extract Train metric for generalization gap
-  const getTrainMetric = (model: ModelItem | null | undefined, metricName: string | undefined): number | null => {
+  const getTrainMetric = (
+    model: ModelItem | null | undefined,
+    metricName: string | undefined
+  ): number | null => {
     if (!model) return null;
-    const mMetrics = (model as unknown as { metrics?: Array<{ split?: string; metric_name?: string; metric_value?: number }> }).metrics;
+    const mMetrics = (
+      model as unknown as {
+        metrics?: Array<{ split?: string; metric_name?: string; metric_value?: number }>;
+      }
+    ).metrics;
     if (!mMetrics) return null;
     const targetMetric = metricName?.toLowerCase();
     const trainMetric = mMetrics.find(
@@ -176,11 +196,14 @@ export const DiagnosticsStage: React.FC = () => {
         (m.metric_name?.toLowerCase() === targetMetric ||
           (targetMetric?.includes('f1') && m.metric_name?.toLowerCase().includes('f1')))
     );
-    return trainMetric && trainMetric.metric_value != null ? Number(trainMetric.metric_value) : null;
+    return trainMetric && trainMetric.metric_value != null
+      ? Number(trainMetric.metric_value)
+      : null;
   };
 
   // Resolve winning model and candidate models for current experiment
-  const trainedModels: ModelItem[] = (currentExperiment as unknown as { trained_models?: ModelItem[] })?.trained_models || [];
+  const trainedModels: ModelItem[] =
+    (currentExperiment as unknown as { trained_models?: ModelItem[] })?.trained_models || [];
   const winningModel =
     trainedModels.find((m) => m.id === currentExperiment?.selected_model_id) ||
     (trainedModels.length > 0 ? trainedModels[0] : null);
@@ -278,7 +301,8 @@ export const DiagnosticsStage: React.FC = () => {
             <span>Model Health & Decision Trace</span>
           </h1>
           <p className="text-sm text-[var(--color-text-muted)] mt-1.5 max-w-3xl">
-            Direction-aware generalization gap analysis, traceable dataset recommendations, and why-not model selection comparison.
+            Direction-aware generalization gap analysis, traceable dataset recommendations, and
+            why-not model selection comparison.
           </p>
         </div>
 
@@ -316,7 +340,9 @@ export const DiagnosticsStage: React.FC = () => {
           {experiments.length > 0 && (
             <div className="flex items-center space-x-2.5">
               <Layers className="w-4 h-4 text-[var(--color-text-muted)]" />
-              <span className="text-xs font-semibold text-[var(--color-text-muted)]">Experiment:</span>
+              <span className="text-xs font-semibold text-[var(--color-text-muted)]">
+                Experiment:
+              </span>
               <select
                 value={selectedExperimentId}
                 onChange={(e) => setSelectedExperimentId(e.target.value)}
@@ -324,7 +350,8 @@ export const DiagnosticsStage: React.FC = () => {
               >
                 {experiments.map((exp, idx) => (
                   <option key={exp.id} value={exp.id}>
-                    Exp #{experiments.length - idx} &bull; {exp.task_type} &bull; {exp.fold_count} Folds ({exp.id.slice(0, 8)})
+                    Exp #{experiments.length - idx} &bull; {exp.task_type} &bull; {exp.fold_count}{' '}
+                    Folds ({exp.id.slice(0, 8)})
                   </option>
                 ))}
               </select>
@@ -357,9 +384,13 @@ export const DiagnosticsStage: React.FC = () => {
           <Stethoscope className="w-4 h-4" />
           <span>Fit Diagnosis & Generalization Gaps</span>
           {trainedModels.length > 0 && (
-            <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono ${
-              activeTab === 'fit_diagnosis' ? 'bg-white/20 text-white' : 'bg-[var(--color-surface-hover)] text-[var(--color-text-muted)]'
-            }`}>
+            <span
+              className={`px-2 py-0.5 rounded-full text-[10px] font-mono ${
+                activeTab === 'fit_diagnosis'
+                  ? 'bg-white/20 text-white'
+                  : 'bg-[var(--color-surface-hover)] text-[var(--color-text-muted)]'
+              }`}
+            >
               {trainedModels.length}
             </span>
           )}
@@ -376,9 +407,13 @@ export const DiagnosticsStage: React.FC = () => {
           <Trophy className="w-4 h-4" />
           <span>Why-Not Selection Comparison</span>
           {candidateModels.length > 0 && (
-            <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono ${
-              activeTab === 'why_not' ? 'bg-white/20 text-white' : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-            }`}>
+            <span
+              className={`px-2 py-0.5 rounded-full text-[10px] font-mono ${
+                activeTab === 'why_not'
+                  ? 'bg-white/20 text-white'
+                  : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+              }`}
+            >
               {candidateModels.length} Rejected
             </span>
           )}
@@ -395,9 +430,13 @@ export const DiagnosticsStage: React.FC = () => {
           <Sparkles className="w-4 h-4" />
           <span>Traceable Recommendations</span>
           {recommendations.length > 0 && (
-            <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono ${
-              activeTab === 'recommendations' ? 'bg-white/20 text-white' : 'bg-[var(--color-accent-soft)] text-[var(--color-accent)]'
-            }`}>
+            <span
+              className={`px-2 py-0.5 rounded-full text-[10px] font-mono ${
+                activeTab === 'recommendations'
+                  ? 'bg-white/20 text-white'
+                  : 'bg-[var(--color-accent-soft)] text-[var(--color-accent)]'
+              }`}
+            >
               {recommendations.length}
             </span>
           )}
@@ -424,7 +463,9 @@ export const DiagnosticsStage: React.FC = () => {
                 {trainedModels.length === 0 ? (
                   <div className="col-span-full p-12 text-center bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl text-[var(--color-text-muted)] space-y-2 shadow-sm">
                     <Activity className="w-8 h-8 mx-auto text-[var(--color-text-muted)] opacity-60" />
-                    <p className="text-sm font-bold text-[var(--color-text)]">No trained models found for this experiment.</p>
+                    <p className="text-sm font-bold text-[var(--color-text)]">
+                      No trained models found for this experiment.
+                    </p>
                     <p className="text-xs text-[var(--color-text-muted)]">
                       Run model training in the Machine Learning stage to populate fit diagnostics.
                     </p>
@@ -434,7 +475,7 @@ export const DiagnosticsStage: React.FC = () => {
                     const isWinner = model.id === currentExperiment?.selected_model_id;
                     const cvScore = getPrimaryCvMetric(model, primaryMetricName);
                     const trainScore = getTrainMetric(model, primaryMetricName);
-                    
+
                     // Gap computation
                     let gapPercent: number | null = null;
                     if (trainScore != null && cvScore != null) {
@@ -455,7 +496,9 @@ export const DiagnosticsStage: React.FC = () => {
                         <div className="flex items-start justify-between gap-2">
                           <div>
                             <div className="flex items-center space-x-2">
-                              <h3 className="text-sm font-bold text-[var(--color-text)]">{model.algorithm_name}</h3>
+                              <h3 className="text-sm font-bold text-[var(--color-text)]">
+                                {model.algorithm_name}
+                              </h3>
                               {isWinner && (
                                 <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-[var(--color-accent-soft)] text-[var(--color-accent)] border border-[var(--color-accent-border)] flex items-center space-x-1">
                                   <Trophy className="w-2.5 h-2.5" />
@@ -463,7 +506,9 @@ export const DiagnosticsStage: React.FC = () => {
                                 </span>
                               )}
                             </div>
-                            <span className="text-[10px] font-mono text-[var(--color-text-muted)]">ID: {model.id ? model.id.slice(0, 8) : 'N/A'}</span>
+                            <span className="text-[10px] font-mono text-[var(--color-text-muted)]">
+                              ID: {model.id ? model.id.slice(0, 8) : 'N/A'}
+                            </span>
                           </div>
                           {renderFitBadge(model.fit_diagnosis)}
                         </div>
@@ -471,13 +516,17 @@ export const DiagnosticsStage: React.FC = () => {
                         {/* Scores Grid */}
                         <div className="grid grid-cols-2 gap-2 text-xs font-mono">
                           <div className="p-3 bg-[var(--color-surface-card)] rounded-xl border border-[var(--color-border)]">
-                            <span className="text-[10px] text-[var(--color-text-muted)] uppercase font-semibold">CV Mean</span>
+                            <span className="text-[10px] text-[var(--color-text-muted)] uppercase font-semibold">
+                              CV Mean
+                            </span>
                             <div className="text-sm font-bold text-[var(--color-text)] mt-0.5">
                               {cvScore != null ? cvScore.toFixed(4) : 'N/A'}
                             </div>
                           </div>
                           <div className="p-3 bg-[var(--color-surface-card)] rounded-xl border border-[var(--color-border)]">
-                            <span className="text-[10px] text-[var(--color-text-muted)] uppercase font-semibold">Train Mean</span>
+                            <span className="text-[10px] text-[var(--color-text-muted)] uppercase font-semibold">
+                              Train Mean
+                            </span>
                             <div className="text-sm font-bold text-[var(--color-text-muted)] mt-0.5">
                               {trainScore != null ? trainScore.toFixed(4) : 'N/A'}
                             </div>
@@ -488,14 +537,16 @@ export const DiagnosticsStage: React.FC = () => {
                         {gapPercent != null && (
                           <div className="space-y-1.5 pt-1">
                             <div className="flex justify-between text-[11px] font-mono">
-                              <span className="text-[var(--color-text-muted)]">Generalization Gap:</span>
+                              <span className="text-[var(--color-text-muted)]">
+                                Generalization Gap:
+                              </span>
                               <span
                                 className={`font-bold ${
                                   gapPercent > 25
                                     ? 'text-rose-400'
                                     : gapPercent > 10
-                                    ? 'text-amber-400'
-                                    : 'text-emerald-400'
+                                      ? 'text-amber-400'
+                                      : 'text-emerald-400'
                                 }`}
                               >
                                 {gapPercent.toFixed(1)}%
@@ -507,8 +558,8 @@ export const DiagnosticsStage: React.FC = () => {
                                   gapPercent > 25
                                     ? 'bg-rose-500'
                                     : gapPercent > 10
-                                    ? 'bg-amber-500'
-                                    : 'bg-emerald-500'
+                                      ? 'bg-amber-500'
+                                      : 'bg-emerald-500'
                                 }`}
                                 style={{ width: `${Math.min(100, gapPercent * 2)}%` }}
                               />
@@ -521,7 +572,9 @@ export const DiagnosticsStage: React.FC = () => {
                           <div>
                             <span>Score: </span>
                             <span className="font-bold text-[var(--color-text)]">
-                              {model.model_selection_score != null ? Number(model.model_selection_score).toFixed(4) : 'N/A'}
+                              {model.model_selection_score != null
+                                ? Number(model.model_selection_score).toFixed(4)
+                                : 'N/A'}
                             </span>
                           </div>
                           <button
@@ -566,14 +619,19 @@ export const DiagnosticsStage: React.FC = () => {
                           </span>
                         </div>
                         <p className="text-xs text-[var(--color-text-muted)] font-mono mt-0.5">
-                          Artifact SHA-256: {winningModel.artifact_checksum ? winningModel.artifact_checksum.slice(0, 16) + '...' : 'Verified'}
+                          Artifact SHA-256:{' '}
+                          {winningModel.artifact_checksum
+                            ? winningModel.artifact_checksum.slice(0, 16) + '...'
+                            : 'Verified'}
                         </p>
                       </div>
                     </div>
 
                     <div className="flex items-center space-x-4">
                       <div className="text-right font-mono">
-                        <span className="text-[10px] text-[var(--color-text-muted)] uppercase font-semibold">Winning Metric</span>
+                        <span className="text-[10px] text-[var(--color-text-muted)] uppercase font-semibold">
+                          Winning Metric
+                        </span>
                         <div className="text-xl font-extrabold text-[var(--color-accent)]">
                           {getPrimaryCvMetric(winningModel, primaryMetricName)?.toFixed(4) || 'N/A'}
                         </div>
@@ -604,7 +662,9 @@ export const DiagnosticsStage: React.FC = () => {
 
                 {candidateModels.length === 0 ? (
                   <div className="p-8 text-center bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl text-[var(--color-text-muted)] space-y-1 shadow-sm">
-                    <p className="text-xs font-medium">No competing candidates evaluated in this experiment.</p>
+                    <p className="text-xs font-medium">
+                      No competing candidates evaluated in this experiment.
+                    </p>
                   </div>
                 ) : (
                   candidateModels.map((candidate) => {
@@ -624,8 +684,12 @@ export const DiagnosticsStage: React.FC = () => {
                               Rejected
                             </span>
                             <div>
-                              <h4 className="text-sm font-bold text-[var(--color-text)]">{candidate.algorithm_name}</h4>
-                              <span className="text-[10px] font-mono text-[var(--color-text-muted)]">ID: {candidate.id ? candidate.id.slice(0, 8) : 'N/A'}</span>
+                              <h4 className="text-sm font-bold text-[var(--color-text)]">
+                                {candidate.algorithm_name}
+                              </h4>
+                              <span className="text-[10px] font-mono text-[var(--color-text-muted)]">
+                                ID: {candidate.id ? candidate.id.slice(0, 8) : 'N/A'}
+                              </span>
                             </div>
                           </div>
                           <div className="flex items-center space-x-2">
@@ -657,20 +721,40 @@ export const DiagnosticsStage: React.FC = () => {
                         {/* Head-to-Head Metric Comparison */}
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs font-mono">
                           <div className="p-2.5 bg-[var(--color-surface-card)] rounded-xl border border-[var(--color-border)]">
-                            <span className="text-[10px] text-[var(--color-text-muted)]">Candidate CV</span>
-                            <div className="font-bold text-[var(--color-text)] mt-0.5">{candCv != null ? candCv.toFixed(4) : 'N/A'}</div>
+                            <span className="text-[10px] text-[var(--color-text-muted)]">
+                              Candidate CV
+                            </span>
+                            <div className="font-bold text-[var(--color-text)] mt-0.5">
+                              {candCv != null ? candCv.toFixed(4) : 'N/A'}
+                            </div>
                           </div>
                           <div className="p-2.5 bg-[var(--color-surface-card)] rounded-xl border border-[var(--color-border)]">
-                            <span className="text-[10px] text-[var(--color-text-muted)]">Winner CV</span>
-                            <div className="font-bold text-[var(--color-accent)] mt-0.5">{winCv != null ? winCv.toFixed(4) : 'N/A'}</div>
+                            <span className="text-[10px] text-[var(--color-text-muted)]">
+                              Winner CV
+                            </span>
+                            <div className="font-bold text-[var(--color-accent)] mt-0.5">
+                              {winCv != null ? winCv.toFixed(4) : 'N/A'}
+                            </div>
                           </div>
                           <div className="p-2.5 bg-[var(--color-surface-card)] rounded-xl border border-[var(--color-border)]">
-                            <span className="text-[10px] text-[var(--color-text-muted)]">Candidate Score</span>
-                            <div className="font-bold text-[var(--color-text-muted)] mt-0.5">{candidate.model_selection_score != null ? Number(candidate.model_selection_score).toFixed(3) : 'N/A'}</div>
+                            <span className="text-[10px] text-[var(--color-text-muted)]">
+                              Candidate Score
+                            </span>
+                            <div className="font-bold text-[var(--color-text-muted)] mt-0.5">
+                              {candidate.model_selection_score != null
+                                ? Number(candidate.model_selection_score).toFixed(3)
+                                : 'N/A'}
+                            </div>
                           </div>
                           <div className="p-2.5 bg-[var(--color-surface-card)] rounded-xl border border-[var(--color-border)]">
-                            <span className="text-[10px] text-[var(--color-text-muted)]">Winner Score</span>
-                            <div className="font-bold text-[var(--color-accent)] mt-0.5">{winningModel?.model_selection_score != null ? Number(winningModel.model_selection_score).toFixed(3) : 'N/A'}</div>
+                            <span className="text-[10px] text-[var(--color-text-muted)]">
+                              Winner Score
+                            </span>
+                            <div className="font-bold text-[var(--color-accent)] mt-0.5">
+                              {winningModel?.model_selection_score != null
+                                ? Number(winningModel.model_selection_score).toFixed(3)
+                                : 'N/A'}
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -687,15 +771,21 @@ export const DiagnosticsStage: React.FC = () => {
               <div className="flex items-center justify-between">
                 <h3 className="text-xs font-bold text-[var(--color-text-muted)] uppercase tracking-wider flex items-center space-x-2">
                   <Sparkles className="w-4 h-4 text-[var(--color-accent)]" />
-                  <span>Automated Dataset & Model Health Recommendations ({recommendations.length})</span>
+                  <span>
+                    Automated Dataset & Model Health Recommendations ({recommendations.length})
+                  </span>
                 </h3>
               </div>
 
               {recommendations.length === 0 ? (
                 <div className="p-12 text-center bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl text-[var(--color-text-muted)] space-y-2 shadow-sm">
                   <CheckCircle2 className="w-8 h-8 text-emerald-400 mx-auto" />
-                  <p className="text-sm font-bold text-[var(--color-text)]">No active health warnings or recommendations</p>
-                  <p className="text-xs text-[var(--color-text-muted)]">Dataset and model metrics adhere to all quality heuristics.</p>
+                  <p className="text-sm font-bold text-[var(--color-text)]">
+                    No active health warnings or recommendations
+                  </p>
+                  <p className="text-xs text-[var(--color-text-muted)]">
+                    Dataset and model metrics adhere to all quality heuristics.
+                  </p>
                 </div>
               ) : (
                 <div className="space-y-3.5">
@@ -723,8 +813,8 @@ export const DiagnosticsStage: React.FC = () => {
                               rec.confidence_level === 'HIGH'
                                 ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
                                 : rec.confidence_level === 'MEDIUM'
-                                ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
-                                : 'bg-[var(--color-surface-hover)] text-[var(--color-text-muted)]'
+                                  ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                                  : 'bg-[var(--color-surface-hover)] text-[var(--color-text-muted)]'
                             }`}
                           >
                             {rec.confidence_level || 'HIGH'} Confidence
@@ -736,8 +826,12 @@ export const DiagnosticsStage: React.FC = () => {
                       <div className="p-3 bg-[var(--color-surface-card)] rounded-xl border border-[var(--color-border)] text-xs text-[var(--color-text)] flex items-start space-x-2.5">
                         <ArrowRight className="w-4 h-4 text-[var(--color-accent)] shrink-0 mt-0.5" />
                         <div>
-                          <span className="font-bold text-[var(--color-accent)]">Recommended Action: </span>
-                          <span className="text-[var(--color-text-muted)]">{rec.recommended_action}</span>
+                          <span className="font-bold text-[var(--color-accent)]">
+                            Recommended Action:{' '}
+                          </span>
+                          <span className="text-[var(--color-text-muted)]">
+                            {rec.recommended_action}
+                          </span>
                         </div>
                       </div>
 

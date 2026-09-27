@@ -17,7 +17,18 @@ import {
 } from './training';
 import { EmptyState } from './feedback/EmptyState';
 import { ErrorState } from './feedback/ErrorState';
-import { ShieldCheck, CheckCircle2, Layers, AlertTriangle, Cpu, Activity, ArrowRight, Sparkles, Trophy, Play } from 'lucide-react';
+import {
+  ShieldCheck,
+  CheckCircle2,
+  Layers,
+  AlertTriangle,
+  Cpu,
+  Activity,
+  ArrowRight,
+  Sparkles,
+  Trophy,
+  Play,
+} from 'lucide-react';
 
 interface ModelTrainingProps {
   projectId: string;
@@ -37,15 +48,17 @@ export const ModelTraining: React.FC<ModelTrainingProps> = ({
   const availableAlgs = isRegression
     ? REGRESSION_ALGORITHMS
     : isClassification
-    ? CLASSIFICATION_ALGORITHMS
-    : [];
+      ? CLASSIFICATION_ALGORITHMS
+      : [];
 
   const [selectedAlgorithms, setSelectedAlgorithms] = useState<string[]>(
     availableAlgs.map((a) => a.id)
   );
   const [folds, setFolds] = useState<number>(5);
   const [seed, setSeed] = useState<string>('');
-  const [selectionMetric, setSelectionMetric] = useState<string>(isRegression ? 'rmse' : 'f1_macro');
+  const [selectionMetric, setSelectionMetric] = useState<string>(
+    isRegression ? 'rmse' : 'f1_macro'
+  );
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
   const [successMsg, setSuccessMsg] = useState<string>('');
@@ -192,7 +205,9 @@ export const ModelTraining: React.FC<ModelTrainingProps> = ({
     try {
       setRerunningDiagnostic(true);
       const res = await experimentApi.diagnosticRerun(activeExperiment.id);
-      setSuccessMsg(res.data.message || 'Diagnostic rerun completed. Stored as TEST_REUSED_DIAGNOSTIC.');
+      setSuccessMsg(
+        res.data.message || 'Diagnostic rerun completed. Stored as TEST_REUSED_DIAGNOSTIC.'
+      );
       await loadLeaderboardData(activeExperiment.id);
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Diagnostic rerun failed');
@@ -259,16 +274,13 @@ export const ModelTraining: React.FC<ModelTrainingProps> = ({
               Select ML Task Type
             </h2>
             <p className="text-xs sm:text-sm text-[var(--color-text-muted)] leading-relaxed">
-              Confirm your project's modeling objective below. This customizes algorithm selection, loss functions, and evaluation metrics across cross-validation folds.
+              Confirm your project's modeling objective below. This customizes algorithm selection,
+              loss functions, and evaluation metrics across cross-validation folds.
             </p>
           </div>
 
           {error && (
-            <ErrorState
-              title="Configuration Error"
-              message={error}
-              onRetry={() => setError('')}
-            />
+            <ErrorState title="Configuration Error" message={error} onRetry={() => setError('')} />
           )}
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
@@ -293,17 +305,23 @@ export const ModelTraining: React.FC<ModelTrainingProps> = ({
                     </span>
                   </div>
                   <p className="text-xs text-[var(--color-text-muted)] mt-1.5 leading-relaxed">
-                    Predict categorical labels, churn states, binary outcomes, or multi-class decisions.
+                    Predict categorical labels, churn states, binary outcomes, or multi-class
+                    decisions.
                   </p>
                 </div>
                 <div className="text-[11px] text-[var(--color-text-muted)] space-y-1 pt-1 border-t border-[var(--color-border)]/50">
                   <div className="flex items-center space-x-1.5">
                     <span className="w-1.5 h-1.5 rounded-full bg-indigo-400" />
-                    <span><strong>Algorithms:</strong> Logistic Regression, Random Forest, Gradient Boosting</span>
+                    <span>
+                      <strong>Algorithms:</strong> Logistic Regression, Random Forest, Gradient
+                      Boosting
+                    </span>
                   </div>
                   <div className="flex items-center space-x-1.5">
                     <span className="w-1.5 h-1.5 rounded-full bg-indigo-400" />
-                    <span><strong>Metrics:</strong> Macro-F1, ROC-AUC, Precision, Recall, Accuracy</span>
+                    <span>
+                      <strong>Metrics:</strong> Macro-F1, ROC-AUC, Precision, Recall, Accuracy
+                    </span>
                   </div>
                 </div>
               </div>
@@ -335,17 +353,23 @@ export const ModelTraining: React.FC<ModelTrainingProps> = ({
                     </span>
                   </div>
                   <p className="text-xs text-[var(--color-text-muted)] mt-1.5 leading-relaxed">
-                    Predict continuous numerical quantities, prices, target metrics, or financial values.
+                    Predict continuous numerical quantities, prices, target metrics, or financial
+                    values.
                   </p>
                 </div>
                 <div className="text-[11px] text-[var(--color-text-muted)] space-y-1 pt-1 border-t border-[var(--color-border)]/50">
                   <div className="flex items-center space-x-1.5">
                     <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-                    <span><strong>Algorithms:</strong> Linear Regression, Ridge, Random Forest, Gradient Boosting</span>
+                    <span>
+                      <strong>Algorithms:</strong> Linear Regression, Ridge, Random Forest, Gradient
+                      Boosting
+                    </span>
                   </div>
                   <div className="flex items-center space-x-1.5">
                     <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-                    <span><strong>Metrics:</strong> RMSE, MAE, R², Mean Squared Error</span>
+                    <span>
+                      <strong>Metrics:</strong> RMSE, MAE, R², Mean Squared Error
+                    </span>
                   </div>
                 </div>
               </div>
@@ -369,9 +393,13 @@ export const ModelTraining: React.FC<ModelTrainingProps> = ({
       <div className="p-4 rounded-2xl bg-[var(--color-accent-soft)] border border-[var(--color-accent-border)] text-xs text-[var(--color-text)] flex items-start space-x-3 shadow-sm">
         <ShieldCheck className="w-4 h-4 text-[var(--color-accent)] shrink-0 mt-0.5" />
         <div>
-          <strong className="font-bold text-[var(--color-text)]">Leakage-Safe Protocol & Locked Test Boundary: </strong>
+          <strong className="font-bold text-[var(--color-text)]">
+            Leakage-Safe Protocol & Locked Test Boundary:{' '}
+          </strong>
           <span className="text-[var(--color-text-muted)]">
-            Inner CV evaluation drives model ranking by primary metric. Upon finalization, the winning model is refit on full Development data and evaluated exactly ONCE against the Locked Test partition.
+            Inner CV evaluation drives model ranking by primary metric. Upon finalization, the
+            winning model is refit on full Development data and evaluated exactly ONCE against the
+            Locked Test partition.
           </span>
         </div>
       </div>
@@ -479,7 +507,10 @@ export const ModelTraining: React.FC<ModelTrainingProps> = ({
                   <div className="text-sm font-mono font-bold text-indigo-400">
                     {selectedAlgorithms.length} Selected
                   </div>
-                  <span className="text-[10px] text-[var(--color-text-muted)] block truncate" title={selectedAlgorithms.join(', ')}>
+                  <span
+                    className="text-[10px] text-[var(--color-text-muted)] block truncate"
+                    title={selectedAlgorithms.join(', ')}
+                  >
                     {selectedAlgorithms.join(', ')}
                   </span>
                 </div>
@@ -493,16 +524,31 @@ export const ModelTraining: React.FC<ModelTrainingProps> = ({
                 </h4>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs text-[var(--color-text-muted)]">
                   <div className="flex items-start space-x-2">
-                    <span className="w-5 h-5 rounded-full bg-[var(--color-surface-hover)] border border-[var(--color-border)] text-[var(--color-text)] font-mono text-[10px] font-bold flex items-center justify-center shrink-0 mt-0.5">1</span>
-                    <span><strong>CV Fitting:</strong> Trains all selected estimators across {folds} fold splits with strict isolation.</span>
+                    <span className="w-5 h-5 rounded-full bg-[var(--color-surface-hover)] border border-[var(--color-border)] text-[var(--color-text)] font-mono text-[10px] font-bold flex items-center justify-center shrink-0 mt-0.5">
+                      1
+                    </span>
+                    <span>
+                      <strong>CV Fitting:</strong> Trains all selected estimators across {folds}{' '}
+                      fold splits with strict isolation.
+                    </span>
                   </div>
                   <div className="flex items-start space-x-2">
-                    <span className="w-5 h-5 rounded-full bg-[var(--color-surface-hover)] border border-[var(--color-border)] text-[var(--color-text)] font-mono text-[10px] font-bold flex items-center justify-center shrink-0 mt-0.5">2</span>
-                    <span><strong>Gap Diagnostics:</strong> Measures overfit ratios, signal quality, and train vs test deviation.</span>
+                    <span className="w-5 h-5 rounded-full bg-[var(--color-surface-hover)] border border-[var(--color-border)] text-[var(--color-text)] font-mono text-[10px] font-bold flex items-center justify-center shrink-0 mt-0.5">
+                      2
+                    </span>
+                    <span>
+                      <strong>Gap Diagnostics:</strong> Measures overfit ratios, signal quality, and
+                      train vs test deviation.
+                    </span>
                   </div>
                   <div className="flex items-start space-x-2">
-                    <span className="w-5 h-5 rounded-full bg-[var(--color-surface-hover)] border border-[var(--color-border)] text-[var(--color-text)] font-mono text-[10px] font-bold flex items-center justify-center shrink-0 mt-0.5">3</span>
-                    <span><strong>Champion Promotion:</strong> Crowns top-performing model and generates cryptographic passport.</span>
+                    <span className="w-5 h-5 rounded-full bg-[var(--color-surface-hover)] border border-[var(--color-border)] text-[var(--color-text)] font-mono text-[10px] font-bold flex items-center justify-center shrink-0 mt-0.5">
+                      3
+                    </span>
+                    <span>
+                      <strong>Champion Promotion:</strong> Crowns top-performing model and generates
+                      cryptographic passport.
+                    </span>
                   </div>
                 </div>
               </div>
@@ -599,7 +645,10 @@ export const ModelTraining: React.FC<ModelTrainingProps> = ({
           <ExplainabilityViewer
             modelId={selectedExplainModel.id}
             algorithmName={selectedExplainModel.algorithm_name}
-            isWinner={selectedExplainModel.is_winner || activeExperiment?.selected_model_id === selectedExplainModel.id}
+            isWinner={
+              selectedExplainModel.is_winner ||
+              activeExperiment?.selected_model_id === selectedExplainModel.id
+            }
             hasArtifact={Boolean(selectedExplainModel.artifact_path)}
             onClose={() => {
               setExplainModalOpen(false);

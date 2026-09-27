@@ -54,7 +54,8 @@ export const WinnerCalloutCard: React.FC<WinnerCalloutCardProps> = ({
             <span>
               CV Mean {leaderboard.selection_metric.toUpperCase()}:{' '}
               <strong className="text-[var(--color-text)] font-mono">
-                {winningModel.primary_metric_value !== null && winningModel.primary_metric_value !== undefined
+                {winningModel.primary_metric_value !== null &&
+                winningModel.primary_metric_value !== undefined
                   ? Number(winningModel.primary_metric_value).toFixed(5)
                   : 'N/A'}
               </strong>
@@ -64,17 +65,18 @@ export const WinnerCalloutCard: React.FC<WinnerCalloutCardProps> = ({
               <span>Fit:</span>
               <FitDiagnosisBadge diagnosis={winningModel.fit_diagnosis} />
             </div>
-            {winningModel.decision_threshold !== null && winningModel.decision_threshold !== undefined && (
-              <>
-                <span>•</span>
-                <span
-                  className="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-[var(--color-accent-soft)] text-[var(--color-accent)] border border-[var(--color-accent-border)]"
-                  title="Binary classification decision threshold optimized on out-of-fold predictions"
-                >
-                  <span>τ = {Number(winningModel.decision_threshold).toFixed(4)}</span>
-                </span>
-              </>
-            )}
+            {winningModel.decision_threshold !== null &&
+              winningModel.decision_threshold !== undefined && (
+                <>
+                  <span>•</span>
+                  <span
+                    className="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-[var(--color-accent-soft)] text-[var(--color-accent)] border border-[var(--color-accent-border)]"
+                    title="Binary classification decision threshold optimized on out-of-fold predictions"
+                  >
+                    <span>τ = {Number(winningModel.decision_threshold).toFixed(4)}</span>
+                  </span>
+                </>
+              )}
           </div>
         </div>
 
@@ -87,7 +89,8 @@ export const WinnerCalloutCard: React.FC<WinnerCalloutCardProps> = ({
           {leaderboard.locked_test_consumed ? (
             <div className="space-y-1">
               <div className="text-lg font-extrabold text-emerald-400 font-mono">
-                {winningModel.locked_test_score !== null && winningModel.locked_test_score !== undefined
+                {winningModel.locked_test_score !== null &&
+                winningModel.locked_test_score !== undefined
                   ? Number(winningModel.locked_test_score).toFixed(5)
                   : 'Evaluated'}
               </div>
@@ -97,9 +100,7 @@ export const WinnerCalloutCard: React.FC<WinnerCalloutCardProps> = ({
               </div>
             </div>
           ) : (
-            <div className="text-xs text-amber-400 font-semibold">
-              Pending final refit
-            </div>
+            <div className="text-xs text-amber-400 font-semibold">Pending final refit</div>
           )}
 
           {leaderboard.locked_test_consumed && (
@@ -110,7 +111,9 @@ export const WinnerCalloutCard: React.FC<WinnerCalloutCardProps> = ({
                 className="text-[10px] text-[var(--color-accent)] hover:underline transition-colors cursor-pointer"
                 title="Rerun locked test data for diagnostic/debugging only. Labeled as TEST_REUSED_DIAGNOSTIC."
               >
-                {rerunningDiagnostic ? 'Running Diagnostic...' : 'Diagnostic Rerun (Non-authoritative)'}
+                {rerunningDiagnostic
+                  ? 'Running Diagnostic...'
+                  : 'Diagnostic Rerun (Non-authoritative)'}
               </button>
             </div>
           )}

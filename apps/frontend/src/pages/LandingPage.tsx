@@ -41,7 +41,9 @@ export const LandingPage: React.FC = () => {
 
   // Navigation & Interactive Stage States
   const [activeStage, setActiveStage] = useState<number>(0);
-  const [selectedTaskType, setSelectedTaskType] = useState<'CLASSIFICATION' | 'REGRESSION'>('CLASSIFICATION');
+  const [selectedTaskType, setSelectedTaskType] = useState<'CLASSIFICATION' | 'REGRESSION'>(
+    'CLASSIFICATION'
+  );
   const [showRuleTrace, setShowRuleTrace] = useState<boolean>(false);
 
   // Auth Modal State
@@ -49,7 +51,9 @@ export const LandingPage: React.FC = () => {
   const [isRegister, setIsRegister] = useState<boolean>(false);
   const [authFullName, setAuthFullName] = useState<string>('');
   const [authEmail, setAuthEmail] = useState<string>(import.meta.env.DEV ? 'dev@mlstudio.io' : '');
-  const [authPassword, setAuthPassword] = useState<string>(import.meta.env.DEV ? 'password123' : '');
+  const [authPassword, setAuthPassword] = useState<string>(
+    import.meta.env.DEV ? 'password123' : ''
+  );
   const [authError, setAuthError] = useState<string>('');
   const [authInfoMessage, setAuthInfoMessage] = useState<string>('');
   const [authSubmitting, setAuthSubmitting] = useState<boolean>(false);
@@ -156,9 +160,11 @@ export const LandingPage: React.FC = () => {
       title: 'Dataset',
       subtitle: 'Ingestion & Partition Seal',
       icon: Database,
-      explanation: 'Ingest tabular CSV/Parquet and cryptographically seal the locked test partition before profiling runs.',
+      explanation:
+        'Ingest tabular CSV/Parquet and cryptographically seal the locked test partition before profiling runs.',
       metric: 'SHA-256 Cryptographic Hash',
-      detail: 'The test partition is isolated into a sealed storage container with read-only access. Zero test rows are ever loaded during EDA or feature tuning.',
+      detail:
+        'The test partition is isolated into a sealed storage container with read-only access. Zero test rows are ever loaded during EDA or feature tuning.',
       code: `split_summary = dataset_split_service.create_split(
     dataset_id=dataset.id,
     locked_test_pct=20,
@@ -171,9 +177,11 @@ export const LandingPage: React.FC = () => {
       title: 'Profile',
       subtitle: 'DQI & Task-Type Detection',
       icon: BarChart3,
-      explanation: 'Multi-factor Data Quality Index, Pearson correlation matrices, and automated task-type inference.',
+      explanation:
+        'Multi-factor Data Quality Index, Pearson correlation matrices, and automated task-type inference.',
       metric: 'DQI: 94.8 / 100 Score',
-      detail: 'Assesses completeness, uniqueness, stability, and target association exclusively on the development partition.',
+      detail:
+        'Assesses completeness, uniqueness, stability, and target association exclusively on the development partition.',
       code: `profile = data_profiling_service.generate_report(dataset_id)
 # Detected Task: Classification (Binary)
 # Target Balance: 72% Class 0 / 28% Class 1`,
@@ -183,9 +191,11 @@ export const LandingPage: React.FC = () => {
       title: 'Prepare',
       subtitle: 'Leakage-Free Transformations',
       icon: Layers,
-      explanation: 'Imputation, scaling, and categorical encoding fitted strictly inside CV training folds.',
+      explanation:
+        'Imputation, scaling, and categorical encoding fitted strictly inside CV training folds.',
       metric: 'Zero-Contamination Pipelines',
-      detail: 'Imputers and scalers compute parameters only on training slices and apply them to validation slices to eliminate distribution leakage.',
+      detail:
+        'Imputers and scalers compute parameters only on training slices and apply them to validation slices to eliminate distribution leakage.',
       code: `transformer = ColumnTransformer([
     ('num', StandardScaler(), numeric_cols),
     ('cat', OneHotEncoder(drop='first'), cat_cols)
@@ -199,7 +209,8 @@ export const LandingPage: React.FC = () => {
       icon: Sparkles,
       explanation: 'Select predictors via 4-technique ensemble without contaminating evaluation.',
       metric: '4-Selector Ensemble',
-      detail: 'Ensemble of Absolute Correlation, Lasso L1, Random Forest Importance, and Permutation Importance aggregated across K folds.',
+      detail:
+        'Ensemble of Absolute Correlation, Lasso L1, Random Forest Importance, and Permutation Importance aggregated across K folds.',
       code: `scores = feature_selection_service.run_cv_feature_selection(
     project_id=project.id,
     n_splits=5,
@@ -214,7 +225,8 @@ export const LandingPage: React.FC = () => {
       icon: Cpu,
       explanation: 'Compare standardized tabular models using controlled cross-validation.',
       metric: 'Standardized Leaderboard',
-      detail: 'Automated hyperparameter exploration for Logistic Regression, Ridge, Random Forest, and LightGBM with identical fold splits.',
+      detail:
+        'Automated hyperparameter exploration for Logistic Regression, Ridge, Random Forest, and LightGBM with identical fold splits.',
       code: `experiment = experiment_service.train_model(
     project_id=project.id,
     algorithm="LIGHTGBM",
@@ -229,7 +241,8 @@ export const LandingPage: React.FC = () => {
       icon: Eye,
       explanation: 'Understand model behavior with feature-level SHAP explanations.',
       metric: 'Exact TreeSHAP Attribution',
-      detail: 'Decompose any single prediction into positive and negative feature contributions with mathematical consistency.',
+      detail:
+        'Decompose any single prediction into positive and negative feature contributions with mathematical consistency.',
       code: `shap_values = explainability_service.get_local_shap(
     model_id=model.id,
     input_row=sample_record
@@ -243,7 +256,8 @@ export const LandingPage: React.FC = () => {
       icon: ShieldCheck,
       explanation: 'Apply eligibility criteria, threshold policies, and deployment controls.',
       metric: 'Dual-Key Approval Gate',
-      detail: 'Production promotion requires independent verification by Data Scientist and Risk/Compliance Officer with immutable audit trail.',
+      detail:
+        'Production promotion requires independent verification by Data Scientist and Risk/Compliance Officer with immutable audit trail.',
       code: `gate_decision = governance_service.evaluate_gates(
     model_id=model.id,
     test_performance=test_metrics
@@ -257,7 +271,8 @@ export const LandingPage: React.FC = () => {
       icon: Send,
       explanation: 'Serve real-time inference with decoupled latency profiles and drift alerts.',
       metric: '< 12ms P99 Latency',
-      detail: 'Low-latency REST inference with background input payload logging, PSI data drift monitoring, and automatic fallback.',
+      detail:
+        'Low-latency REST inference with background input payload logging, PSI data drift monitoring, and automatic fallback.',
       code: `POST /api/v1/deployments/{id}/predict
 { "account_age": 42, "credit_score": 750 }
 # Response: { "prediction": 0, "latency_ms": 6.8 }`,
@@ -331,7 +346,10 @@ export const LandingPage: React.FC = () => {
       </header>
 
       {/* 2. Hero Section */}
-      <section id="platform" className="pt-16 pb-20 md:pt-24 md:pb-28 px-6 max-w-7xl mx-auto w-full">
+      <section
+        id="platform"
+        className="pt-16 pb-20 md:pt-24 md:pb-28 px-6 max-w-7xl mx-auto w-full"
+      >
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center">
           {/* Left Column: Narrative */}
           <div className="lg:col-span-7 space-y-6">
@@ -358,9 +376,10 @@ export const LandingPage: React.FC = () => {
 
             {/* Supporting Text */}
             <p className="text-sm sm:text-base text-[var(--color-text-muted)] max-w-xl leading-relaxed">
-              We hide the test set before you ever see the data, and we only let you look at it one time.
-              A tabular machine learning platform designed around leakage prevention, mathematical reproducibility,
-              inspectable explanations, and governed dual-signoff deployment.
+              We hide the test set before you ever see the data, and we only let you look at it one
+              time. A tabular machine learning platform designed around leakage prevention,
+              mathematical reproducibility, inspectable explanations, and governed dual-signoff
+              deployment.
             </p>
 
             {/* Actions */}
@@ -457,16 +476,26 @@ export const LandingPage: React.FC = () => {
 
               <div className="grid grid-cols-3 gap-2.5 text-center text-xs">
                 <div className="p-2.5 rounded-2xl bg-[var(--color-surface-hover)] border border-[var(--color-border)]">
-                  <div className="text-[10px] text-[var(--color-text-muted)] uppercase font-semibold">F1 Macro</div>
-                  <div className="font-mono font-black text-sm text-[var(--color-accent)] mt-0.5">0.9420</div>
+                  <div className="text-[10px] text-[var(--color-text-muted)] uppercase font-semibold">
+                    F1 Macro
+                  </div>
+                  <div className="font-mono font-black text-sm text-[var(--color-accent)] mt-0.5">
+                    0.9420
+                  </div>
                 </div>
                 <div className="p-2.5 rounded-2xl bg-[var(--color-surface-hover)] border border-[var(--color-border)]">
-                  <div className="text-[10px] text-[var(--color-text-muted)] uppercase font-semibold">Test Leakage</div>
+                  <div className="text-[10px] text-[var(--color-text-muted)] uppercase font-semibold">
+                    Test Leakage
+                  </div>
                   <div className="font-mono font-black text-sm text-emerald-400 mt-0.5">0.00%</div>
                 </div>
                 <div className="p-2.5 rounded-2xl bg-[var(--color-surface-hover)] border border-[var(--color-border)]">
-                  <div className="text-[10px] text-[var(--color-text-muted)] uppercase font-semibold">P99 Latency</div>
-                  <div className="font-mono font-black text-sm text-[var(--color-text)] mt-0.5">8.4 ms</div>
+                  <div className="text-[10px] text-[var(--color-text-muted)] uppercase font-semibold">
+                    P99 Latency
+                  </div>
+                  <div className="font-mono font-black text-sm text-[var(--color-text)] mt-0.5">
+                    8.4 ms
+                  </div>
                 </div>
               </div>
             </div>
@@ -475,7 +504,10 @@ export const LandingPage: React.FC = () => {
       </section>
 
       {/* 3. ML Lifecycle Section */}
-      <section id="lifecycle" className="py-20 px-6 border-y border-[var(--color-border)] bg-[var(--color-surface)]">
+      <section
+        id="lifecycle"
+        className="py-20 px-6 border-y border-[var(--color-border)] bg-[var(--color-surface)]"
+      >
         <div className="max-w-7xl mx-auto space-y-12">
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
             <div>
@@ -486,7 +518,8 @@ export const LandingPage: React.FC = () => {
                 The Governed ML Lifecycle
               </h2>
               <p className="text-xs sm:text-sm text-[var(--color-text-muted)] mt-1.5 max-w-xl">
-                Every stage enforces cryptographic partition boundaries, cross-validation isolation, and verifiable evidence.
+                Every stage enforces cryptographic partition boundaries, cross-validation isolation,
+                and verifiable evidence.
               </p>
             </div>
 
@@ -523,7 +556,9 @@ export const LandingPage: React.FC = () => {
                     </span>
                     <span className="text-[10px] font-mono font-bold">0{idx + 1}</span>
                   </div>
-                  <div className={`text-xs font-bold ${isActive ? 'text-[var(--color-text)]' : 'text-[var(--color-text-muted)]'}`}>
+                  <div
+                    className={`text-xs font-bold ${isActive ? 'text-[var(--color-text)]' : 'text-[var(--color-text-muted)]'}`}
+                  >
                     {stage.title}
                   </div>
                   <div className="text-[10px] text-[var(--color-text-muted)] truncate mt-0.5">
@@ -607,7 +642,11 @@ export const LandingPage: React.FC = () => {
             </div>
 
             <p className="text-sm text-[var(--color-text-muted)] leading-relaxed">
-              Recommendations are generated from <strong className="text-[var(--color-text)]">explicit, deterministic, inspectable rules</strong> rather than black-box hidden model behavior.
+              Recommendations are generated from{' '}
+              <strong className="text-[var(--color-text)]">
+                explicit, deterministic, inspectable rules
+              </strong>{' '}
+              rather than black-box hidden model behavior.
             </p>
 
             <div className="space-y-3.5">
@@ -617,7 +656,8 @@ export const LandingPage: React.FC = () => {
                 </span>
                 <p className="text-xs text-[var(--color-text-muted)]">
                   <strong className="text-[var(--color-text)]">Deterministic Rules: </strong>
-                  Thresholds, missing rate criteria, and class balance ratios are codified in open rule trees.
+                  Thresholds, missing rate criteria, and class balance ratios are codified in open
+                  rule trees.
                 </p>
               </div>
 
@@ -627,7 +667,8 @@ export const LandingPage: React.FC = () => {
                 </span>
                 <p className="text-xs text-[var(--color-text-muted)]">
                   <strong className="text-[var(--color-text)]">Target-Leakage Heuristics: </strong>
-                  Detects suspicious $R^2 \ge 0.99$ or perfect single-feature separation before model training begins.
+                  Detects suspicious $R^2 \ge 0.99$ or perfect single-feature separation before
+                  model training begins.
                 </p>
               </div>
 
@@ -637,7 +678,8 @@ export const LandingPage: React.FC = () => {
                 </span>
                 <p className="text-xs text-[var(--color-text-muted)]">
                   <strong className="text-[var(--color-text)]">Human Override: </strong>
-                  Accept, reject, or customize any metric, algorithm, or preprocessing suggestion at any step.
+                  Accept, reject, or customize any metric, algorithm, or preprocessing suggestion at
+                  any step.
                 </p>
               </div>
             </div>
@@ -710,30 +752,44 @@ export const LandingPage: React.FC = () => {
                     <>
                       <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center space-x-2">
                         <CheckCircle2 className="w-4 h-4 shrink-0" />
-                        <span>✓ Missing values: 3.4% in numeric columns (Iterative Imputation suggested)</span>
+                        <span>
+                          ✓ Missing values: 3.4% in numeric columns (Iterative Imputation suggested)
+                        </span>
                       </div>
                       <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center space-x-2">
                         <CheckCircle2 className="w-4 h-4 shrink-0" />
-                        <span>✓ Class imbalance: 72% Class 0 / 28% Class 1 (Stratified K-Fold applied)</span>
+                        <span>
+                          ✓ Class imbalance: 72% Class 0 / 28% Class 1 (Stratified K-Fold applied)
+                        </span>
                       </div>
                       <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center space-x-2">
                         <AlertTriangle className="w-4 h-4 shrink-0" />
-                        <span>⚠ Potential target leakage: Column 'account_id' excluded from feature candidates</span>
+                        <span>
+                          ⚠ Potential target leakage: Column 'account_id' excluded from feature
+                          candidates
+                        </span>
                       </div>
                     </>
                   ) : (
                     <>
                       <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center space-x-2">
                         <CheckCircle2 className="w-4 h-4 shrink-0" />
-                        <span>✓ Target distribution: Continuous float with positive skewness (+1.42)</span>
+                        <span>
+                          ✓ Target distribution: Continuous float with positive skewness (+1.42)
+                        </span>
                       </div>
                       <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center space-x-2">
                         <CheckCircle2 className="w-4 h-4 shrink-0" />
-                        <span>✓ Missing values: 2.8% in continuous features (KNN Imputation suggested)</span>
+                        <span>
+                          ✓ Missing values: 2.8% in continuous features (KNN Imputation suggested)
+                        </span>
                       </div>
                       <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center space-x-2">
                         <AlertTriangle className="w-4 h-4 shrink-0" />
-                        <span>⚠ Outlier detection: 14 high-leverage outliers flagged (&gt; 3.0 IQR boundary)</span>
+                        <span>
+                          ⚠ Outlier detection: 14 high-leverage outliers flagged (&gt; 3.0 IQR
+                          boundary)
+                        </span>
                       </div>
                     </>
                   )}
@@ -784,22 +840,42 @@ export const LandingPage: React.FC = () => {
                   <div className="text-[#F37338] font-bold text-xs pb-1.5 border-b border-[#333230] flex items-center justify-between">
                     <span>Rule Execution Trace</span>
                     <span className="text-[10px] text-[#A8A4A0]">
-                      {selectedTaskType === 'CLASSIFICATION' ? 'RuleID: REC-CLF-042' : 'RuleID: REC-REG-019'}
+                      {selectedTaskType === 'CLASSIFICATION'
+                        ? 'RuleID: REC-CLF-042'
+                        : 'RuleID: REC-REG-019'}
                     </span>
                   </div>
                   {selectedTaskType === 'CLASSIFICATION' ? (
                     <>
-                      <div className="text-[#E3DFDC] pt-1">→ Condition: target_cardinality == 2 & class_ratio &lt; 0.30</div>
-                      <div className="text-[#E3DFDC]">→ Action: Set primary_metric = "F1_MACRO", cv = "STRATIFIED_K_FOLD"</div>
-                      <div className="text-[#E3DFDC]">→ Heuristic: High multicollinearity detected (corr &gt; 0.85). Applied L1 Lasso selector.</div>
-                      <div className="text-emerald-400 font-semibold pt-1">✓ Rule fired deterministically with zero black-box bias.</div>
+                      <div className="text-[#E3DFDC] pt-1">
+                        → Condition: target_cardinality == 2 & class_ratio &lt; 0.30
+                      </div>
+                      <div className="text-[#E3DFDC]">
+                        → Action: Set primary_metric = "F1_MACRO", cv = "STRATIFIED_K_FOLD"
+                      </div>
+                      <div className="text-[#E3DFDC]">
+                        → Heuristic: High multicollinearity detected (corr &gt; 0.85). Applied L1
+                        Lasso selector.
+                      </div>
+                      <div className="text-emerald-400 font-semibold pt-1">
+                        ✓ Rule fired deterministically with zero black-box bias.
+                      </div>
                     </>
                   ) : (
                     <>
-                      <div className="text-[#E3DFDC] pt-1">→ Condition: target_dtype == "float64" & target_skewness &gt; 1.0</div>
-                      <div className="text-[#E3DFDC]">→ Action: Set primary_metric = "RMSE_MAE", cv = "K_FOLD", loss = "HUBER"</div>
-                      <div className="text-[#E3DFDC]">→ Heuristic: Non-linear continuous interactions detected. Prioritized tree-based regressors.</div>
-                      <div className="text-emerald-400 font-semibold pt-1">✓ Rule fired deterministically with zero black-box bias.</div>
+                      <div className="text-[#E3DFDC] pt-1">
+                        → Condition: target_dtype == "float64" & target_skewness &gt; 1.0
+                      </div>
+                      <div className="text-[#E3DFDC]">
+                        → Action: Set primary_metric = "RMSE_MAE", cv = "K_FOLD", loss = "HUBER"
+                      </div>
+                      <div className="text-[#E3DFDC]">
+                        → Heuristic: Non-linear continuous interactions detected. Prioritized
+                        tree-based regressors.
+                      </div>
+                      <div className="text-emerald-400 font-semibold pt-1">
+                        ✓ Rule fired deterministically with zero black-box bias.
+                      </div>
                     </>
                   )}
                 </div>
@@ -810,7 +886,10 @@ export const LandingPage: React.FC = () => {
       </section>
 
       {/* 5. Core Architectural Pillars */}
-      <section id="architecture" className="py-20 px-6 border-t border-[var(--color-border)] bg-[var(--color-surface)]">
+      <section
+        id="architecture"
+        className="py-20 px-6 border-t border-[var(--color-border)] bg-[var(--color-surface)]"
+      >
         <div className="max-w-7xl mx-auto space-y-12">
           <div className="text-center max-w-2xl mx-auto space-y-3">
             <div className="text-xs font-bold text-[var(--color-accent)] uppercase tracking-wider">
@@ -820,7 +899,8 @@ export const LandingPage: React.FC = () => {
               Reliable ML is harder. We built the controls.
             </h2>
             <p className="text-xs sm:text-sm text-[var(--color-text-muted)]">
-              ML is easy to train. ML Studio provides mathematical controls around the workflow that make the resulting evidence trustworthy.
+              ML is easy to train. ML Studio provides mathematical controls around the workflow that
+              make the resulting evidence trustworthy.
             </p>
           </div>
 
@@ -829,9 +909,12 @@ export const LandingPage: React.FC = () => {
               <span className="p-3 rounded-2xl bg-[var(--color-accent-soft)] text-[var(--color-accent)] inline-block">
                 <Lock className="w-6 h-6" />
               </span>
-              <h3 className="text-base font-bold text-[var(--color-text)]">Zero Leakage Boundary</h3>
+              <h3 className="text-base font-bold text-[var(--color-text)]">
+                Zero Leakage Boundary
+              </h3>
               <p className="text-xs text-[var(--color-text-muted)] leading-relaxed">
-                The locked test partition is sealed before any EDA, imputation, scaling, or feature selection runs. You can only evaluate the test set once at final gating.
+                The locked test partition is sealed before any EDA, imputation, scaling, or feature
+                selection runs. You can only evaluate the test set once at final gating.
               </p>
             </div>
 
@@ -839,9 +922,12 @@ export const LandingPage: React.FC = () => {
               <span className="p-3 rounded-2xl bg-emerald-500/10 text-emerald-400 inline-block">
                 <RotateCcw className="w-6 h-6" />
               </span>
-              <h3 className="text-base font-bold text-[var(--color-text)]">Deterministic Reproducibility</h3>
+              <h3 className="text-base font-bold text-[var(--color-text)]">
+                Deterministic Reproducibility
+              </h3>
               <p className="text-xs text-[var(--color-text-muted)] leading-relaxed">
-                Every split seed, hyperparameter configuration, data version, and software package is stamped into a cryptographic Model Passport for 100% replayability.
+                Every split seed, hyperparameter configuration, data version, and software package
+                is stamped into a cryptographic Model Passport for 100% replayability.
               </p>
             </div>
 
@@ -849,9 +935,12 @@ export const LandingPage: React.FC = () => {
               <span className="p-3 rounded-2xl bg-indigo-500/10 text-indigo-400 inline-block">
                 <Users className="w-6 h-6" />
               </span>
-              <h3 className="text-base font-bold text-[var(--color-text)]">Dual-Signoff Governance</h3>
+              <h3 className="text-base font-bold text-[var(--color-text)]">
+                Dual-Signoff Governance
+              </h3>
               <p className="text-xs text-[var(--color-text-muted)] leading-relaxed">
-                You cannot deploy a model without an independent review. Both the author and an independent compliance officer must sign off on gate thresholds.
+                You cannot deploy a model without an independent review. Both the author and an
+                independent compliance officer must sign off on gate thresholds.
               </p>
             </div>
           </div>
@@ -864,7 +953,8 @@ export const LandingPage: React.FC = () => {
           Ready to train machine learning models with real evidence?
         </h2>
         <p className="text-sm text-[var(--color-text-muted)] max-w-xl mx-auto">
-          Start ingesting tabular datasets, evaluating leak-free models, and producing cryptographic passports in minutes.
+          Start ingesting tabular datasets, evaluating leak-free models, and producing cryptographic
+          passports in minutes.
         </p>
         <div className="flex items-center justify-center space-x-4 pt-2">
           <Button
@@ -889,12 +979,24 @@ export const LandingPage: React.FC = () => {
           </div>
 
           <div className="flex flex-wrap items-center gap-6">
-            <a href="#platform" className="hover:text-[var(--color-text)] transition-colors">Platform</a>
-            <a href="#lifecycle" className="hover:text-[var(--color-text)] transition-colors">Lifecycle</a>
-            <a href="#recommendations" className="hover:text-[var(--color-text)] transition-colors">Recommendations</a>
-            <Link to="/legal" className="hover:text-[var(--color-text)] transition-colors">Legal Center</Link>
-            <Link to="/privacy" className="hover:text-[var(--color-text)] transition-colors">Privacy Policy</Link>
-            <Link to="/terms" className="hover:text-[var(--color-text)] transition-colors">Terms of Service</Link>
+            <a href="#platform" className="hover:text-[var(--color-text)] transition-colors">
+              Platform
+            </a>
+            <a href="#lifecycle" className="hover:text-[var(--color-text)] transition-colors">
+              Lifecycle
+            </a>
+            <a href="#recommendations" className="hover:text-[var(--color-text)] transition-colors">
+              Recommendations
+            </a>
+            <Link to="/legal" className="hover:text-[var(--color-text)] transition-colors">
+              Legal Center
+            </Link>
+            <Link to="/privacy" className="hover:text-[var(--color-text)] transition-colors">
+              Privacy Policy
+            </Link>
+            <Link to="/terms" className="hover:text-[var(--color-text)] transition-colors">
+              Terms of Service
+            </Link>
             <button
               type="button"
               onClick={() => openSignInModal(false)}
@@ -931,15 +1033,15 @@ export const LandingPage: React.FC = () => {
                 {is2FAPrompt
                   ? 'Two-Factor Email Verification'
                   : isRegister
-                  ? 'Create ML Studio Account'
-                  : 'Sign in to ML Studio'}
+                    ? 'Create ML Studio Account'
+                    : 'Sign in to ML Studio'}
               </h3>
               <p className="text-xs text-[var(--color-text-muted)]">
                 {is2FAPrompt
                   ? `Enter the 6-digit verification code sent to ${maskedEmail || 'your email'}. No QR code needed.`
                   : isRegister
-                  ? 'Register your account to access leakage-free tabular ML pipelines.'
-                  : 'Sign in to access your projects, models, and real-time inference deployments.'}
+                    ? 'Register your account to access leakage-free tabular ML pipelines.'
+                    : 'Sign in to access your projects, models, and real-time inference deployments.'}
               </p>
             </div>
 
@@ -987,8 +1089,8 @@ export const LandingPage: React.FC = () => {
                         {resendCooldown > 0
                           ? `Resend code in ${resendCooldown}s`
                           : resending
-                          ? 'Sending fresh OTP...'
-                          : 'Resend Verification Code to Email'}
+                            ? 'Sending fresh OTP...'
+                            : 'Resend Verification Code to Email'}
                       </span>
                     </button>
 
@@ -1012,7 +1114,9 @@ export const LandingPage: React.FC = () => {
                 <>
                   {isRegister && (
                     <div className="space-y-1.5">
-                      <label className="text-xs font-bold text-[var(--color-text)]">Full Name</label>
+                      <label className="text-xs font-bold text-[var(--color-text)]">
+                        Full Name
+                      </label>
                       <input
                         type="text"
                         required
@@ -1025,7 +1129,9 @@ export const LandingPage: React.FC = () => {
                   )}
 
                   <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-[var(--color-text)]">Email Address</label>
+                    <label className="text-xs font-bold text-[var(--color-text)]">
+                      Email Address
+                    </label>
                     <div className="relative">
                       <Mail className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
                       <input
@@ -1065,7 +1171,13 @@ export const LandingPage: React.FC = () => {
                 isLoading={authSubmitting}
                 className="w-full rounded-full font-bold shadow-md text-xs py-2.5 mt-2"
               >
-                <span>{is2FAPrompt ? 'Verify and Enter Dashboard' : isRegister ? 'Create Account & Enter' : 'Sign In to Dashboard'}</span>
+                <span>
+                  {is2FAPrompt
+                    ? 'Verify and Enter Dashboard'
+                    : isRegister
+                      ? 'Create Account & Enter'
+                      : 'Sign In to Dashboard'}
+                </span>
                 <ArrowRight className="w-4 h-4 ml-1.5" />
               </Button>
             </form>

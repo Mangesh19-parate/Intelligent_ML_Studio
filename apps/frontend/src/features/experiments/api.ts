@@ -18,12 +18,17 @@ export const experimentsApi = {
       deployment_threshold?: { metric: string; min_value: number };
     }
   ): Promise<ExperimentCreateResponse> => {
-    const res = await httpClient.post<ExperimentCreateResponse>(`/projects/${projectId}/experiments`, payload);
+    const res = await httpClient.post<ExperimentCreateResponse>(
+      `/projects/${projectId}/experiments`,
+      payload
+    );
     return res.data;
   },
 
   getExperiment: async (projectId: string, experimentId: string): Promise<Experiment> => {
-    const res = await httpClient.get<Experiment>(`/projects/${projectId}/experiments/${experimentId}`);
+    const res = await httpClient.get<Experiment>(
+      `/projects/${projectId}/experiments/${experimentId}`
+    );
     return res.data;
   },
 
@@ -38,17 +43,23 @@ export const experimentsApi = {
   },
 
   evaluateLockedTest: async (projectId: string, experimentId: string): Promise<Experiment> => {
-    const res = await httpClient.post<Experiment>(`/projects/${projectId}/experiments/${experimentId}/evaluate-locked-test`);
+    const res = await httpClient.post<Experiment>(
+      `/projects/${projectId}/experiments/${experimentId}/evaluate-locked-test`
+    );
     return res.data;
   },
 
   freezeExperiment: async (projectId: string, experimentId: string): Promise<Experiment> => {
-    const res = await httpClient.post<Experiment>(`/projects/${projectId}/experiments/${experimentId}/freeze`);
+    const res = await httpClient.post<Experiment>(
+      `/projects/${projectId}/experiments/${experimentId}/freeze`
+    );
     return res.data;
   },
 
   cancelExperiment: async (projectId: string, experimentId: string): Promise<Experiment> => {
-    const res = await httpClient.post<Experiment>(`/projects/${projectId}/experiments/${experimentId}/cancel`);
+    const res = await httpClient.post<Experiment>(
+      `/projects/${projectId}/experiments/${experimentId}/cancel`
+    );
     return res.data;
   },
 };

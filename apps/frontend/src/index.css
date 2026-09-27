@@ -4,52 +4,64 @@
 
 :root {
   /* Mastercard Light Theme: Putty-Cream Canvas + Signal Orange + Ink Black */
-  --color-bg: #F3F0EE;
-  --color-surface: #FCFBFA;
-  --color-surface-hover: #ECE8E5;
-  --color-surface-card: #FFFFFF;
-  --color-border: #E3DFDC;
-  --color-border-subtle: #ECE8E5;
+  --color-bg: #f3f0ee;
+  --color-surface: #fcfbfa;
+  --color-surface-hover: #ece8e5;
+  --color-surface-card: #ffffff;
+  --color-border: #e3dfdc;
+  --color-border-subtle: #ece8e5;
   --color-text: #141413;
   --color-text-muted: #696969;
-  --color-accent: #CF4500;
-  --color-accent-hover: #B83D00;
-  --color-accent-active: #9A3A0A;
-  --color-accent-soft: rgba(207, 69, 0, 0.10);
+  --color-accent: #cf4500;
+  --color-accent-hover: #b83d00;
+  --color-accent-active: #9a3a0a;
+  --color-accent-soft: rgba(207, 69, 0, 0.1);
   --color-card-shadow: 0 16px 36px rgba(20, 20, 19, 0.05), 0 2px 8px rgba(20, 20, 19, 0.03);
 }
 
 .dark {
   /* Mastercard Dark Theme: Warm Ink Black + Signal Orange */
   --color-bg: #141413;
-  --color-surface: #1E1E1C;
+  --color-surface: #1e1e1c;
   --color-surface-hover: #282825;
   --color-surface-card: #222220;
   --color-border: #333230;
-  --color-border-subtle: #3D3B38;
-  --color-text: #F3F0EE;
-  --color-text-muted: #A8A4A0;
-  --color-accent: #F37338;
-  --color-accent-hover: #CF4500;
-  --color-accent-active: #B83D00;
+  --color-border-subtle: #3d3b38;
+  --color-text: #f3f0ee;
+  --color-text-muted: #a8a4a0;
+  --color-accent: #f37338;
+  --color-accent-hover: #cf4500;
+  --color-accent-active: #b83d00;
   --color-accent-soft: rgba(243, 115, 56, 0.15);
   --color-card-shadow: 0 16px 36px rgba(0, 0, 0, 0.35);
 }
 
 body {
-  font-family: 'Sofia Sans', 'Plus Jakarta Sans', Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family:
+    'Sofia Sans',
+    'Plus Jakarta Sans',
+    Inter,
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    Roboto,
+    sans-serif;
   background-color: var(--color-bg);
   color: var(--color-text);
   letter-spacing: -0.015em;
 }
 
-h1, h2, h3 {
+h1,
+h2,
+h3 {
   font-family: 'Sofia Sans', 'Plus Jakarta Sans', sans-serif;
   letter-spacing: -0.02em;
   font-weight: 600;
 }
 
-code, pre, .font-mono {
+code,
+pre,
+.font-mono {
   font-family: 'JetBrains Mono', monospace;
 }
 
@@ -64,31 +76,39 @@ code, pre, .font-mono {
 /* Mastercard Stadium Pill Button */
 .mc-btn-primary {
   background-color: #141413;
-  color: #F3F0EE;
+  color: #f3f0ee;
   font-weight: 600;
   border-radius: 9999px;
   padding: 0.5rem 1.5rem;
-  box-shadow: 0 4px 12px rgba(20, 20, 19, 0.15), 0 1px 3px rgba(20, 20, 19, 0.08);
+  box-shadow:
+    0 4px 12px rgba(20, 20, 19, 0.15),
+    0 1px 3px rgba(20, 20, 19, 0.08);
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .mc-btn-primary:hover {
   background-color: #262627;
-  box-shadow: 0 6px 20px rgba(20, 20, 19, 0.25), 0 2px 6px rgba(20, 20, 19, 0.12);
+  box-shadow:
+    0 6px 20px rgba(20, 20, 19, 0.25),
+    0 2px 6px rgba(20, 20, 19, 0.12);
   transform: translateY(-1px);
 }
 
 .mc-btn-accent {
   background-color: var(--color-accent);
-  color: #FFFFFF;
+  color: #ffffff;
   font-weight: 600;
   border-radius: 9999px;
   padding: 0.5rem 1.5rem;
-  box-shadow: 0 4px 14px rgba(207, 69, 0, 0.30), 0 1px 3px rgba(207, 69, 0, 0.15);
+  box-shadow:
+    0 4px 14px rgba(207, 69, 0, 0.3),
+    0 1px 3px rgba(207, 69, 0, 0.15);
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .mc-btn-accent:hover {
   background-color: var(--color-accent-hover);
-  box-shadow: 0 6px 20px rgba(207, 69, 0, 0.45), 0 2px 6px rgba(207, 69, 0, 0.20);
+  box-shadow:
+    0 6px 20px rgba(207, 69, 0, 0.45),
+    0 2px 6px rgba(207, 69, 0, 0.2);
   transform: translateY(-1px);
 }
 
@@ -99,12 +119,16 @@ code, pre, .font-mono {
   font-weight: 600;
   border-radius: 9999px;
   padding: 0.5rem 1.25rem;
-  box-shadow: 0 2px 6px rgba(20, 20, 19, 0.06), 0 1px 2px rgba(20, 20, 19, 0.04);
+  box-shadow:
+    0 2px 6px rgba(20, 20, 19, 0.06),
+    0 1px 2px rgba(20, 20, 19, 0.04);
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .mc-btn-secondary:hover {
   background-color: var(--color-surface-hover);
-  box-shadow: 0 4px 12px rgba(20, 20, 19, 0.10), 0 1px 3px rgba(20, 20, 19, 0.06);
+  box-shadow:
+    0 4px 12px rgba(20, 20, 19, 0.1),
+    0 1px 3px rgba(20, 20, 19, 0.06);
 }
 
 /* Eyebrow Label with Signal Dot */

@@ -67,7 +67,9 @@ interface ComprehensiveProfilingReportProps {
   edaReport?: ComprehensiveEDAReport | null;
 }
 
-export const ComprehensiveProfilingReport: React.FC<ComprehensiveProfilingReportProps> = ({ edaReport }) => {
+export const ComprehensiveProfilingReport: React.FC<ComprehensiveProfilingReportProps> = ({
+  edaReport,
+}) => {
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [filterType, setFilterType] = useState<string>('ALL');
   const [expandedVar, setExpandedVar] = useState<string | null>(null);
@@ -95,7 +97,9 @@ export const ComprehensiveProfilingReport: React.FC<ComprehensiveProfilingReport
               <FileText className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-base font-bold text-[var(--color-text)]">Dataset Overview Summary</h2>
+              <h2 className="text-base font-bold text-[var(--color-text)]">
+                Dataset Overview Summary
+              </h2>
               <p className="text-xs text-[var(--color-text-muted)]">
                 Exhaustive structural statistics on the Development partition (The Sixth Invariant)
               </p>
@@ -213,7 +217,9 @@ export const ComprehensiveProfilingReport: React.FC<ComprehensiveProfilingReport
       <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl p-6 shadow-sm space-y-5">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[var(--color-border)]">
           <div>
-            <h3 className="text-base font-bold text-[var(--color-text)]">Detailed Variable Statistics</h3>
+            <h3 className="text-base font-bold text-[var(--color-text)]">
+              Detailed Variable Statistics
+            </h3>
             <p className="text-xs text-[var(--color-text-muted)]">
               Per-feature distributions, missingness, zero frequencies, and quantiles
             </p>
@@ -264,13 +270,15 @@ export const ComprehensiveProfilingReport: React.FC<ComprehensiveProfilingReport
                         v.type === 'Numeric'
                           ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20'
                           : v.type === 'Categorical'
-                          ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20'
-                          : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                            ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20'
+                            : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
                       }`}
                     >
                       {v.type}
                     </span>
-                    <span className="font-bold text-xs sm:text-sm text-[var(--color-text)]">{v.name}</span>
+                    <span className="font-bold text-xs sm:text-sm text-[var(--color-text)]">
+                      {v.name}
+                    </span>
                     {v.is_mixed && (
                       <span className="px-2 py-0.5 bg-amber-500/20 text-amber-600 text-[10px] font-bold rounded">
                         MIXED
@@ -280,10 +288,29 @@ export const ComprehensiveProfilingReport: React.FC<ComprehensiveProfilingReport
 
                   <div className="flex items-center space-x-6">
                     <div className="hidden sm:flex items-center space-x-4 text-xs text-[var(--color-text-muted)]">
-                      <span>Distinct: <strong className="text-[var(--color-text)]">{v.distinct_count} ({v.distinct_percentage}%)</strong></span>
-                      <span>Missing: <strong className={v.missing_count > 0 ? 'text-rose-500 font-bold' : 'text-[var(--color-text)]'}>{v.missing_count} ({v.missing_percentage}%)</strong></span>
+                      <span>
+                        Distinct:{' '}
+                        <strong className="text-[var(--color-text)]">
+                          {v.distinct_count} ({v.distinct_percentage}%)
+                        </strong>
+                      </span>
+                      <span>
+                        Missing:{' '}
+                        <strong
+                          className={
+                            v.missing_count > 0
+                              ? 'text-rose-500 font-bold'
+                              : 'text-[var(--color-text)]'
+                          }
+                        >
+                          {v.missing_count} ({v.missing_percentage}%)
+                        </strong>
+                      </span>
                       {v.type === 'Numeric' && (
-                        <span>Mean: <strong className="text-[var(--color-text)]">{v.mean ?? 'N/A'}</strong></span>
+                        <span>
+                          Mean:{' '}
+                          <strong className="text-[var(--color-text)]">{v.mean ?? 'N/A'}</strong>
+                        </span>
                       )}
                     </div>
                     {isExpanded ? (
@@ -300,35 +327,51 @@ export const ComprehensiveProfilingReport: React.FC<ComprehensiveProfilingReport
                     {v.type === 'Numeric' && (
                       <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3 text-xs">
                         <div className="p-2.5 bg-[var(--color-surface-hover)] rounded-lg">
-                          <span className="text-[10px] text-[var(--color-text-muted)] block">Min</span>
+                          <span className="text-[10px] text-[var(--color-text-muted)] block">
+                            Min
+                          </span>
                           <span className="font-bold text-[var(--color-text)]">{v.min}</span>
                         </div>
                         <div className="p-2.5 bg-[var(--color-surface-hover)] rounded-lg">
-                          <span className="text-[10px] text-[var(--color-text-muted)] block">Q25</span>
+                          <span className="text-[10px] text-[var(--color-text-muted)] block">
+                            Q25
+                          </span>
                           <span className="font-bold text-[var(--color-text)]">{v.q25}</span>
                         </div>
                         <div className="p-2.5 bg-[var(--color-surface-hover)] rounded-lg">
-                          <span className="text-[10px] text-[var(--color-text-muted)] block">Median</span>
+                          <span className="text-[10px] text-[var(--color-text-muted)] block">
+                            Median
+                          </span>
                           <span className="font-bold text-[var(--color-text)]">{v.median}</span>
                         </div>
                         <div className="p-2.5 bg-[var(--color-surface-hover)] rounded-lg">
-                          <span className="text-[10px] text-[var(--color-text-muted)] block">Q75</span>
+                          <span className="text-[10px] text-[var(--color-text-muted)] block">
+                            Q75
+                          </span>
                           <span className="font-bold text-[var(--color-text)]">{v.q75}</span>
                         </div>
                         <div className="p-2.5 bg-[var(--color-surface-hover)] rounded-lg">
-                          <span className="text-[10px] text-[var(--color-text-muted)] block">Max</span>
+                          <span className="text-[10px] text-[var(--color-text-muted)] block">
+                            Max
+                          </span>
                           <span className="font-bold text-[var(--color-text)]">{v.max}</span>
                         </div>
                         <div className="p-2.5 bg-[var(--color-surface-hover)] rounded-lg">
-                          <span className="text-[10px] text-[var(--color-text-muted)] block">Std Dev</span>
+                          <span className="text-[10px] text-[var(--color-text-muted)] block">
+                            Std Dev
+                          </span>
                           <span className="font-bold text-[var(--color-text)]">{v.std}</span>
                         </div>
                         <div className="p-2.5 bg-[var(--color-surface-hover)] rounded-lg">
-                          <span className="text-[10px] text-[var(--color-text-muted)] block">IQR</span>
+                          <span className="text-[10px] text-[var(--color-text-muted)] block">
+                            IQR
+                          </span>
                           <span className="font-bold text-[var(--color-text)]">{v.iqr}</span>
                         </div>
                         <div className="p-2.5 bg-[var(--color-surface-hover)] rounded-lg">
-                          <span className="text-[10px] text-[var(--color-text-muted)] block">Skewness</span>
+                          <span className="text-[10px] text-[var(--color-text-muted)] block">
+                            Skewness
+                          </span>
                           <span className="font-bold text-[var(--color-text)]">{v.skewness}</span>
                         </div>
                       </div>
@@ -345,7 +388,9 @@ export const ComprehensiveProfilingReport: React.FC<ComprehensiveProfilingReport
                               key={i}
                               className="p-2 bg-[var(--color-surface-hover)] border border-[var(--color-border)] rounded-lg text-xs"
                             >
-                              <div className="font-semibold text-[var(--color-text)] truncate">{cat.value || '(Empty)'}</div>
+                              <div className="font-semibold text-[var(--color-text)] truncate">
+                                {cat.value || '(Empty)'}
+                              </div>
                               <div className="text-[10px] text-[var(--color-text-muted)] flex justify-between mt-1">
                                 <span>{cat.count} rows</span>
                                 <span className="font-bold">{cat.percentage}%</span>

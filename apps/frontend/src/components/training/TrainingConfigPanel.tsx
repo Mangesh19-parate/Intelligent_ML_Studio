@@ -155,7 +155,9 @@ export const TrainingConfigPanel: React.FC<TrainingConfigPanelProps> = ({
         <div className="space-y-1.5">
           <label className="text-[11px] font-bold text-[var(--color-text-muted)] flex items-center justify-between">
             <span>Primary Selection Metric (Sort Basis)</span>
-            <span className="text-[10px] text-[var(--color-accent)] font-semibold">Authoritative</span>
+            <span className="text-[10px] text-[var(--color-accent)] font-semibold">
+              Authoritative
+            </span>
           </label>
           <select
             value={selectionMetric}
@@ -183,9 +185,7 @@ export const TrainingConfigPanel: React.FC<TrainingConfigPanelProps> = ({
         {/* Folds & Seed */}
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1.5">
-            <label className="text-[11px] font-bold text-[var(--color-text-muted)]">
-              CV Folds
-            </label>
+            <label className="text-[11px] font-bold text-[var(--color-text-muted)]">CV Folds</label>
             <select
               value={folds}
               onChange={(e) => onFoldsChange(Number(e.target.value))}

@@ -18,34 +18,56 @@ export const datasetsApi = {
     return res.data;
   },
 
-  getDatasetPreview: async (projectId: string, datasetId: string, limit: number = 50): Promise<Record<string, unknown>[]> => {
-    const res = await httpClient.get<Record<string, unknown>[]>(`/projects/${projectId}/datasets/${datasetId}/preview`, {
-      params: { limit },
-    });
+  getDatasetPreview: async (
+    projectId: string,
+    datasetId: string,
+    limit: number = 50
+  ): Promise<Record<string, unknown>[]> => {
+    const res = await httpClient.get<Record<string, unknown>[]>(
+      `/projects/${projectId}/datasets/${datasetId}/preview`,
+      {
+        params: { limit },
+      }
+    );
     return res.data;
   },
 
   getDatasetColumns: async (projectId: string, datasetId: string): Promise<DatasetColumn[]> => {
-    const res = await httpClient.get<DatasetColumn[]>(`/projects/${projectId}/datasets/${datasetId}/columns`);
+    const res = await httpClient.get<DatasetColumn[]>(
+      `/projects/${projectId}/datasets/${datasetId}/columns`
+    );
     return res.data;
   },
 
   getDatasetProfile: async (projectId: string, datasetId: string): Promise<DatasetProfile> => {
-    const res = await httpClient.get<DatasetProfile>(`/projects/${projectId}/datasets/${datasetId}/profile`);
+    const res = await httpClient.get<DatasetProfile>(
+      `/projects/${projectId}/datasets/${datasetId}/profile`
+    );
     return res.data;
   },
 
-  createDatasetSplit: async (projectId: string, datasetId: string, testRatio: number = 0.2, seed: number = 42, stratify: boolean = true): Promise<DatasetSplit> => {
-    const res = await httpClient.post<DatasetSplit>(`/projects/${projectId}/datasets/${datasetId}/splits`, {
-      test_ratio: testRatio,
-      seed,
-      stratify,
-    });
+  createDatasetSplit: async (
+    projectId: string,
+    datasetId: string,
+    testRatio: number = 0.2,
+    seed: number = 42,
+    stratify: boolean = true
+  ): Promise<DatasetSplit> => {
+    const res = await httpClient.post<DatasetSplit>(
+      `/projects/${projectId}/datasets/${datasetId}/splits`,
+      {
+        test_ratio: testRatio,
+        seed,
+        stratify,
+      }
+    );
     return res.data;
   },
 
   getDatasetSplits: async (projectId: string, datasetId: string): Promise<DatasetSplit[]> => {
-    const res = await httpClient.get<DatasetSplit[]>(`/projects/${projectId}/datasets/${datasetId}/splits`);
+    const res = await httpClient.get<DatasetSplit[]>(
+      `/projects/${projectId}/datasets/${datasetId}/splits`
+    );
     return res.data;
   },
 };

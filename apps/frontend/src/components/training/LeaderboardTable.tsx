@@ -100,13 +100,13 @@ export const LeaderboardTable: React.FC<LeaderboardTableProps> = ({
               <th className="px-4 py-3 bg-[var(--color-accent-soft)] text-[var(--color-accent)] font-bold border-x border-[var(--color-border)]">
                 Primary: {selectionMetric.toUpperCase()}
               </th>
-              <th className="px-4 py-3">
-                {isRegression ? 'Secondary: R²' : 'Secondary: ROC-AUC'}
-              </th>
+              <th className="px-4 py-3">{isRegression ? 'Secondary: R²' : 'Secondary: ROC-AUC'}</th>
               <th className="px-4 py-3">Fit Diagnosis</th>
               <th className="px-4 py-3 text-[var(--color-text-muted)]">
                 Composite Indicator
-                <div className="text-[9px] lowercase font-normal opacity-70">(not used for ranking)</div>
+                <div className="text-[9px] lowercase font-normal opacity-70">
+                  (not used for ranking)
+                </div>
               </th>
               <th className="px-4 py-3 text-right">Details & Actions</th>
             </tr>
@@ -132,7 +132,9 @@ export const LeaderboardTable: React.FC<LeaderboardTableProps> = ({
                         1
                       </span>
                     ) : (
-                      <span className="text-[var(--color-text-muted)] font-semibold pl-1.5">{idx + 1}</span>
+                      <span className="text-[var(--color-text-muted)] font-semibold pl-1.5">
+                        {idx + 1}
+                      </span>
                     )}
                   </td>
 
@@ -144,36 +146,42 @@ export const LeaderboardTable: React.FC<LeaderboardTableProps> = ({
                           Winner
                         </span>
                       )}
-                      {model.decision_threshold !== null && model.decision_threshold !== undefined && (
-                        <span
-                          className="px-2 py-0.5 rounded-full text-[9px] font-mono font-bold bg-[var(--color-surface-hover)] text-[var(--color-text-muted)] border border-[var(--color-border)]"
-                          title="Optimized decision threshold"
-                        >
-                          τ={Number(model.decision_threshold).toFixed(3)}
-                        </span>
-                      )}
+                      {model.decision_threshold !== null &&
+                        model.decision_threshold !== undefined && (
+                          <span
+                            className="px-2 py-0.5 rounded-full text-[9px] font-mono font-bold bg-[var(--color-surface-hover)] text-[var(--color-text-muted)] border border-[var(--color-border)]"
+                            title="Optimized decision threshold"
+                          >
+                            τ={Number(model.decision_threshold).toFixed(3)}
+                          </span>
+                        )}
                     </div>
                     <div className="text-[10px] text-[var(--color-text-muted)] font-mono truncate max-w-[160px]">
                       {model.status === 'FAILED' ? (
                         <span className="text-rose-400">Failed: {model.error_message}</span>
+                      ) : !model.hyperparameters ||
+                        JSON.stringify(model.hyperparameters) === '{}' ? (
+                        'Default params'
                       ) : (
-                        !model.hyperparameters || JSON.stringify(model.hyperparameters) === '{}'
-                          ? 'Default params'
-                          : JSON.stringify(model.hyperparameters)
+                        JSON.stringify(model.hyperparameters)
                       )}
                     </div>
                   </td>
 
                   <td className="px-4 py-3 font-mono font-extrabold bg-[var(--color-accent-soft)]/30 border-x border-[var(--color-border)] text-[var(--color-accent)] text-sm">
-                    {model.primary_metric_value !== null && model.primary_metric_value !== undefined ? (
+                    {model.primary_metric_value !== null &&
+                    model.primary_metric_value !== undefined ? (
                       Number(model.primary_metric_value).toFixed(5)
                     ) : (
-                      <span className="text-[var(--color-text-muted)] text-xs italic font-normal">N/A</span>
+                      <span className="text-[var(--color-text-muted)] text-xs italic font-normal">
+                        N/A
+                      </span>
                     )}
                   </td>
 
                   <td className="px-4 py-3 font-mono text-[var(--color-text)]">
-                    {model.secondary_metric_value !== null && model.secondary_metric_value !== undefined ? (
+                    {model.secondary_metric_value !== null &&
+                    model.secondary_metric_value !== undefined ? (
                       Number(model.secondary_metric_value).toFixed(5)
                     ) : (
                       <span className="text-[var(--color-text-muted)] italic font-normal">N/A</span>
@@ -185,7 +193,8 @@ export const LeaderboardTable: React.FC<LeaderboardTableProps> = ({
                   </td>
 
                   <td className="px-4 py-3">
-                    {model.model_selection_score !== null && model.model_selection_score !== undefined ? (
+                    {model.model_selection_score !== null &&
+                    model.model_selection_score !== undefined ? (
                       <div className="space-y-1">
                         <div className="font-mono text-[var(--color-text)] text-xs font-semibold">
                           {Number(model.model_selection_score).toFixed(1)} / 100
@@ -193,7 +202,9 @@ export const LeaderboardTable: React.FC<LeaderboardTableProps> = ({
                         <div className="w-24 bg-[var(--color-surface-hover)] rounded-full h-1.5 overflow-hidden">
                           <div
                             className="bg-[var(--color-accent)] h-1.5 rounded-full"
-                            style={{ width: `${Math.min(100, Math.max(0, model.model_selection_score))}%` }}
+                            style={{
+                              width: `${Math.min(100, Math.max(0, model.model_selection_score))}%`,
+                            }}
                           />
                         </div>
                       </div>

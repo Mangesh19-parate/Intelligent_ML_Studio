@@ -6,9 +6,19 @@ import { TaskTypeSelector } from '../components/TaskTypeSelector';
 import { RecommendationsList } from '../components/RecommendationsList';
 import { CorrelationHeatmap } from '../components/CorrelationHeatmap';
 import { ColumnStatsTable } from '../components/ColumnStatsTable';
-import { ComprehensiveProfilingReport, ComprehensiveEDAReport } from '../components/ComprehensiveProfilingReport';
+import {
+  ComprehensiveProfilingReport,
+  ComprehensiveEDAReport,
+} from '../components/ComprehensiveProfilingReport';
 import { InteractiveEDAStudio, EDAReport } from '../components/InteractiveEDAStudio';
-import { Project, Dataset, SplitResponse, RecommendationItem, TaskType, TaskTypeConfidence } from '../types/api';
+import {
+  Project,
+  Dataset,
+  SplitResponse,
+  RecommendationItem,
+  TaskType,
+  TaskTypeConfidence,
+} from '../types/api';
 import {
   BarChart3,
   ShieldCheck,
@@ -192,7 +202,9 @@ export const DataAnalysisStage: React.FC = () => {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
         <div className="w-10 h-10 border-3 border-[var(--color-accent)] border-t-transparent rounded-full animate-spin" />
-        <p className="text-xs text-[var(--color-text-muted)] font-medium">Loading Data Analysis & DQI diagnostics...</p>
+        <p className="text-xs text-[var(--color-text-muted)] font-medium">
+          Loading Data Analysis & DQI diagnostics...
+        </p>
       </div>
     );
   }
@@ -211,7 +223,8 @@ export const DataAnalysisStage: React.FC = () => {
             <span>Data Analysis & Quality Diagnostics</span>
           </h1>
           <p className="text-xs text-[var(--color-text-muted)] mt-1">
-            Distributional profiling, Pearson correlations, task-type inference, and the multi-factor Data Quality Index.
+            Distributional profiling, Pearson correlations, task-type inference, and the
+            multi-factor Data Quality Index.
           </p>
         </div>
 
@@ -227,7 +240,11 @@ export const DataAnalysisStage: React.FC = () => {
                 className="bg-transparent text-xs font-semibold text-[var(--color-text)] border-none focus:outline-none cursor-pointer pr-2"
               >
                 {projects.map((p) => (
-                  <option key={p.id} value={p.id} className="bg-[var(--color-surface)] text-[var(--color-text)]">
+                  <option
+                    key={p.id}
+                    value={p.id}
+                    className="bg-[var(--color-surface)] text-[var(--color-text)]"
+                  >
                     {p.project_name || p.name}
                   </option>
                 ))}
@@ -266,7 +283,8 @@ export const DataAnalysisStage: React.FC = () => {
           <Database className="w-12 h-12 mx-auto text-[var(--color-text-muted)]" />
           <h3 className="text-base font-bold text-[var(--color-text)]">No Dataset Uploaded Yet</h3>
           <p className="text-xs text-[var(--color-text-muted)]">
-            Upload your tabular dataset in Stage 2 (Data) to generate schemas and compute data quality diagnostics.
+            Upload your tabular dataset in Stage 2 (Data) to generate schemas and compute data
+            quality diagnostics.
           </p>
           <Link
             to={`/data?project_id=${selectedProjectId}`}
@@ -279,9 +297,12 @@ export const DataAnalysisStage: React.FC = () => {
       ) : !splitSummary ? (
         <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl p-12 text-center space-y-4 max-w-lg mx-auto shadow-sm">
           <Split className="w-12 h-12 mx-auto text-amber-500" />
-          <h3 className="text-base font-bold text-[var(--color-text)]">Outer Split Required Before Profiling</h3>
+          <h3 className="text-base font-bold text-[var(--color-text)]">
+            Outer Split Required Before Profiling
+          </h3>
           <p className="text-xs text-[var(--color-text-muted)] leading-relaxed">
-            To enforce strict leakage prevention (The Sixth Invariant), Data Profiling and DQI operate exclusively on the isolated Development partition.
+            To enforce strict leakage prevention (The Sixth Invariant), Data Profiling and DQI
+            operate exclusively on the isolated Development partition.
           </p>
           <Link
             to={`/data?project_id=${selectedProjectId}`}
@@ -297,9 +318,12 @@ export const DataAnalysisStage: React.FC = () => {
             <Sparkles className="w-8 h-8" />
           </div>
           <div>
-            <h3 className="text-lg font-bold text-[var(--color-text)]">Development Partition Ready for Analysis</h3>
+            <h3 className="text-lg font-bold text-[var(--color-text)]">
+              Development Partition Ready for Analysis
+            </h3>
             <p className="text-xs text-[var(--color-text-muted)] mt-1 max-w-md mx-auto leading-relaxed">
-              Execute Stage B distributional profiling, compute the multi-factor Data Quality Index (DQI), and evaluate task-type confidence.
+              Execute Stage B distributional profiling, compute the multi-factor Data Quality Index
+              (DQI), and evaluate task-type confidence.
             </p>
           </div>
           <button
@@ -362,7 +386,9 @@ export const DataAnalysisStage: React.FC = () => {
               <TaskTypeSelector
                 projectId={selectedProjectId}
                 currentTaskType={currentProject?.task_type}
-                taskTypeConfidence={currentProject?.task_type_confidence as TaskTypeConfidence | undefined}
+                taskTypeConfidence={
+                  currentProject?.task_type_confidence as TaskTypeConfidence | undefined
+                }
                 taskTypeSuggestion={profilingReport.task_type_suggestion}
                 onTaskTypeConfirmed={handleTaskTypeConfirmed}
               />
@@ -374,7 +400,10 @@ export const DataAnalysisStage: React.FC = () => {
               {edaReport && <ComprehensiveProfilingReport edaReport={edaReport} />}
 
               {/* 4. Traceable Prescriptive Recommendation Cards */}
-              <RecommendationsList recommendations={recommendations} projectId={selectedProjectId} />
+              <RecommendationsList
+                recommendations={recommendations}
+                projectId={selectedProjectId}
+              />
 
               {/* 5. Pearson Correlation Matrix Heatmap */}
               <CorrelationHeatmap correlationData={profilingReport.correlation_matrix} />

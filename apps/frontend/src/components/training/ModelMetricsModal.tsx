@@ -16,7 +16,11 @@ interface ModelMetricsModalProps {
   onClose: () => void;
 }
 
-export const ModelMetricsModal: React.FC<ModelMetricsModalProps> = ({ isOpen, metrics, onClose }) => {
+export const ModelMetricsModal: React.FC<ModelMetricsModalProps> = ({
+  isOpen,
+  metrics,
+  onClose,
+}) => {
   if (!isOpen || !metrics) return null;
 
   return (
@@ -51,31 +55,35 @@ export const ModelMetricsModal: React.FC<ModelMetricsModalProps> = ({ isOpen, me
               <tbody className="divide-y divide-[var(--color-border)] font-mono text-[11px]">
                 {metrics.map((m) => (
                   <tr key={m.id} className="hover:bg-[var(--color-surface-hover)]">
-                    <td className="px-4 py-2 text-[var(--color-text)] font-semibold">{m.metric_name}</td>
+                    <td className="px-4 py-2 text-[var(--color-text)] font-semibold">
+                      {m.metric_name}
+                    </td>
                     <td className="px-4 py-2">
                       <span
                         className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
                           m.split === 'LOCKED_TEST'
                             ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
                             : m.split === 'CV_MEAN'
-                            ? 'bg-[var(--color-accent-soft)] text-[var(--color-accent)] border border-[var(--color-accent-border)]'
-                            : m.split === 'TEST_REUSED_DIAGNOSTIC'
-                            ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-                            : 'bg-[var(--color-surface-hover)] text-[var(--color-text-muted)]'
+                              ? 'bg-[var(--color-accent-soft)] text-[var(--color-accent)] border border-[var(--color-accent-border)]'
+                              : m.split === 'TEST_REUSED_DIAGNOSTIC'
+                                ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                                : 'bg-[var(--color-surface-hover)] text-[var(--color-text-muted)]'
                         }`}
                       >
                         {m.split}
                       </span>
                     </td>
                     <td className="px-4 py-2 text-[var(--color-text-muted)]">
-                      {m.fold_index !== null && m.fold_index !== undefined ? `Fold ${m.fold_index + 1}` : 'Overall'}
+                      {m.fold_index !== null && m.fold_index !== undefined
+                        ? `Fold ${m.fold_index + 1}`
+                        : 'Overall'}
                     </td>
                     <td className="px-4 py-2 text-right text-emerald-400 font-bold">
-                      {m.metric_value !== null && m.metric_value !== undefined ? (
-                        Number(m.metric_value).toFixed(5)
-                      ) : (
-                        m.metric_json ? JSON.stringify(m.metric_json) : 'null'
-                      )}
+                      {m.metric_value !== null && m.metric_value !== undefined
+                        ? Number(m.metric_value).toFixed(5)
+                        : m.metric_json
+                          ? JSON.stringify(m.metric_json)
+                          : 'null'}
                     </td>
                   </tr>
                 ))}

@@ -32,7 +32,9 @@ export const TransformationStage: React.FC = () => {
   const [successMsg, setSuccessMsg] = useState<string>('');
 
   // Active Tab: 'missing' | 'categorical' | 'outliers' | 'datetime' | 'scaling' | 'recipe'
-  const [activeTab, setActiveTab] = useState<'missing' | 'categorical' | 'outliers' | 'datetime' | 'scaling' | 'recipe'>('missing');
+  const [activeTab, setActiveTab] = useState<
+    'missing' | 'categorical' | 'outliers' | 'datetime' | 'scaling' | 'recipe'
+  >('missing');
 
   // Transformation Strategy Configurations
   const [numImputer, setNumImputer] = useState<string>('median'); // mean | median | arbitrary | end_tail | knn | iterative
@@ -47,7 +49,13 @@ export const TransformationStage: React.FC = () => {
   const [outlierAction, setOutlierAction] = useState<string>('capping'); // capping | trimming | missing
   const [zScoreThreshold] = useState<number>(3.0);
 
-  const [dateExtractParts, setDateExtractParts] = useState<string[]>(['year', 'month', 'day', 'dayofweek', 'is_weekend']);
+  const [dateExtractParts, setDateExtractParts] = useState<string[]>([
+    'year',
+    'month',
+    'day',
+    'dayofweek',
+    'is_weekend',
+  ]);
   const [cyclicalEncoding, setCyclicalEncoding] = useState<boolean>(true);
 
   const [scalingMethod, setScalingMethod] = useState<string>('standard'); // standard | minmax | robust
@@ -131,14 +139,20 @@ export const TransformationStage: React.FC = () => {
             <span>Feature Transformation Pipeline</span>
           </h1>
           <p className="text-sm text-[var(--color-text-muted)] mt-1.5 max-w-3xl">
-            Configure imputation, categorical encoding, mixed-variable parsing, outlier capping, and feature scaling. All transforms are encapsulated in scikit-learn ColumnTransformers and fit strictly per CV training fold.
+            Configure imputation, categorical encoding, mixed-variable parsing, outlier capping, and
+            feature scaling. All transforms are encapsulated in scikit-learn ColumnTransformers and
+            fit strictly per CV training fold.
           </p>
         </div>
 
         {/* Action Controls & Navigation */}
         <div className="flex items-center space-x-3">
           <Link
-            to={selectedProjectId ? `/feature-engineering?project_id=${selectedProjectId}` : '/feature-engineering'}
+            to={
+              selectedProjectId
+                ? `/feature-engineering?project_id=${selectedProjectId}`
+                : '/feature-engineering'
+            }
             className="px-5 py-2.5 rounded-full bg-[var(--color-accent)] hover:bg-[var(--color-accent-hover)] text-white text-xs font-bold flex items-center space-x-2 shadow-sm transition-all"
           >
             <span>Next: Feature Engineering</span>
@@ -184,9 +198,13 @@ export const TransformationStage: React.FC = () => {
       <div className="p-4 rounded-2xl bg-[var(--color-accent-soft)] border border-[var(--color-accent-border)] text-xs text-[var(--color-text)] flex items-start space-x-3 shadow-sm">
         <ShieldCheck className="w-4 h-4 text-[var(--color-accent)] shrink-0 mt-0.5" />
         <div>
-          <strong className="font-bold text-[var(--color-text)]">Zero Data Leakage Invariant: </strong>
+          <strong className="font-bold text-[var(--color-text)]">
+            Zero Data Leakage Invariant:{' '}
+          </strong>
           <span className="text-[var(--color-text-muted)]">
-            Parameters computed here (means, medians, scaling ranges, outlier bounds) are NEVER fit across the full dataset. They are compiled into a formal Pipeline specification that executes strictly on training folds and transforms validation/test partitions.
+            Parameters computed here (means, medians, scaling ranges, outlier bounds) are NEVER fit
+            across the full dataset. They are compiled into a formal Pipeline specification that
+            executes strictly on training folds and transforms validation/test partitions.
           </span>
         </div>
       </div>
@@ -233,9 +251,12 @@ export const TransformationStage: React.FC = () => {
         {activeTab === 'missing' && (
           <div className="space-y-6">
             <div>
-              <h3 className="text-base font-bold text-[var(--color-text)]">Missing Value Imputation Strategy</h3>
+              <h3 className="text-base font-bold text-[var(--color-text)]">
+                Missing Value Imputation Strategy
+              </h3>
               <p className="text-xs text-[var(--color-text-muted)] mt-1">
-                Choose univariate or multivariate statistical strategies to impute null values without dropping records.
+                Choose univariate or multivariate statistical strategies to impute null values
+                without dropping records.
               </p>
             </div>
 
@@ -249,12 +270,36 @@ export const TransformationStage: React.FC = () => {
 
                 <div className="space-y-2.5">
                   {[
-                    { id: 'median', label: 'Median Imputation', desc: 'Robust to outliers, recommended for skewed continuous distributions.' },
-                    { id: 'mean', label: 'Mean Imputation', desc: 'Preserves the arithmetic mean; best for Gaussian-like distributions.' },
-                    { id: 'arbitrary', label: 'Arbitrary Value Imputation', desc: 'Replaces nulls with an arbitrary constant value (e.g. 0 or -999).' },
-                    { id: 'end_tail', label: 'End of Distribution (Tail)', desc: 'Imputes at mean + 3*std to capture missingness significance.' },
-                    { id: 'knn', label: 'KNN Imputer (Multivariate)', desc: 'Imputes based on Euclidean distance to nearest neighbors in feature space.' },
-                    { id: 'iterative', label: 'Iterative Imputer (MICE)', desc: 'Models each feature with missing values as a function of other features.' },
+                    {
+                      id: 'median',
+                      label: 'Median Imputation',
+                      desc: 'Robust to outliers, recommended for skewed continuous distributions.',
+                    },
+                    {
+                      id: 'mean',
+                      label: 'Mean Imputation',
+                      desc: 'Preserves the arithmetic mean; best for Gaussian-like distributions.',
+                    },
+                    {
+                      id: 'arbitrary',
+                      label: 'Arbitrary Value Imputation',
+                      desc: 'Replaces nulls with an arbitrary constant value (e.g. 0 or -999).',
+                    },
+                    {
+                      id: 'end_tail',
+                      label: 'End of Distribution (Tail)',
+                      desc: 'Imputes at mean + 3*std to capture missingness significance.',
+                    },
+                    {
+                      id: 'knn',
+                      label: 'KNN Imputer (Multivariate)',
+                      desc: 'Imputes based on Euclidean distance to nearest neighbors in feature space.',
+                    },
+                    {
+                      id: 'iterative',
+                      label: 'Iterative Imputer (MICE)',
+                      desc: 'Models each feature with missing values as a function of other features.',
+                    },
                   ].map((opt) => (
                     <label
                       key={opt.id}
@@ -273,8 +318,12 @@ export const TransformationStage: React.FC = () => {
                         className="mt-1 text-[var(--color-accent)] focus:ring-[var(--color-accent)]"
                       />
                       <div>
-                        <div className="text-xs font-bold text-[var(--color-text)]">{opt.label}</div>
-                        <div className="text-[11px] text-[var(--color-text-muted)] mt-0.5">{opt.desc}</div>
+                        <div className="text-xs font-bold text-[var(--color-text)]">
+                          {opt.label}
+                        </div>
+                        <div className="text-[11px] text-[var(--color-text-muted)] mt-0.5">
+                          {opt.desc}
+                        </div>
                       </div>
                     </label>
                   ))}
@@ -282,7 +331,9 @@ export const TransformationStage: React.FC = () => {
 
                 {numImputer === 'arbitrary' && (
                   <div className="pt-2 space-y-1">
-                    <label className="text-xs font-semibold text-[var(--color-text)]">Arbitrary Value:</label>
+                    <label className="text-xs font-semibold text-[var(--color-text)]">
+                      Arbitrary Value:
+                    </label>
                     <input
                       type="text"
                       value={arbitraryVal}
@@ -294,7 +345,9 @@ export const TransformationStage: React.FC = () => {
 
                 {numImputer === 'knn' && (
                   <div className="pt-2 space-y-1">
-                    <label className="text-xs font-semibold text-[var(--color-text)]">Number of Neighbors ($k$ = {knnNeighbors}):</label>
+                    <label className="text-xs font-semibold text-[var(--color-text)]">
+                      Number of Neighbors ($k$ = {knnNeighbors}):
+                    </label>
                     <input
                       type="range"
                       min={1}
@@ -316,8 +369,16 @@ export const TransformationStage: React.FC = () => {
 
                 <div className="space-y-2.5">
                   {[
-                    { id: 'mode', label: 'Mode Imputation (Most Frequent)', desc: 'Replaces nulls with the most frequent category.' },
-                    { id: 'missing_category', label: 'Explicit "Missing" Category', desc: 'Treats missingness as an explicit informative category (prevents falsified observations).' },
+                    {
+                      id: 'mode',
+                      label: 'Mode Imputation (Most Frequent)',
+                      desc: 'Replaces nulls with the most frequent category.',
+                    },
+                    {
+                      id: 'missing_category',
+                      label: 'Explicit "Missing" Category',
+                      desc: 'Treats missingness as an explicit informative category (prevents falsified observations).',
+                    },
                   ].map((opt) => (
                     <label
                       key={opt.id}
@@ -336,8 +397,12 @@ export const TransformationStage: React.FC = () => {
                         className="mt-1 text-[var(--color-accent)] focus:ring-[var(--color-accent)]"
                       />
                       <div>
-                        <div className="text-xs font-bold text-[var(--color-text)]">{opt.label}</div>
-                        <div className="text-[11px] text-[var(--color-text-muted)] mt-0.5">{opt.desc}</div>
+                        <div className="text-xs font-bold text-[var(--color-text)]">
+                          {opt.label}
+                        </div>
+                        <div className="text-[11px] text-[var(--color-text-muted)] mt-0.5">
+                          {opt.desc}
+                        </div>
                       </div>
                     </label>
                   ))}
@@ -351,7 +416,9 @@ export const TransformationStage: React.FC = () => {
         {activeTab === 'categorical' && (
           <div className="space-y-6">
             <div>
-              <h3 className="text-base font-bold text-[var(--color-text)]">Categorical Encoding Strategies</h3>
+              <h3 className="text-base font-bold text-[var(--color-text)]">
+                Categorical Encoding Strategies
+              </h3>
               <p className="text-xs text-[var(--color-text-muted)] mt-1">
                 Convert nominal and ordinal string features into numeric vectors.
               </p>
@@ -359,11 +426,21 @@ export const TransformationStage: React.FC = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="p-5 rounded-2xl bg-[var(--color-surface-card)] border border-[var(--color-border)] space-y-4">
-                <h4 className="text-xs font-bold text-[var(--color-text)] uppercase tracking-wider">Nominal Features (No Natural Order)</h4>
+                <h4 className="text-xs font-bold text-[var(--color-text)] uppercase tracking-wider">
+                  Nominal Features (No Natural Order)
+                </h4>
                 <div className="space-y-2.5">
                   {[
-                    { id: 'one_hot', label: 'One-Hot Encoding', desc: 'Binary indicator columns per category. Truncates categories > 50 to prevent dimension explosion.' },
-                    { id: 'drop_first', label: 'One-Hot with First Dropped', desc: 'Drops first dummy column to avoid multicollinearity in linear models.' },
+                    {
+                      id: 'one_hot',
+                      label: 'One-Hot Encoding',
+                      desc: 'Binary indicator columns per category. Truncates categories > 50 to prevent dimension explosion.',
+                    },
+                    {
+                      id: 'drop_first',
+                      label: 'One-Hot with First Dropped',
+                      desc: 'Drops first dummy column to avoid multicollinearity in linear models.',
+                    },
                   ].map((opt) => (
                     <label
                       key={opt.id}
@@ -382,8 +459,12 @@ export const TransformationStage: React.FC = () => {
                         className="mt-1 text-[var(--color-accent)] focus:ring-[var(--color-accent)]"
                       />
                       <div>
-                        <div className="text-xs font-bold text-[var(--color-text)]">{opt.label}</div>
-                        <div className="text-[11px] text-[var(--color-text-muted)] mt-0.5">{opt.desc}</div>
+                        <div className="text-xs font-bold text-[var(--color-text)]">
+                          {opt.label}
+                        </div>
+                        <div className="text-[11px] text-[var(--color-text-muted)] mt-0.5">
+                          {opt.desc}
+                        </div>
                       </div>
                     </label>
                   ))}
@@ -391,11 +472,21 @@ export const TransformationStage: React.FC = () => {
               </div>
 
               <div className="p-5 rounded-2xl bg-[var(--color-surface-card)] border border-[var(--color-border)] space-y-4">
-                <h4 className="text-xs font-bold text-[var(--color-text)] uppercase tracking-wider">Ordinal Features (Ordered Ranking)</h4>
+                <h4 className="text-xs font-bold text-[var(--color-text)] uppercase tracking-wider">
+                  Ordinal Features (Ordered Ranking)
+                </h4>
                 <div className="space-y-2.5">
                   {[
-                    { id: 'ordinal', label: 'Ordinal Encoding', desc: 'Maps categories to ordered integer ranks (e.g. Low=1, Medium=2, High=3).' },
-                    { id: 'label', label: 'Label Encoding', desc: 'Arbitrary integer mapping (best suited for target encoding).' },
+                    {
+                      id: 'ordinal',
+                      label: 'Ordinal Encoding',
+                      desc: 'Maps categories to ordered integer ranks (e.g. Low=1, Medium=2, High=3).',
+                    },
+                    {
+                      id: 'label',
+                      label: 'Label Encoding',
+                      desc: 'Arbitrary integer mapping (best suited for target encoding).',
+                    },
                   ].map((opt) => (
                     <label
                       key={opt.id}
@@ -414,8 +505,12 @@ export const TransformationStage: React.FC = () => {
                         className="mt-1 text-[var(--color-accent)] focus:ring-[var(--color-accent)]"
                       />
                       <div>
-                        <div className="text-xs font-bold text-[var(--color-text)]">{opt.label}</div>
-                        <div className="text-[11px] text-[var(--color-text-muted)] mt-0.5">{opt.desc}</div>
+                        <div className="text-xs font-bold text-[var(--color-text)]">
+                          {opt.label}
+                        </div>
+                        <div className="text-[11px] text-[var(--color-text-muted)] mt-0.5">
+                          {opt.desc}
+                        </div>
                       </div>
                     </label>
                   ))}
@@ -429,21 +524,42 @@ export const TransformationStage: React.FC = () => {
         {activeTab === 'outliers' && (
           <div className="space-y-6">
             <div>
-              <h3 className="text-base font-bold text-[var(--color-text)]">Outlier Detection & Treatment</h3>
+              <h3 className="text-base font-bold text-[var(--color-text)]">
+                Outlier Detection & Treatment
+              </h3>
               <p className="text-xs text-[var(--color-text-muted)] mt-1">
-                Detect abnormal extreme values and cap them safely to avoid distorting gradient descent and linear loss surfaces.
+                Detect abnormal extreme values and cap them safely to avoid distorting gradient
+                descent and linear loss surfaces.
               </p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="p-5 rounded-2xl bg-[var(--color-surface-card)] border border-[var(--color-border)] space-y-4">
-                <h4 className="text-xs font-bold text-[var(--color-text)] uppercase tracking-wider">Detection Algorithm</h4>
+                <h4 className="text-xs font-bold text-[var(--color-text)] uppercase tracking-wider">
+                  Detection Algorithm
+                </h4>
                 <div className="space-y-2.5">
                   {[
-                    { id: 'iqr', label: 'Interquartile Range (IQR Filter)', desc: 'Bounds: [Q1 - 1.5*IQR, Q3 + 1.5*IQR]. Ideal for skewed non-normal features.' },
-                    { id: 'z_score', label: 'Z-Score Test (Standard Normal)', desc: 'Flags values with |z| > 3.0 standard deviations from the mean.' },
-                    { id: 'percentile', label: 'Percentile Clipping (1% - 99%)', desc: 'Clips values below 1st percentile and above 99th percentile.' },
-                    { id: 'winsorization', label: 'Winsorization (5% Tail Capping)', desc: 'Caps extremes to the 5th and 95th percentile bounds.' },
+                    {
+                      id: 'iqr',
+                      label: 'Interquartile Range (IQR Filter)',
+                      desc: 'Bounds: [Q1 - 1.5*IQR, Q3 + 1.5*IQR]. Ideal for skewed non-normal features.',
+                    },
+                    {
+                      id: 'z_score',
+                      label: 'Z-Score Test (Standard Normal)',
+                      desc: 'Flags values with |z| > 3.0 standard deviations from the mean.',
+                    },
+                    {
+                      id: 'percentile',
+                      label: 'Percentile Clipping (1% - 99%)',
+                      desc: 'Clips values below 1st percentile and above 99th percentile.',
+                    },
+                    {
+                      id: 'winsorization',
+                      label: 'Winsorization (5% Tail Capping)',
+                      desc: 'Caps extremes to the 5th and 95th percentile bounds.',
+                    },
                   ].map((opt) => (
                     <label
                       key={opt.id}
@@ -462,8 +578,12 @@ export const TransformationStage: React.FC = () => {
                         className="mt-1 text-[var(--color-accent)] focus:ring-[var(--color-accent)]"
                       />
                       <div>
-                        <div className="text-xs font-bold text-[var(--color-text)]">{opt.label}</div>
-                        <div className="text-[11px] text-[var(--color-text-muted)] mt-0.5">{opt.desc}</div>
+                        <div className="text-xs font-bold text-[var(--color-text)]">
+                          {opt.label}
+                        </div>
+                        <div className="text-[11px] text-[var(--color-text-muted)] mt-0.5">
+                          {opt.desc}
+                        </div>
                       </div>
                     </label>
                   ))}
@@ -471,12 +591,26 @@ export const TransformationStage: React.FC = () => {
               </div>
 
               <div className="p-5 rounded-2xl bg-[var(--color-surface-card)] border border-[var(--color-border)] space-y-4">
-                <h4 className="text-xs font-bold text-[var(--color-text)] uppercase tracking-wider">Treatment Action</h4>
+                <h4 className="text-xs font-bold text-[var(--color-text)] uppercase tracking-wider">
+                  Treatment Action
+                </h4>
                 <div className="space-y-2.5">
                   {[
-                    { id: 'capping', label: 'Capping / Winsorizing (Recommended)', desc: 'Caps extreme values to upper and lower boundary thresholds without losing data rows.' },
-                    { id: 'trimming', label: 'Trimming (Drop Records)', desc: 'Removes rows containing extreme outliers (use with caution on small datasets).' },
-                    { id: 'missing', label: 'Convert to Missing Value', desc: 'Replaces outliers with NaN and passes them through the imputation stage.' },
+                    {
+                      id: 'capping',
+                      label: 'Capping / Winsorizing (Recommended)',
+                      desc: 'Caps extreme values to upper and lower boundary thresholds without losing data rows.',
+                    },
+                    {
+                      id: 'trimming',
+                      label: 'Trimming (Drop Records)',
+                      desc: 'Removes rows containing extreme outliers (use with caution on small datasets).',
+                    },
+                    {
+                      id: 'missing',
+                      label: 'Convert to Missing Value',
+                      desc: 'Replaces outliers with NaN and passes them through the imputation stage.',
+                    },
                   ].map((opt) => (
                     <label
                       key={opt.id}
@@ -495,8 +629,12 @@ export const TransformationStage: React.FC = () => {
                         className="mt-1 text-[var(--color-accent)] focus:ring-[var(--color-accent)]"
                       />
                       <div>
-                        <div className="text-xs font-bold text-[var(--color-text)]">{opt.label}</div>
-                        <div className="text-[11px] text-[var(--color-text-muted)] mt-0.5">{opt.desc}</div>
+                        <div className="text-xs font-bold text-[var(--color-text)]">
+                          {opt.label}
+                        </div>
+                        <div className="text-[11px] text-[var(--color-text-muted)] mt-0.5">
+                          {opt.desc}
+                        </div>
                       </div>
                     </label>
                   ))}
@@ -510,15 +648,20 @@ export const TransformationStage: React.FC = () => {
         {activeTab === 'datetime' && (
           <div className="space-y-6">
             <div>
-              <h3 className="text-base font-bold text-[var(--color-text)]">Date/Time & Mixed Variable Decomposition</h3>
+              <h3 className="text-base font-bold text-[var(--color-text)]">
+                Date/Time & Mixed Variable Decomposition
+              </h3>
               <p className="text-xs text-[var(--color-text-muted)] mt-1">
-                Decompose timestamp columns into seasonality features and extract numerical/alphabetic tokens from mixed strings.
+                Decompose timestamp columns into seasonality features and extract
+                numerical/alphabetic tokens from mixed strings.
               </p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="p-5 rounded-2xl bg-[var(--color-surface-card)] border border-[var(--color-border)] space-y-4">
-                <h4 className="text-xs font-bold text-[var(--color-text)] uppercase tracking-wider">Date Part Extraction</h4>
+                <h4 className="text-xs font-bold text-[var(--color-text)] uppercase tracking-wider">
+                  Date Part Extraction
+                </h4>
                 <div className="grid grid-cols-2 gap-2">
                   {[
                     { id: 'year', label: 'Year' },
@@ -539,7 +682,9 @@ export const TransformationStage: React.FC = () => {
                       }`}
                     >
                       <span>{part.label}</span>
-                      {dateExtractParts.includes(part.id) && <Check className="w-3.5 h-3.5 text-[var(--color-accent)]" />}
+                      {dateExtractParts.includes(part.id) && (
+                        <Check className="w-3.5 h-3.5 text-[var(--color-accent)]" />
+                      )}
                     </button>
                   ))}
                 </div>
@@ -556,9 +701,13 @@ export const TransformationStage: React.FC = () => {
               </div>
 
               <div className="p-5 rounded-2xl bg-[var(--color-surface-card)] border border-[var(--color-border)] space-y-4">
-                <h4 className="text-xs font-bold text-[var(--color-text)] uppercase tracking-wider">Mixed Alphanumeric Variable Parser</h4>
+                <h4 className="text-xs font-bold text-[var(--color-text)] uppercase tracking-wider">
+                  Mixed Alphanumeric Variable Parser
+                </h4>
                 <p className="text-xs text-[var(--color-text-muted)] leading-relaxed">
-                  Automatically decomposes columns with mixed tokens (e.g. Ticket IDs: <code>A/5 21171</code> or Cabin: <code>C85</code>) into separate numeric and categorical features.
+                  Automatically decomposes columns with mixed tokens (e.g. Ticket IDs:{' '}
+                  <code>A/5 21171</code> or Cabin: <code>C85</code>) into separate numeric and
+                  categorical features.
                 </p>
                 <div className="p-3 bg-[var(--color-surface)] rounded-xl border border-[var(--color-border)] font-mono text-xs text-[var(--color-accent)]">
                   Regex Pattern: <code>(?P&lt;prefix&gt;[a-zA-Z]+)?(?P&lt;num&gt;\d+)?</code>
@@ -572,17 +721,35 @@ export const TransformationStage: React.FC = () => {
         {activeTab === 'scaling' && (
           <div className="space-y-6">
             <div>
-              <h3 className="text-base font-bold text-[var(--color-text)]">Feature Scaling & Normalization</h3>
+              <h3 className="text-base font-bold text-[var(--color-text)]">
+                Feature Scaling & Normalization
+              </h3>
               <p className="text-xs text-[var(--color-text-muted)] mt-1">
-                Standardize features to prevent larger-magnitude columns from dominating gradient updates.
+                Standardize features to prevent larger-magnitude columns from dominating gradient
+                updates.
               </p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {[
-                { id: 'standard', label: 'StandardScaler (Z-Score)', formula: 'z = (x - μ) / σ', desc: 'Zero mean and unit variance. Standard default for linear models, neural nets, and Ridge/Lasso.' },
-                { id: 'minmax', label: 'MinMaxScaler (0 to 1)', formula: 'x_scaled = (x - min) / (max - min)', desc: 'Scales all features to the range [0, 1]. Suitable for non-negative inputs and image algorithms.' },
-                { id: 'robust', label: 'RobustScaler (Median & IQR)', formula: 'x_scaled = (x - median) / IQR', desc: 'Scales using median and IQR. Highly recommended when outliers are present.' },
+                {
+                  id: 'standard',
+                  label: 'StandardScaler (Z-Score)',
+                  formula: 'z = (x - μ) / σ',
+                  desc: 'Zero mean and unit variance. Standard default for linear models, neural nets, and Ridge/Lasso.',
+                },
+                {
+                  id: 'minmax',
+                  label: 'MinMaxScaler (0 to 1)',
+                  formula: 'x_scaled = (x - min) / (max - min)',
+                  desc: 'Scales all features to the range [0, 1]. Suitable for non-negative inputs and image algorithms.',
+                },
+                {
+                  id: 'robust',
+                  label: 'RobustScaler (Median & IQR)',
+                  formula: 'x_scaled = (x - median) / IQR',
+                  desc: 'Scales using median and IQR. Highly recommended when outliers are present.',
+                },
               ].map((opt) => (
                 <div
                   key={opt.id}
@@ -596,7 +763,9 @@ export const TransformationStage: React.FC = () => {
                   <div>
                     <div className="flex items-center justify-between">
                       <h4 className="text-xs font-bold text-[var(--color-text)]">{opt.label}</h4>
-                      {scalingMethod === opt.id && <Check className="w-4 h-4 text-[var(--color-accent)]" />}
+                      {scalingMethod === opt.id && (
+                        <Check className="w-4 h-4 text-[var(--color-accent)]" />
+                      )}
                     </div>
                     <div className="font-mono text-xs text-[var(--color-accent)] bg-[var(--color-surface)] px-2.5 py-1 rounded-lg border border-[var(--color-border)] inline-block mt-2">
                       {opt.formula}
@@ -616,9 +785,12 @@ export const TransformationStage: React.FC = () => {
           <div className="space-y-6">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-base font-bold text-[var(--color-text)]">Compiled ColumnTransformer Pipeline Recipe</h3>
+                <h3 className="text-base font-bold text-[var(--color-text)]">
+                  Compiled ColumnTransformer Pipeline Recipe
+                </h3>
                 <p className="text-xs text-[var(--color-text-muted)] mt-1">
-                  Serializable pipeline configuration JSON applied deterministically across cross-validation splits.
+                  Serializable pipeline configuration JSON applied deterministically across
+                  cross-validation splits.
                 </p>
               </div>
               <button
@@ -666,7 +838,11 @@ export const TransformationStage: React.FC = () => {
         {/* Action Footer */}
         <div className="pt-4 border-t border-[var(--color-border)] flex flex-wrap items-center justify-between gap-4">
           <Link
-            to={selectedProjectId ? `/data-analysis?project_id=${selectedProjectId}` : '/data-analysis'}
+            to={
+              selectedProjectId
+                ? `/data-analysis?project_id=${selectedProjectId}`
+                : '/data-analysis'
+            }
             className="inline-flex items-center space-x-2 text-xs font-bold text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
           >
             <ArrowLeft className="w-4 h-4" />

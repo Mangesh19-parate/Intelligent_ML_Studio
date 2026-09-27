@@ -74,7 +74,9 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
 
   const userPerms = new Set(
     user?.permissions ||
-    (user?.role?.permissions ? user.role.permissions.map((p) => (typeof p === 'string' ? p : p.permission_key)) : [])
+      (user?.role?.permissions
+        ? user.role.permissions.map((p) => (typeof p === 'string' ? p : p.permission_key))
+        : [])
   );
   const roleName = user?.role?.role_name === 'ADMIN' ? 'ADMIN' : 'USER';
   const isAdmin = roleName === 'ADMIN' || userPerms.has('MANAGE_USERS');
@@ -103,14 +105,37 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
 
   const isItemActive = (itemPath: string): boolean => {
     const currentPath = location.pathname;
-    if (itemPath === '/dashboard' && (currentPath === '/dashboard' || currentPath === '/')) return true;
-    if (itemPath === '/data' && (currentPath.startsWith('/data') || currentPath === '/data')) return true;
-    if (itemPath === '/data-analysis' && (currentPath.startsWith('/analysis') || currentPath === '/data-analysis')) return true;
+    if (itemPath === '/dashboard' && (currentPath === '/dashboard' || currentPath === '/'))
+      return true;
+    if (itemPath === '/data' && (currentPath.startsWith('/data') || currentPath === '/data'))
+      return true;
+    if (
+      itemPath === '/data-analysis' &&
+      (currentPath.startsWith('/analysis') || currentPath === '/data-analysis')
+    )
+      return true;
     if (itemPath === '/transformations' && currentPath === '/transformations') return true;
-    if (itemPath === '/feature-engineering' && currentPath.startsWith('/feature-engineering')) return true;
-    if (itemPath === '/ml/training' && (currentPath.startsWith('/ml') || currentPath === '/machine-learning' || currentPath === '/leaderboard')) return true;
-    if (itemPath === '/diagnostics' && (currentPath.startsWith('/intelligence') || currentPath === '/diagnostics')) return true;
-    if (itemPath === '/production' && (currentPath.startsWith('/production') || currentPath === '/validation' || currentPath === '/monitoring')) return true;
+    if (itemPath === '/feature-engineering' && currentPath.startsWith('/feature-engineering'))
+      return true;
+    if (
+      itemPath === '/ml/training' &&
+      (currentPath.startsWith('/ml') ||
+        currentPath === '/machine-learning' ||
+        currentPath === '/leaderboard')
+    )
+      return true;
+    if (
+      itemPath === '/diagnostics' &&
+      (currentPath.startsWith('/intelligence') || currentPath === '/diagnostics')
+    )
+      return true;
+    if (
+      itemPath === '/production' &&
+      (currentPath.startsWith('/production') ||
+        currentPath === '/validation' ||
+        currentPath === '/monitoring')
+    )
+      return true;
     if (itemPath === '/admin' && currentPath.startsWith('/admin')) return true;
     return currentPath === itemPath;
   };
@@ -122,8 +147,8 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
           {/* Brand Logo */}
           <div className="flex items-center space-x-6 shrink-0">
-            <Link 
-              to={getNavPath('/dashboard')} 
+            <Link
+              to={getNavPath('/dashboard')}
               className="flex items-center space-x-3 group focus:outline-hidden"
             >
               <div className="relative flex items-center justify-center">
@@ -194,7 +219,10 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
 
             {/* User Profile Dropdown */}
             {user && (
-              <div id="user-profile-menu" className="relative pl-2 border-l border-[var(--color-border)]">
+              <div
+                id="user-profile-menu"
+                className="relative pl-2 border-l border-[var(--color-border)]"
+              >
                 <button
                   type="button"
                   onClick={() => setProfileDropdownOpen((prev) => !prev)}
@@ -246,11 +274,13 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                         <ShieldCheck className="w-4 h-4 text-[var(--color-accent)]" />
                         <span>Security & 2FA</span>
                       </div>
-                      <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded-md font-bold ${
-                        user.is_two_factor_enabled
-                          ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'
-                          : 'bg-[var(--color-surface-hover)] text-[var(--color-text-muted)]'
-                      }`}>
+                      <span
+                        className={`text-[10px] font-mono px-1.5 py-0.5 rounded-md font-bold ${
+                          user.is_two_factor_enabled
+                            ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'
+                            : 'bg-[var(--color-surface-hover)] text-[var(--color-text-muted)]'
+                        }`}
+                      >
                         {user.is_two_factor_enabled ? 'Active' : 'Off'}
                       </span>
                     </button>
@@ -306,10 +336,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       </main>
 
       {/* Global Command Palette */}
-      <CommandPalette
-        isOpen={commandPaletteOpen}
-        onClose={() => setCommandPaletteOpen(false)}
-      />
+      <CommandPalette isOpen={commandPaletteOpen} onClose={() => setCommandPaletteOpen(false)} />
 
       {/* Two-Factor Authentication Settings Modal */}
       <TwoFactorSettingsModal
@@ -342,9 +369,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
               <span>Support: support@mlstudio.io</span>
             </a>
             <span className="hidden sm:inline text-slate-600">&bull;</span>
-            <span className="font-mono text-[10px] text-[var(--color-text-muted)]">
-              v1.0.0
-            </span>
+            <span className="font-mono text-[10px] text-[var(--color-text-muted)]">v1.0.0</span>
           </div>
         </div>
       </footer>

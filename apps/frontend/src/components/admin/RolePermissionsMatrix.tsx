@@ -58,7 +58,9 @@ export const RolePermissionsMatrix: React.FC<RolePermissionsMatrixProps> = ({
                 className="p-3 rounded-xl bg-[var(--color-surface-card)] border border-[var(--color-border)] space-y-1"
               >
                 <div className="flex items-center justify-between">
-                  <span className="font-bold text-xs text-[var(--color-text)]">{m.name || m.key}</span>
+                  <span className="font-bold text-xs text-[var(--color-text)]">
+                    {m.name || m.key}
+                  </span>
                   <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                     {m.direction || 'OPTIMIZE'}
                   </span>
@@ -81,21 +83,34 @@ export const RolePermissionsMatrix: React.FC<RolePermissionsMatrixProps> = ({
           </div>
           <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
             {features?.imputers?.map((imp: string) => (
-              <div key={imp} className="p-2.5 rounded-xl bg-[var(--color-surface-card)] border border-[var(--color-border)] flex items-center justify-between text-xs">
+              <div
+                key={imp}
+                className="p-2.5 rounded-xl bg-[var(--color-surface-card)] border border-[var(--color-border)] flex items-center justify-between text-xs"
+              >
                 <span className="font-medium text-[var(--color-text)]">{imp}</span>
-                <span className="text-[10px] text-[var(--color-text-muted)] font-mono">Imputer</span>
+                <span className="text-[10px] text-[var(--color-text-muted)] font-mono">
+                  Imputer
+                </span>
               </div>
             ))}
             {features?.scalers?.map((sc: string) => (
-              <div key={sc} className="p-2.5 rounded-xl bg-[var(--color-surface-card)] border border-[var(--color-border)] flex items-center justify-between text-xs">
+              <div
+                key={sc}
+                className="p-2.5 rounded-xl bg-[var(--color-surface-card)] border border-[var(--color-border)] flex items-center justify-between text-xs"
+              >
                 <span className="font-medium text-[var(--color-text)]">{sc}</span>
                 <span className="text-[10px] text-[var(--color-text-muted)] font-mono">Scaler</span>
               </div>
             ))}
             {features?.encoders?.map((enc: string) => (
-              <div key={enc} className="p-2.5 rounded-xl bg-[var(--color-surface-card)] border border-[var(--color-border)] flex items-center justify-between text-xs">
+              <div
+                key={enc}
+                className="p-2.5 rounded-xl bg-[var(--color-surface-card)] border border-[var(--color-border)] flex items-center justify-between text-xs"
+              >
                 <span className="font-medium text-[var(--color-text)]">{enc}</span>
-                <span className="text-[10px] text-[var(--color-text-muted)] font-mono">Encoder</span>
+                <span className="text-[10px] text-[var(--color-text-muted)] font-mono">
+                  Encoder
+                </span>
               </div>
             ))}
           </div>

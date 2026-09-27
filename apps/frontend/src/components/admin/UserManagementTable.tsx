@@ -101,12 +101,8 @@ export const UserManagementTable: React.FC<UserManagementTableProps> = ({
           <tbody className="divide-y divide-[var(--color-border)]">
             {filteredUsers.map((u) => (
               <tr key={u.id} className="hover:bg-[var(--color-surface-hover)] transition-colors">
-                <td className="px-4 py-3 font-bold text-[var(--color-text)]">
-                  {u.full_name}
-                </td>
-                <td className="px-4 py-3 font-mono text-[var(--color-text-muted)]">
-                  {u.email}
-                </td>
+                <td className="px-4 py-3 font-bold text-[var(--color-text)]">{u.full_name}</td>
+                <td className="px-4 py-3 font-mono text-[var(--color-text-muted)]">{u.email}</td>
                 <td className="px-4 py-3">
                   <span
                     className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold ${

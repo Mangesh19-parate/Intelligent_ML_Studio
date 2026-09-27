@@ -6,7 +6,14 @@
 export type UUID = string;
 
 export type TaskType = 'REGRESSION' | 'CLASSIFICATION' | 'UNDETERMINED';
-export type PipelineStage = 'INGESTION' | 'PROFILED' | 'SPLIT' | 'TRANSFORMED' | 'FEATURE_SELECTED' | 'EXPERIMENTATION' | 'DEPLOYED';
+export type PipelineStage =
+  | 'INGESTION'
+  | 'PROFILED'
+  | 'SPLIT'
+  | 'TRANSFORMED'
+  | 'FEATURE_SELECTED'
+  | 'EXPERIMENTATION'
+  | 'DEPLOYED';
 
 export type UserRole = 'ADMIN' | 'USER';
 
@@ -458,5 +465,3 @@ export interface TwoFactorStatusResponse {
   delivery_method?: string;
   remaining_backup_codes: number;
 }
-
-

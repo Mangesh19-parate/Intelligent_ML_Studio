@@ -16,7 +16,11 @@ describe('Frontend Chaos & Edge Case Testing Suite', () => {
     expect(handleAction).toHaveBeenCalledTimes(1);
 
     // Simulate button entering loading state
-    rerender(<Button isLoading onClick={handleAction}>Train Model</Button>);
+    rerender(
+      <Button isLoading onClick={handleAction}>
+        Train Model
+      </Button>
+    );
     expect(button).toBeDisabled();
 
     // Rapid spam clicks while in flight

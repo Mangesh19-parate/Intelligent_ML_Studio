@@ -31,7 +31,8 @@ export const CorrelationHeatmap: React.FC<CorrelationHeatmapProps> = ({ correlat
   const { columns, matrix } = correlationData;
 
   const getColor = (value: number | null | undefined): string => {
-    if (value === null || value === undefined) return 'bg-[var(--color-surface-hover)] text-[var(--color-text-muted)]';
+    if (value === null || value === undefined)
+      return 'bg-[var(--color-surface-hover)] text-[var(--color-text-muted)]';
     if (value >= 0.8) return 'bg-emerald-600 text-white font-bold';
     if (value >= 0.5) return 'bg-emerald-500/60 text-emerald-950 dark:text-emerald-100 font-bold';
     if (value >= 0.2) return 'bg-emerald-500/25 text-emerald-900 dark:text-emerald-200';
@@ -49,7 +50,9 @@ export const CorrelationHeatmap: React.FC<CorrelationHeatmapProps> = ({ correlat
             <Activity className="w-5 h-5" />
           </div>
           <div>
-            <h4 className="text-lg font-bold text-[var(--color-text)]">Pearson Correlation Matrix</h4>
+            <h4 className="text-lg font-bold text-[var(--color-text)]">
+              Pearson Correlation Matrix
+            </h4>
             <p className="text-xs text-[var(--color-text-muted)]">
               Pairwise linear relationships across {columns.length} numeric features
             </p>
@@ -63,7 +66,8 @@ export const CorrelationHeatmap: React.FC<CorrelationHeatmapProps> = ({ correlat
           </span>
           <span className="text-[var(--color-border)]">|</span>
           <span className="flex items-center gap-1 font-semibold">
-            <span className="w-2.5 h-2.5 rounded-full bg-[var(--color-text-muted)] inline-block" /> 0.0
+            <span className="w-2.5 h-2.5 rounded-full bg-[var(--color-text-muted)] inline-block" />{' '}
+            0.0
           </span>
           <span className="text-[var(--color-border)]">|</span>
           <span className="flex items-center gap-1 font-semibold">
@@ -94,7 +98,10 @@ export const CorrelationHeatmap: React.FC<CorrelationHeatmapProps> = ({ correlat
           <tbody>
             {columns.map((rowCol, rowIdx) => (
               <tr key={rowIdx} className="hover:bg-[var(--color-surface-hover)] transition-colors">
-                <td className="p-2 text-xs font-mono font-bold text-[var(--color-text)] border-r border-[var(--color-border)] sticky left-0 bg-[var(--color-surface)] z-10 truncate max-w-[140px]" title={rowCol}>
+                <td
+                  className="p-2 text-xs font-mono font-bold text-[var(--color-text)] border-r border-[var(--color-border)] sticky left-0 bg-[var(--color-surface)] z-10 truncate max-w-[140px]"
+                  title={rowCol}
+                >
                   {rowCol}
                 </td>
                 {columns.map((col, colIdx) => {
@@ -106,7 +113,9 @@ export const CorrelationHeatmap: React.FC<CorrelationHeatmapProps> = ({ correlat
                       onMouseEnter={() => setHoveredCell({ row: rowCol, col, val })}
                       onMouseLeave={() => setHoveredCell(null)}
                       className={`p-2.5 text-center text-xs font-mono transition-all duration-150 border border-[var(--color-border)]/50 ${getColor(val)} ${
-                        isDiagonal ? 'ring-1 ring-inset ring-[var(--color-border)]' : 'cursor-pointer hover:scale-105 hover:z-20'
+                        isDiagonal
+                          ? 'ring-1 ring-inset ring-[var(--color-border)]'
+                          : 'cursor-pointer hover:scale-105 hover:z-20'
                       }`}
                     >
                       {val !== null && val !== undefined ? val.toFixed(2) : '-'}
@@ -122,10 +131,14 @@ export const CorrelationHeatmap: React.FC<CorrelationHeatmapProps> = ({ correlat
       {hoveredCell && (
         <div className="mt-3 p-3 bg-[var(--color-surface-hover)] border border-[var(--color-border)] rounded-xl text-xs font-mono flex items-center justify-between text-[var(--color-text)]">
           <span>
-            Correlation (<strong className="text-[var(--color-accent)]">{hoveredCell.row}</strong> vs <strong className="text-emerald-600 dark:text-emerald-400">{hoveredCell.col}</strong>):
+            Correlation (<strong className="text-[var(--color-accent)]">{hoveredCell.row}</strong>{' '}
+            vs <strong className="text-emerald-600 dark:text-emerald-400">{hoveredCell.col}</strong>
+            ):
           </span>
           <strong className="text-sm font-bold text-[var(--color-text)]">
-            {hoveredCell.val !== null && hoveredCell.val !== undefined ? hoveredCell.val.toFixed(4) : 'N/A'}
+            {hoveredCell.val !== null && hoveredCell.val !== undefined
+              ? hoveredCell.val.toFixed(4)
+              : 'N/A'}
           </strong>
         </div>
       )}

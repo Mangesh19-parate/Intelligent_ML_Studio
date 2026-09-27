@@ -1,13 +1,17 @@
 import React from 'react';
 
-export type FitDiagnosis = 'GOOD_FIT' | 'POTENTIAL_OVERFIT' | 'POTENTIAL_UNDERFIT_WEAK_SIGNAL' | 'LOW_DATA' | string | null;
+export type FitDiagnosis =
+  'GOOD_FIT' | 'POTENTIAL_OVERFIT' | 'POTENTIAL_UNDERFIT_WEAK_SIGNAL' | 'LOW_DATA' | string | null;
 
 interface FitDiagnosisBadgeProps {
   diagnosis?: FitDiagnosis;
   className?: string;
 }
 
-export const FitDiagnosisBadge: React.FC<FitDiagnosisBadgeProps> = ({ diagnosis, className = '' }) => {
+export const FitDiagnosisBadge: React.FC<FitDiagnosisBadgeProps> = ({
+  diagnosis,
+  className = '',
+}) => {
   if (!diagnosis) {
     return <span className={`text-[var(--color-text-muted)] text-[10px] ${className}`}>N/A</span>;
   }

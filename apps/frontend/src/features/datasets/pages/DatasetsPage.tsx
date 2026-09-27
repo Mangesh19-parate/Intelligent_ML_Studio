@@ -13,20 +13,15 @@ import {
 import { EmptyState } from '../../../components/feedback/EmptyState';
 import { ErrorState } from '../../../components/feedback/ErrorState';
 import { Skeleton } from '../../../components/feedback/Skeleton';
-import {
-  Database,
-  ArrowRight,
-  CheckCircle2,
-  Plus,
-  FolderOpen,
-} from 'lucide-react';
+import { Database, ArrowRight, CheckCircle2, Plus, FolderOpen } from 'lucide-react';
 import { Button } from '../../../components/ui/Button';
 import { TaskType, DatasetSplit } from '../../../types/api';
 
 export const DatasetsPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { currentProject, currentProjectId, projects, selectProject, refreshProjects } = useProject();
+  const { currentProject, currentProjectId, projects, selectProject, refreshProjects } =
+    useProject();
 
   const urlProjectId = searchParams.get('project_id');
   const activeProjectId = urlProjectId || currentProjectId;
@@ -70,7 +65,8 @@ export const DatasetsPage: React.FC = () => {
       setSplitSummary(splitRes.data as unknown as DatasetSplit);
 
       const previewRes = await datasetSplitApi.getDevelopmentPreview(datasetId, 10);
-      const rows = previewRes.data?.preview_rows || (Array.isArray(previewRes.data) ? previewRes.data : []);
+      const rows =
+        previewRes.data?.preview_rows || (Array.isArray(previewRes.data) ? previewRes.data : []);
       setDevPreview(rows as Record<string, unknown>[]);
     } catch (err: unknown) {
       setSplitSummary(null);
@@ -105,9 +101,11 @@ export const DatasetsPage: React.FC = () => {
         setDevPreview(null);
       }
     } catch (err: unknown) {
-      const errorMsg = err && typeof err === 'object' && 'response' in err
-        ? ((err as { response?: { data?: { detail?: string } } }).response?.data?.detail || 'Failed to load dataset details.')
-        : 'Failed to load dataset details.';
+      const errorMsg =
+        err && typeof err === 'object' && 'response' in err
+          ? (err as { response?: { data?: { detail?: string } } }).response?.data?.detail ||
+            'Failed to load dataset details.'
+          : 'Failed to load dataset details.';
       console.error('Failed to load project data', err);
       setError(errorMsg);
     } finally {
@@ -146,9 +144,11 @@ export const DatasetsPage: React.FC = () => {
       setSuccessMsg(`Dataset "${file.name}" uploaded and validated successfully!`);
       await loadProjectData(activeProjectId);
     } catch (err: unknown) {
-      const errorMsg = err && typeof err === 'object' && 'response' in err
-        ? ((err as { response?: { data?: { detail?: string } } }).response?.data?.detail || 'Failed to upload dataset.')
-        : 'Failed to upload dataset.';
+      const errorMsg =
+        err && typeof err === 'object' && 'response' in err
+          ? (err as { response?: { data?: { detail?: string } } }).response?.data?.detail ||
+            'Failed to upload dataset.'
+          : 'Failed to upload dataset.';
       console.error('Upload error', err);
       setError(errorMsg);
     } finally {
@@ -173,9 +173,11 @@ export const DatasetsPage: React.FC = () => {
       setSuccessMsg('Development / Locked Test partition created and cryptographically sealed!');
       await loadSplitAndPreview(selectedDataset.id);
     } catch (err: unknown) {
-      const errorMsg = err && typeof err === 'object' && 'response' in err
-        ? ((err as { response?: { data?: { detail?: string } } }).response?.data?.detail || 'Failed to create dataset partition.')
-        : 'Failed to create dataset partition.';
+      const errorMsg =
+        err && typeof err === 'object' && 'response' in err
+          ? (err as { response?: { data?: { detail?: string } } }).response?.data?.detail ||
+            'Failed to create dataset partition.'
+          : 'Failed to create dataset partition.';
       console.error('Split creation error', err);
       setError(errorMsg);
     } finally {
@@ -207,9 +209,11 @@ export const DatasetsPage: React.FC = () => {
       selectProject(String(res.data.id));
       navigate(`/data?project_id=${res.data.id}`);
     } catch (err: unknown) {
-      const errorMsg = err && typeof err === 'object' && 'response' in err
-        ? ((err as { response?: { data?: { detail?: string } } }).response?.data?.detail || 'Failed to create project.')
-        : 'Failed to create project.';
+      const errorMsg =
+        err && typeof err === 'object' && 'response' in err
+          ? (err as { response?: { data?: { detail?: string } } }).response?.data?.detail ||
+            'Failed to create project.'
+          : 'Failed to create project.';
       console.error('Create project error', err);
       setError(errorMsg);
     } finally {
@@ -231,7 +235,8 @@ export const DatasetsPage: React.FC = () => {
             </h1>
           </div>
           <p className="text-xs text-[var(--color-text-muted)] mt-1">
-            Ingest tabular data, inspect column roles, and establish strict developmental vs locked test boundaries.
+            Ingest tabular data, inspect column roles, and establish strict developmental vs locked
+            test boundaries.
           </p>
         </div>
 
@@ -247,7 +252,11 @@ export const DatasetsPage: React.FC = () => {
                 className="bg-transparent text-xs font-semibold text-[var(--color-text)] border-none focus:outline-none cursor-pointer pr-2"
               >
                 {projects.map((p) => (
-                  <option key={p.id} value={p.id} className="bg-[var(--color-surface)] text-[var(--color-text)]">
+                  <option
+                    key={p.id}
+                    value={p.id}
+                    className="bg-[var(--color-surface)] text-[var(--color-text)]"
+                  >
                     {p.project_name || p.id}
                   </option>
                 ))}
@@ -295,11 +304,7 @@ export const DatasetsPage: React.FC = () => {
       ) : (
         <>
           {error && (
-            <ErrorState
-              title="Data Stage Error"
-              message={error}
-              onRetry={() => setError('')}
-            />
+            <ErrorState title="Data Stage Error" message={error} onRetry={() => setError('')} />
           )}
 
           {successMsg && (
@@ -316,7 +321,9 @@ export const DatasetsPage: React.FC = () => {
               selectedDataset={selectedDataset}
               onSelectDataset={(ds) => {
                 setSelectedDataset(ds);
-                datasetApi.getColumns(ds.id).then((res) => setColumns((res.data || []) as unknown as ColumnSchemaItem[]));
+                datasetApi
+                  .getColumns(ds.id)
+                  .then((res) => setColumns((res.data || []) as unknown as ColumnSchemaItem[]));
                 loadSplitAndPreview(ds.id);
               }}
             />
@@ -327,10 +334,7 @@ export const DatasetsPage: React.FC = () => {
             <h2 className="text-sm font-bold text-[var(--color-text)]">
               {selectedDataset ? 'Upload New Dataset Version' : 'Upload Initial Dataset'}
             </h2>
-            <UploadZone
-              onFileUpload={handleFileUpload}
-              uploading={uploading}
-            />
+            <UploadZone onFileUpload={handleFileUpload} uploading={uploading} />
           </div>
 
           {/* Split & Partitioning Panel (if dataset exists) */}
@@ -378,7 +382,9 @@ export const DatasetsPage: React.FC = () => {
               </div>
 
               <div className="space-y-1">
-                <label className="text-xs font-bold text-[var(--color-text)]">Target Column (Optional)</label>
+                <label className="text-xs font-bold text-[var(--color-text)]">
+                  Target Column (Optional)
+                </label>
                 <input
                   type="text"
                   placeholder="e.g. churned"
@@ -389,7 +395,9 @@ export const DatasetsPage: React.FC = () => {
               </div>
 
               <div className="space-y-1">
-                <label className="text-xs font-bold text-[var(--color-text)]">Task Type (Optional)</label>
+                <label className="text-xs font-bold text-[var(--color-text)]">
+                  Task Type (Optional)
+                </label>
                 <select
                   value={newTaskType}
                   onChange={(e) => setNewTaskType(e.target.value as TaskType)}

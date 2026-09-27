@@ -30,11 +30,7 @@ export const Skeleton: React.FC<SkeletonProps> = ({
 
   return (
     <div
-      className={cn(
-        'bg-slate-800/60 animate-pulse',
-        variantStyles[variant],
-        className
-      )}
+      className={cn('bg-slate-800/60 animate-pulse', variantStyles[variant], className)}
       style={customStyle}
       {...props}
     />

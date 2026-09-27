@@ -70,7 +70,7 @@ class TrainedModel(Base):
             name="chk_trained_model_fit_diagnosis"
         ),
         CheckConstraint(
-            "status IN ('TRAINED', 'ARTIFACT_VERIFIED', 'DEPLOYABLE', 'ARTIFACT_INVALID', 'COMPLETED', 'FAILED')",
+            "status IN ('TRAINED', 'ARTIFACT_VERIFIED', 'DEPLOYABLE', 'ARTIFACT_INVALID')",
             name="chk_trained_model_status"
         ),
     )

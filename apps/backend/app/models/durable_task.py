@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime, timezone
-from sqlalchemy import Column, String, Integer, Text, DateTime, ForeignKey, JSON, Uuid
+from sqlalchemy import Column, String, Integer, Text, DateTime, ForeignKey, JSON, Uuid, CheckConstraint
 from sqlalchemy.orm import relationship
 
 from app.core.database import Base
@@ -40,7 +40,15 @@ class DurableTask(Base):
     failure_reason = Column(Text, nullable=True)
     result_summary = Column(JSON, nullable=True)
 
+    __table_args__ = (
+        CheckConstraint(
+            "state IN ('QUEUED', 'RUNNING', 'SUCCEEDED', 'FAILED', 'TIMED_OUT', 'CANCELLED')",
+            name="chk_durable_task_state"
+        ),
+    )
+
     experiment = relationship("Experiment", backref="durable_tasks")
 
     def __repr__(self) -> str:
         return f"<DurableTask id={self.id} exp={self.experiment_id} state={self.state} worker={self.worker_id}>"
+

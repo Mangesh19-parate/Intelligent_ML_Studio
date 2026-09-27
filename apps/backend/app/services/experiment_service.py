@@ -112,7 +112,7 @@ class ExperimentService:
         self.trans_service = TransformationService(db, self.storage)
         self.fs_service = FeatureSelectionService(db, self.storage)
 
-    def start_training(self, experiment_id: UUID | str) -> Experiment:
+    def start_training(self, experiment_id: UUID | str, commit: bool = True) -> Experiment:
         """
         Atomically transitions an experiment into TRAINING state with DB-level concurrency protection (SRS v9 §6).
         Ensures at most one active TRAINING job per experiment.
@@ -126,12 +126,15 @@ class ExperimentService:
                 update(Experiment)
                 .where(
                     Experiment.id == exp_uuid,
-                    Experiment.status.not_in([ExperimentState.TRAINING.value, "TRAINING", "RUNNING"])
+                    Experiment.status.not_in([ExperimentState.TRAINING.value])
                 )
                 .values(status=ExperimentState.TRAINING.value)
             )
             result = self.db.execute(stmt)
-            self.db.commit()
+            if commit:
+                self.db.commit()
+            else:
+                self.db.flush()
             rowcount = result.rowcount
         except Exception as e:
             self.db.rollback()
@@ -186,17 +189,10 @@ class ExperimentService:
         # Strict rejection if already configured or in any subsequent lifecycle state
         if experiment.status in [
             ExperimentState.CONFIGURED.value,
-            "CONFIGURED",
             ExperimentState.TRAINING.value,
-            "TRAINING",
-            "RUNNING",
             ExperimentState.EVALUATED.value,
-            "EVALUATED",
             ExperimentState.TEST_CONSUMED.value,
-            "TEST_CONSUMED",
             ExperimentState.REGISTERED.value,
-            "REGISTERED",
-            "COMPLETED",
         ] or (experiment.experiment_config is not None and experiment.status != ExperimentState.TRAINING_FAILED.value):
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
@@ -1237,7 +1233,7 @@ class ExperimentService:
             # 7. Finalize Experiment & Locked Test Single Evaluation
             all_trained_models = self.exp_repo.get_trained_models(experiment.id)
             has_successful_models = any(
-                m.status in [ModelState.TRAINED.value, ModelState.ARTIFACT_VERIFIED.value, ModelState.DEPLOYABLE.value, "COMPLETED", "TRAINED"]
+                m.status in [ModelState.TRAINED.value, ModelState.ARTIFACT_VERIFIED.value, ModelState.DEPLOYABLE.value]
                 for m in all_trained_models
             )
             if auto_finalize and has_successful_models:
@@ -1326,7 +1322,7 @@ class ExperimentService:
 
         completed_models = [
             m for m in experiment.trained_models
-            if m.status in [ModelState.TRAINED.value, ModelState.ARTIFACT_VERIFIED.value, ModelState.DEPLOYABLE.value, "COMPLETED", "TRAINED"]
+            if m.status in [ModelState.TRAINED.value, ModelState.ARTIFACT_VERIFIED.value, ModelState.DEPLOYABLE.value]
         ]
         if not completed_models:
             raise HTTPException(

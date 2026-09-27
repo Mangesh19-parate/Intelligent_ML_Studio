@@ -219,30 +219,40 @@ def start_experiment_training_endpoint(
     project_service = ProjectService(db)
     project_service.get_project_by_id(exp_record.project_id, current_user)
 
-    exp = service.start_training(id)
+    # Atomic transaction boundary: Experiment (TRAINING) + DurableTask (QUEUED)
+    try:
+        exp = service.start_training(id, commit=False)
 
-    algorithms = None
-    if exp.experiment_config and isinstance(exp.experiment_config, dict):
-        algorithms = exp.experiment_config.get("algorithms")
-    if not algorithms:
-        if exp.task_type == "CLASSIFICATION":
-            algorithms = ["LogisticRegression", "RandomForestClassifier", "GradientBoostingClassifier"]
-        else:
-            algorithms = ["LinearRegression", "Ridge", "RandomForestRegressor"]
+        algorithms = None
+        if exp.experiment_config and isinstance(exp.experiment_config, dict):
+            algorithms = exp.experiment_config.get("algorithms")
+        if not algorithms:
+            if exp.task_type == "CLASSIFICATION":
+                algorithms = ["LogisticRegression", "RandomForestClassifier", "GradientBoostingClassifier"]
+            else:
+                algorithms = ["LinearRegression", "Ridge", "RandomForestRegressor"]
 
-    eff_metric = exp.selection_metric or ("rmse" if exp.task_type == "REGRESSION" else "f1_macro")
-    eff_direction = exp.selection_direction or ("MINIMIZE" if eff_metric in ["rmse", "mae", "mse"] else "MAXIMIZE")
+        eff_metric = exp.selection_metric or ("rmse" if exp.task_type == "REGRESSION" else "f1_macro")
+        eff_direction = exp.selection_direction or ("MINIMIZE" if eff_metric in ["rmse", "mae", "mse"] else "MAXIMIZE")
 
-    # Submit task to durable persistent execution layer
-    submit_experiment_task(
-        project_id=exp.project_id,
-        experiment_id=exp.id,
-        algorithms=algorithms,
-        folds=exp.fold_count or 5,
-        seed=exp.cv_seed or 42,
-        selection_metric=eff_metric,
-        selection_direction=eff_direction,
-    )
+        # Submit task to durable persistent execution layer within the same transaction
+        submit_experiment_task(
+            project_id=exp.project_id,
+            experiment_id=exp.id,
+            algorithms=algorithms,
+            folds=exp.fold_count or 5,
+            seed=exp.cv_seed or 42,
+            selection_metric=eff_metric,
+            selection_direction=eff_direction,
+            db=db,
+            commit_on_submit=False,
+        )
+
+        db.commit()
+        db.refresh(exp)
+    except Exception:
+        db.rollback()
+        raise
 
     models_res = [
         TrainedModelResponse(

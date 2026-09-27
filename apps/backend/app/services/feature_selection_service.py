@@ -12,6 +12,7 @@ from sklearn.compose import ColumnTransformer
 from app.models.project import Project
 from app.models.dataset import Dataset
 from app.models.experiment import Experiment
+from app.config.state_machines import ExperimentState
 from app.models.feature_selection_fold_result import FeatureSelectionFoldResult
 from app.models.feature_importance_score import FeatureImportanceScore
 from app.repositories.project_repository import ProjectRepository
@@ -542,13 +543,13 @@ class FeatureSelectionService:
             experiment.feature_selection_snapshot_id = fs_snapshot.id
             self.db.add(experiment)
 
-            self.exp_repo.update_status(experiment.id, "COMPLETED")
+            self.exp_repo.update_status(experiment.id, ExperimentState.CONFIGURED.value)
             self.db.commit()
 
             return {
                 "project_id": project.id,
                 "experiment_id": experiment.id,
-                "status": "COMPLETED",
+                "status": ExperimentState.CONFIGURED.value,
                 "fold_count": n_splits,
                 "features": [
                     {
@@ -561,7 +562,7 @@ class FeatureSelectionService:
             }
 
         except Exception as err:
-            self.exp_repo.update_status(experiment.id, "FAILED")
+            self.exp_repo.update_status(experiment.id, ExperimentState.TRAINING_FAILED.value)
             self.db.rollback()
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

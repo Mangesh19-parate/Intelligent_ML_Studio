@@ -15,6 +15,7 @@ from app.models.model_metric import ModelMetric
 from app.models.deployment_gate import DeploymentGate
 from app.models.deployment import Deployment
 from app.models.user import User
+from app.config.state_machines import ExperimentState, ModelState
 from app.services.monitoring_service import MonitoringService
 
 
@@ -109,9 +110,9 @@ def derive_pipeline_stages_batch(project_ids: list[UUID | str], db: Session) -> 
     for e in experiments:
         if e.locked_test_consumed:
             locked_consumed_projects.add(e.project_id)
-        if e.status in ["COMPLETED", "REGISTERED", "EVALUATED", "TEST_CONSUMED"]:
+        if e.status in [ExperimentState.REGISTERED.value, ExperimentState.EVALUATED.value, ExperimentState.TEST_CONSUMED.value]:
             completed_exps.add(e.project_id)
-        elif e.status in ["RUNNING", "TRAINING"]:
+        elif e.status == ExperimentState.TRAINING.value:
             running_exps.add(e.project_id)
 
     # 6. Fetch trained models
@@ -283,7 +284,7 @@ class WorkspaceAnalyticsService:
             self.db.query(func.count(Experiment.id))
             .filter(
                 Experiment.project_id.in_(project_ids),
-                Experiment.status.in_(["COMPLETED", "REGISTERED", "EVALUATED", "TEST_CONSUMED"])
+                Experiment.status.in_([ExperimentState.REGISTERED.value, ExperimentState.EVALUATED.value, ExperimentState.TEST_CONSUMED.value])
             )
             .scalar() or 0
         )
@@ -294,7 +295,7 @@ class WorkspaceAnalyticsService:
             .join(Experiment, TrainedModel.experiment_id == Experiment.id)
             .filter(
                 Experiment.project_id.in_(project_ids),
-                TrainedModel.status.in_(["COMPLETED", "TRAINED", "ARTIFACT_VERIFIED", "DEPLOYABLE"])
+                TrainedModel.status.in_([ModelState.TRAINED.value, ModelState.ARTIFACT_VERIFIED.value, ModelState.DEPLOYABLE.value])
             )
             .scalar() or 0
         )
@@ -375,8 +376,8 @@ class WorkspaceAnalyticsService:
                     .first()
                 )
             elif latest_experiment.trained_models:
-                # Fallback to first completed model if not finalized
-                selected_model = next((m for m in latest_experiment.trained_models if m.status == "COMPLETED"), None)
+                # Fallback to first trained model if not finalized
+                selected_model = next((m for m in latest_experiment.trained_models if m.status in [ModelState.TRAINED.value, ModelState.ARTIFACT_VERIFIED.value, ModelState.DEPLOYABLE.value]), None)
 
             if selected_model:
                 sel_metric = latest_experiment.selection_metric or (

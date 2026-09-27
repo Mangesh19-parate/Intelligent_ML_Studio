@@ -329,7 +329,7 @@ def get_project_leaderboard(
 
     # Sort strictly by primary metric
     def sort_key(item):
-        is_completed = item["status"] in ["COMPLETED", "TRAINED", "DEPLOYABLE", "ARTIFACT_VERIFIED"]
+        is_completed = item["status"] in [ModelState.TRAINED.value, ModelState.DEPLOYABLE.value, ModelState.ARTIFACT_VERIFIED.value]
         score = item["primary_sort_key"]
         if not is_completed or score is None:
             return (1, 0)

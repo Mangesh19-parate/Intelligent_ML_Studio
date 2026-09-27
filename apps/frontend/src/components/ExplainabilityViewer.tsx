@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Plot from 'react-plotly.js';
 import { modelApi } from '../api/client';
 import {
@@ -55,7 +55,7 @@ export const ExplainabilityViewer: React.FC<ExplainabilityViewerProps> = ({
   const [localError, setLocalError] = useState<string | null>(null);
   const [localResult, setLocalResult] = useState<LocalExplainabilityResult | null>(null);
 
-  const loadGlobalSummary = async () => {
+  const loadGlobalSummary = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -79,7 +79,7 @@ export const ExplainabilityViewer: React.FC<ExplainabilityViewerProps> = ({
     } finally {
       setLoading(false);
     }
-  };
+  }, [modelId]);
 
   useEffect(() => {
     if (!hasArtifact && !isWinner) {
@@ -90,7 +90,7 @@ export const ExplainabilityViewer: React.FC<ExplainabilityViewerProps> = ({
       return;
     }
     loadGlobalSummary();
-  }, [modelId]);
+  }, [hasArtifact, isWinner, loadGlobalSummary]);
 
   const handleRunLocalExplanation = async () => {
     try {

@@ -541,15 +541,13 @@ class FeatureSelectionService:
                 final_selection_method="rank_aggregation_ensemble",
             )
             experiment.feature_selection_snapshot_id = fs_snapshot.id
-            self.db.add(experiment)
-
-            self.exp_repo.update_status(experiment.id, ExperimentState.CONFIGURED.value)
+            self.exp_repo.update_status(experiment.id, "COMPLETED")
             self.db.commit()
 
             return {
                 "project_id": project.id,
                 "experiment_id": experiment.id,
-                "status": ExperimentState.CONFIGURED.value,
+                "status": "COMPLETED",
                 "fold_count": n_splits,
                 "features": [
                     {
@@ -562,7 +560,7 @@ class FeatureSelectionService:
             }
 
         except Exception as err:
-            self.exp_repo.update_status(experiment.id, ExperimentState.TRAINING_FAILED.value)
+            self.exp_repo.update_status(experiment.id, "FAILED")
             self.db.rollback()
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

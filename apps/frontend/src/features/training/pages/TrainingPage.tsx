@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { experimentApi, datasetApi, datasetSplitApi } from '../../../api/client';
 import { useProject } from '../../../context/ProjectContext';
 import { ModelTraining } from '../../../components/ModelTraining';
@@ -16,13 +16,12 @@ import {
 } from 'lucide-react';
 
 export const TrainingPage: React.FC = () => {
-  const [searchParams] = useSearchParams();
   const { currentProject, currentProjectId } = useProject();
 
   const [experimentsCount, setExperimentsCount] = useState<number>(0);
   const [splitInfo, setSplitInfo] = useState<any>(null);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string>('');
+  const [_loading, setLoading] = useState<boolean>(true);
+  const [_error, setError] = useState<string>('');
 
   const loadStageData = async (projId: string) => {
     try {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { transformationApi } from '../api/client';
 import {
   Wand2,
@@ -94,7 +94,7 @@ export const TransformationsTable: React.FC<TransformationsTableProps> = ({
   const [statusMsg, setStatusMsg] = useState<string>('');
   const [errorMsg, setErrorMsg] = useState<string>('');
 
-  const loadConfigs = async () => {
+  const loadConfigs = useCallback(async () => {
     try {
       setLoading(true);
       setErrorMsg('');
@@ -106,13 +106,13 @@ export const TransformationsTable: React.FC<TransformationsTableProps> = ({
     } finally {
       setLoading(false);
     }
-  };
+  }, [projectId]);
 
   useEffect(() => {
     if (projectId) {
       loadConfigs();
     }
-  }, [projectId]);
+  }, [projectId, loadConfigs]);
 
   const handleStrategyChange = async (columnName: string, field: string, value: string) => {
     // Optimistic UI update

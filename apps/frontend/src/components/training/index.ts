@@ -1,3 +1,4 @@
+export * from './algorithms';
 export * from './FitDiagnosisBadge';
 export * from './TrainingConfigPanel';
 export * from './WinnerCalloutCard';

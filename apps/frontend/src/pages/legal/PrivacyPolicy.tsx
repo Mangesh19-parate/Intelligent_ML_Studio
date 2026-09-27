@@ -1,15 +1,6 @@
 import React from 'react';
 import { LegalLayout } from './LegalLayout';
-import {
-  ShieldCheck,
-  Lock,
-  Database,
-  Cpu,
-  Eye,
-  FileText,
-  CheckCircle2,
-  AlertCircle,
-} from 'lucide-react';
+import { ShieldCheck } from 'lucide-react';
 
 export const PrivacyPolicy: React.FC = () => {
   const tocItems = [

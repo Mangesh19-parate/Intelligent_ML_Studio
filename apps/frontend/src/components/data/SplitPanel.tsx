@@ -1,5 +1,5 @@
 import React from 'react';
-import { Lock, Split, Shuffle, Check, ShieldCheck } from 'lucide-react';
+import { Lock, Split, Shuffle } from 'lucide-react';
 import { Button } from '../ui/Button';
 
 export interface SplitSummaryData {

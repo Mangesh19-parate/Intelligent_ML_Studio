@@ -1,6 +1,5 @@
 import React, { useRef } from 'react';
 import { Upload, FileSpreadsheet, AlertTriangle } from 'lucide-react';
-import { Button } from '../ui/Button';
 
 interface UploadZoneProps {
   onFileUpload: (file: File) => void;

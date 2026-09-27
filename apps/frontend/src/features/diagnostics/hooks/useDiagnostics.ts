@@ -20,10 +20,10 @@ export function useDiagnostics(initialProjectId?: string | null) {
         const res = await projectApi.list();
         const list = res.data || [];
         setProjects(list);
-        if (!selectedProjectId && list.length > 0) {
-          setSelectedProjectId(list[0].id);
+        if (list.length > 0) {
+          setSelectedProjectId((prev) => prev || list[0].id);
         }
-      } catch (err) {
+      } catch (_err) {
         setError('Failed to load projects list.');
       } finally {
         setLoading(false);

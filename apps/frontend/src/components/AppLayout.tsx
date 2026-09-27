@@ -19,11 +19,7 @@ import {
   Sun,
   LogOut,
   LucideIcon,
-  Shield,
-  User,
   ChevronDown,
-  KeyRound,
-  Settings,
 } from 'lucide-react';
 
 interface NavItem {

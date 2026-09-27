@@ -1,5 +1,5 @@
 import React from 'react';
-import { SlidersHorizontal, Sparkles, RefreshCw } from 'lucide-react';
+import { SlidersHorizontal, Sparkles } from 'lucide-react';
 import { Button } from '../ui/Button';
 
 interface FeatureConfigPanelProps {

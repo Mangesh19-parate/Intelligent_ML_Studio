@@ -8,10 +8,6 @@ import {
   Cookie,
   ArrowRight,
   CheckCircle2,
-  Server,
-  FileCode,
-  Users,
-  Eye,
 } from 'lucide-react';
 
 export const LegalCenter: React.FC = () => {

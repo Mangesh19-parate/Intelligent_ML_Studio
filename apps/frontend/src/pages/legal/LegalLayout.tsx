@@ -5,10 +5,6 @@ import {
   Sun,
   Moon,
   ArrowLeft,
-  ShieldCheck,
-  FileText,
-  Lock,
-  ExternalLink,
   ChevronRight,
 } from 'lucide-react';
 
@@ -33,7 +29,7 @@ export const LegalLayout: React.FC<LegalLayoutProps> = ({
   lastUpdated,
   subtitle,
   tocItems,
-  activeSection,
+  activeSection: _activeSection,
   children,
   activeDoc,
 }) => {

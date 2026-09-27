@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Users, Search, Plus, CheckCircle2, XCircle, RotateCcw } from 'lucide-react';
 import { Button } from '../ui/Button';
 

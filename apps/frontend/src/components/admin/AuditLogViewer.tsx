@@ -1,15 +1,15 @@
 import React, { useState } from 'react';
-import { ShieldAlert, Search, Filter, Clock, ChevronRight, ChevronDown } from 'lucide-react';
+import { ShieldAlert, Search, Clock, ChevronRight, ChevronDown } from 'lucide-react';
 
 export interface AuditLogItem {
   id: string;
-  action?: string;
-  event_type?: string;
-  user_email?: string;
-  resource_type?: string;
-  resource_id?: string;
-  details?: Record<string, any> | string;
-  ip_address?: string;
+  action?: string | null;
+  event_type?: string | null;
+  user_email?: string | null;
+  resource_type?: string | null;
+  resource_id?: string | null;
+  details?: Record<string, any> | string | null;
+  ip_address?: string | null;
   created_at: string;
 }
 

@@ -1,6 +1,6 @@
 import React from 'react';
 import { LegalLayout } from './LegalLayout';
-import { AlertTriangle, ShieldCheck, Lock, FileCode, CheckCircle2 } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
 
 export const TermsOfService: React.FC = () => {
   const tocItems = [

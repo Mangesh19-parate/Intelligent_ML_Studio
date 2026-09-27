@@ -6,14 +6,10 @@ import {
   Plus,
   Search,
   Target,
-  Layers,
-  Sparkles,
-  ExternalLink,
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useProject } from '../../context/ProjectContext';
 import { Badge } from '../ui/Badge';
-import { Button } from '../ui/Button';
 
 export interface ProjectContextHeaderProps {
   onOpenCommandPalette: () => void;

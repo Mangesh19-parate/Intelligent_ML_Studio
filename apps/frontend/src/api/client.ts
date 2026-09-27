@@ -11,7 +11,6 @@ import {
   FeatureImportanceResponse,
   Experiment,
   ExperimentCreateResponse,
-  ModelLeaderboardItem,
   ModelPassport,
   Deployment,
   PredictionResponse,
@@ -22,7 +21,6 @@ import {
   LoginResponse,
   TwoFactorSetupResponse,
   TwoFactorConfirmRequest,
-  TwoFactorVerifyLoginRequest,
   TwoFactorDisableRequest,
   TwoFactorStatusResponse,
 } from '../types/api';

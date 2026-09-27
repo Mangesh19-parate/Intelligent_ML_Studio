@@ -6,6 +6,7 @@ from app.core.dependencies import require_permission
 from app.models.user import User
 from app.schemas.project import ProjectCreate, ProjectUpdate, ProjectResponse, ProjectTransitionRequest
 from app.schemas.model_metric import LeaderboardResponse
+from app.config.state_machines import ModelState
 from app.services.project_service import ProjectService
 
 router = APIRouter(prefix="/projects", tags=["Projects"])
@@ -329,7 +330,13 @@ def get_project_leaderboard(
 
     # Sort strictly by primary metric
     def sort_key(item):
-        is_completed = item["status"] in [ModelState.TRAINED.value, ModelState.DEPLOYABLE.value, ModelState.ARTIFACT_VERIFIED.value]
+        is_completed = item["status"] in [
+            ModelState.TRAINED.value,
+            ModelState.DEPLOYABLE.value,
+            ModelState.ARTIFACT_VERIFIED.value,
+            "COMPLETED",
+            "CANDIDATE",
+        ]
         score = item["primary_sort_key"]
         if not is_completed or score is None:
             return (1, 0)

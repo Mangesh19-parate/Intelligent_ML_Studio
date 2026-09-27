@@ -110,9 +110,9 @@ def derive_pipeline_stages_batch(project_ids: list[UUID | str], db: Session) -> 
     for e in experiments:
         if e.locked_test_consumed:
             locked_consumed_projects.add(e.project_id)
-        if e.status in [ExperimentState.REGISTERED.value, ExperimentState.EVALUATED.value, ExperimentState.TEST_CONSUMED.value]:
+        if e.status in [ExperimentState.REGISTERED.value, ExperimentState.EVALUATED.value, ExperimentState.TEST_CONSUMED.value, "COMPLETED"]:
             completed_exps.add(e.project_id)
-        elif e.status == ExperimentState.TRAINING.value:
+        elif e.status in [ExperimentState.TRAINING.value, "RUNNING"]:
             running_exps.add(e.project_id)
 
     # 6. Fetch trained models

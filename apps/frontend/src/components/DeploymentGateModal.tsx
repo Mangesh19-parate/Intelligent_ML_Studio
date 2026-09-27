@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   ShieldCheck,
   CheckCircle,
@@ -83,7 +83,7 @@ export const DeploymentGateModal: React.FC<DeploymentGateModalProps> = ({
   const canDeploy = userPerms.has('DEPLOY') || userPerms.has('MANAGE_USERS');
   const canExport = userPerms.has('EXPORT') || userPerms.has('MANAGE_USERS');
 
-  const loadGateStatus = async (): Promise<void> => {
+  const loadGateStatus = useCallback(async (): Promise<void> => {
     if (!model?.id) return;
     setLoadingGate(true);
     try {
@@ -98,7 +98,7 @@ export const DeploymentGateModal: React.FC<DeploymentGateModalProps> = ({
     } finally {
       setLoadingGate(false);
     }
-  };
+  }, [model?.id]);
 
   useEffect(() => {
     if (isOpen && model?.id) {
@@ -108,7 +108,7 @@ export const DeploymentGateModal: React.FC<DeploymentGateModalProps> = ({
       setPredictResult(null);
       setExplainResult(null);
     }
-  }, [isOpen, model?.id]);
+  }, [isOpen, model?.id, loadGateStatus]);
 
   const handleApprove = async (): Promise<void> => {
     if (!model?.id) return;

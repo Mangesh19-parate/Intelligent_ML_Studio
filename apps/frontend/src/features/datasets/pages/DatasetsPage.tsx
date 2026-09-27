@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { projectApi, datasetApi, datasetSplitApi } from '../../../api/client';
 import { useProject } from '../../../context/ProjectContext';
@@ -59,7 +59,7 @@ export const DatasetsPage: React.FC = () => {
   }, [urlProjectId, currentProjectId, projects, selectProject, setSearchParams]);
 
   // Load dataset split and preview
-  const loadSplitAndPreview = async (datasetId: string) => {
+  const loadSplitAndPreview = useCallback(async (datasetId: string) => {
     try {
       const splitRes = await datasetSplitApi.getSplit(datasetId);
       setSplitSummary(splitRes.data as unknown as DatasetSplit);
@@ -68,14 +68,14 @@ export const DatasetsPage: React.FC = () => {
       const rows =
         previewRes.data?.preview_rows || (Array.isArray(previewRes.data) ? previewRes.data : []);
       setDevPreview(rows as Record<string, unknown>[]);
-    } catch (err: unknown) {
+    } catch (_err: unknown) {
       setSplitSummary(null);
       setDevPreview(null);
     }
-  };
+  }, []);
 
   // Load project details and datasets
-  const loadProjectData = async (projId: string) => {
+  const loadProjectData = useCallback(async (projId: string) => {
     if (!projId) {
       setLoading(false);
       return;
@@ -111,7 +111,7 @@ export const DatasetsPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [loadSplitAndPreview]);
 
   useEffect(() => {
     if (activeProjectId) {
@@ -119,7 +119,7 @@ export const DatasetsPage: React.FC = () => {
     } else {
       setLoading(false);
     }
-  }, [activeProjectId]);
+  }, [activeProjectId, loadProjectData]);
 
   const handleSelectProject = (projId: string) => {
     selectProject(projId);

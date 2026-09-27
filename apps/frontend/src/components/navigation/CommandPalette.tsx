@@ -11,16 +11,11 @@ import {
   Sliders,
   FolderKanban,
   Activity,
-  FileSpreadsheet,
-  CheckCircle2,
   Sparkles,
   Shield,
   FileText,
   Lock,
-  Flame,
-  ChevronRight,
   Database,
-  ArrowRight,
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useProject } from '../../context/ProjectContext';

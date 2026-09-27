@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Table, Eye, Layers } from 'lucide-react';
+import { Table } from 'lucide-react';
 
 export interface ColumnSchemaItem {
   id: string;

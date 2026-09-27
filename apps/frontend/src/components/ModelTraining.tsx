@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { experimentApi, modelApi, projectApi } from '../api/client';
 import { useProject } from '../context/ProjectContext';
 import { LineageViewer } from './LineageViewer';
@@ -15,12 +15,10 @@ import {
   REGRESSION_ALGORITHMS,
   CLASSIFICATION_ALGORITHMS,
 } from './training';
-import { EmptyState } from './feedback/EmptyState';
 import { ErrorState } from './feedback/ErrorState';
 import {
   ShieldCheck,
   CheckCircle2,
-  Layers,
   AlertTriangle,
   Cpu,
   Activity,
@@ -40,16 +38,16 @@ interface ModelTrainingProps {
 export const ModelTraining: React.FC<ModelTrainingProps> = ({
   projectId,
   taskType,
-  targetColumn,
+  targetColumn: _targetColumn,
   onExperimentCompleted,
 }) => {
   const isRegression = taskType === 'REGRESSION';
   const isClassification = taskType === 'CLASSIFICATION';
-  const availableAlgs = isRegression
-    ? REGRESSION_ALGORITHMS
-    : isClassification
-      ? CLASSIFICATION_ALGORITHMS
-      : [];
+  const availableAlgs = useMemo(() => {
+    if (isRegression) return REGRESSION_ALGORITHMS;
+    if (isClassification) return CLASSIFICATION_ALGORITHMS;
+    return [];
+  }, [isRegression, isClassification]);
 
   const [selectedAlgorithms, setSelectedAlgorithms] = useState<string[]>(
     availableAlgs.map((a) => a.id)
@@ -87,18 +85,44 @@ export const ModelTraining: React.FC<ModelTrainingProps> = ({
   useEffect(() => {
     setSelectedAlgorithms(availableAlgs.map((a) => a.id));
     setSelectionMetric(isRegression ? 'rmse' : 'f1_macro');
-  }, [taskType]);
+  }, [taskType, availableAlgs, isRegression]);
 
-  const loadLeaderboardData = async (experimentId: string | null = null) => {
-    try {
-      const res = await modelApi.getLeaderboard(projectId, experimentId);
-      setLeaderboard(res.data);
-    } catch (err) {
-      console.error('Failed to load leaderboard:', err);
-    }
-  };
+  const loadLeaderboardData = useCallback(
+    async (experimentId: string | null = null) => {
+      try {
+        const res = await modelApi.getLeaderboard(projectId, experimentId);
+        setLeaderboard(res.data);
+      } catch (err) {
+        console.error('Failed to load leaderboard:', err);
+      }
+    },
+    [projectId]
+  );
 
-  const loadHistory = async () => {
+  const startPolling = useCallback((experimentId: string) => {
+    if (pollingTimerRef.current) clearInterval(pollingTimerRef.current);
+    setPollingActive(true);
+
+    const poll = async () => {
+      try {
+        const res = await experimentApi.get(experimentId);
+        setActiveExperiment(res.data);
+        if (res.data.status === 'COMPLETED' || res.data.status === 'FAILED') {
+          clearInterval(pollingTimerRef.current);
+          setPollingActive(false);
+          await loadLeaderboardData(experimentId);
+          onExperimentCompleted?.();
+        }
+      } catch (err) {
+        console.error('Polling error:', err);
+      }
+    };
+
+    poll();
+    pollingTimerRef.current = setInterval(poll, 2500);
+  }, [loadLeaderboardData, onExperimentCompleted]);
+
+  const loadHistory = useCallback(async () => {
     try {
       const res = await experimentApi.listByProject(projectId);
       const list = res.data || [];
@@ -114,7 +138,7 @@ export const ModelTraining: React.FC<ModelTrainingProps> = ({
     } catch (err) {
       console.error('Failed to load experiment history:', err);
     }
-  };
+  }, [projectId, loadLeaderboardData, startPolling]);
 
   useEffect(() => {
     if (projectId) {
@@ -123,34 +147,7 @@ export const ModelTraining: React.FC<ModelTrainingProps> = ({
     return () => {
       if (pollingTimerRef.current) clearInterval(pollingTimerRef.current);
     };
-  }, [projectId]);
-
-  const startPolling = (experimentId: string) => {
-    if (pollingTimerRef.current) clearInterval(pollingTimerRef.current);
-    setPollingActive(true);
-
-    const poll = async () => {
-      try {
-        const res = await experimentApi.get(experimentId);
-        setActiveExperiment(res.data);
-        await loadLeaderboardData(experimentId);
-
-        if (res.data.status === 'COMPLETED' || res.data.status === 'FAILED') {
-          clearInterval(pollingTimerRef.current);
-          setPollingActive(false);
-          loadHistory();
-          if (onExperimentCompleted) onExperimentCompleted();
-        }
-      } catch (err) {
-        console.error('Polling error:', err);
-        clearInterval(pollingTimerRef.current);
-        setPollingActive(false);
-      }
-    };
-
-    poll();
-    pollingTimerRef.current = setInterval(poll, 1500);
-  };
+  }, [projectId, loadHistory]);
 
   const handleToggleAlgorithm = (algId: string) => {
     if (selectedAlgorithms.includes(algId)) {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   AlertTriangle,
   CheckCircle2,
@@ -68,7 +68,7 @@ export const ExperimentHealthModal: React.FC<ExperimentHealthModalProps> = ({
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>('');
 
-  const fetchHealth = async (): Promise<void> => {
+  const fetchHealth = useCallback(async (): Promise<void> => {
     if (!experimentId) return;
     setLoading(true);
     setError('');
@@ -84,11 +84,11 @@ export const ExperimentHealthModal: React.FC<ExperimentHealthModalProps> = ({
     } finally {
       setLoading(false);
     }
-  };
+  }, [experimentId]);
 
   useEffect(() => {
     fetchHealth();
-  }, [experimentId]);
+  }, [fetchHealth]);
 
   if (!experimentId) return null;
 

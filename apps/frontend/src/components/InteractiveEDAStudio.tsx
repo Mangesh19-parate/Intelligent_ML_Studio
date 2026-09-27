@@ -70,7 +70,7 @@ export const InteractiveEDAStudio: React.FC<InteractiveEDAStudioProps> = ({ edaR
         setMultiColumns(numericCols.slice(0, 3));
       }
     }
-  }, [columnsMeta, numericCols]);
+  }, [columnsMeta, numericCols, bivX, bivY, multiColumns.length, uniColumn]);
 
   const activeUniMeta = columnsMeta.find((c) => c.name === uniColumn);
   const isUniNumeric = activeUniMeta ? activeUniMeta.is_numeric : true;
@@ -87,7 +87,7 @@ export const InteractiveEDAStudio: React.FC<InteractiveEDAStudioProps> = ({ edaR
         setUniChartType('COUNT');
       }
     }
-  }, [uniColumn]);
+  }, [activeUniMeta, uniChartType]);
 
   // Generate Univariate Plot Data
   const renderUnivariatePlot = () => {

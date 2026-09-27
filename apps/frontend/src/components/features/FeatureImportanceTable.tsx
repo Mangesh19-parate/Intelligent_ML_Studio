@@ -1,5 +1,5 @@
 import React from 'react';
-import { Search, Filter, CheckSquare, Square, Sliders, Check } from 'lucide-react';
+import { Search, CheckSquare, Square, Sliders, Check } from 'lucide-react';
 import { Button } from '../ui/Button';
 
 export interface FeatureScoreItem {

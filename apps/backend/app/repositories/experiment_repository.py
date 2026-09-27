@@ -106,7 +106,14 @@ class ExperimentRepository(BaseRepository[Experiment]):
             exp.status = status
             if completed_at is not None:
                 exp.completed_at = completed_at
-            elif status in [ExperimentState.REGISTERED.value, ExperimentState.EVALUATED.value, ExperimentState.TRAINING_FAILED.value, ExperimentState.ARTIFACT_WRITE_FAILED.value] and exp.completed_at is None:
+            elif status in [
+                ExperimentState.REGISTERED.value,
+                ExperimentState.EVALUATED.value,
+                ExperimentState.TRAINING_FAILED.value,
+                ExperimentState.ARTIFACT_WRITE_FAILED.value,
+                "COMPLETED",
+                "FAILED",
+            ] and exp.completed_at is None:
                 exp.completed_at = datetime.now(timezone.utc)
             self.db.add(exp)
             self.db.commit()

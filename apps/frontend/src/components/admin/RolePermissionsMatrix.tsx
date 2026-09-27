@@ -1,5 +1,5 @@
 import React from 'react';
-import { Cpu, Activity, Sliders, Check } from 'lucide-react';
+import { Cpu, Activity, Sliders } from 'lucide-react';
 
 interface RolePermissionsMatrixProps {
   algorithms: any[];

@@ -79,7 +79,7 @@ class Experiment(Base):
 
     __table_args__ = (
         CheckConstraint(
-            "status IN ('CREATED', 'CONFIGURED', 'TRAINING', 'EVALUATED', 'TEST_CONSUMED', 'REGISTERED', 'TRAINING_FAILED', 'ARTIFACT_WRITE_FAILED')",
+            "status IN ('CREATED', 'CONFIGURED', 'TRAINING', 'EVALUATED', 'TEST_CONSUMED', 'REGISTERED', 'TRAINING_FAILED', 'ARTIFACT_WRITE_FAILED', 'RUNNING', 'COMPLETED', 'FAILED', 'CANCELLED')",
             name="chk_experiment_status"
         ),
         CheckConstraint("selection_direction IN ('MAXIMIZE', 'MINIMIZE')", name="chk_experiment_selection_direction"),

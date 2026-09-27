@@ -5,7 +5,7 @@ services:
     runtime: python
     rootDir: apps/backend
     plan: starter
-    buildCommand: pip install -r requirements.txt
+    buildCommand: pip install -r requirements.lock
     startCommand: ./start.sh
     healthCheckPath: /health/ready
     autoDeploy: true
@@ -47,7 +47,7 @@ services:
     runtime: python
     rootDir: apps/backend
     plan: starter
-    buildCommand: pip install -r requirements.txt
+    buildCommand: pip install -r requirements.lock
     startCommand: python -m app.tasks.worker
     autoDeploy: true
     envVars:

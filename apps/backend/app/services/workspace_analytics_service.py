@@ -239,7 +239,7 @@ class WorkspaceAnalyticsService:
         total_projects = len(projects)
         project_ids = [p.id for p in projects]
 
-        # 2. Derive stages across projects
+        # 2. Derive stages across projects in a single batched query
         stage_counts = {
             "DATA": 0,
             "SPLIT": 0,
@@ -251,12 +251,13 @@ class WorkspaceAnalyticsService:
             "GATE_PASSED": 0,
             "DEPLOYED": 0,
         }
-        for proj in projects:
-            stage = derive_pipeline_stage(proj.id, self.db)
-            if stage in stage_counts:
-                stage_counts[stage] += 1
-            else:
-                stage_counts[stage] = 1
+        if project_ids:
+            stages_map = derive_pipeline_stages_batch(project_ids, self.db)
+            for stage in stages_map.values():
+                if stage in stage_counts:
+                    stage_counts[stage] += 1
+                else:
+                    stage_counts[stage] = 1
 
         if not project_ids:
             return {

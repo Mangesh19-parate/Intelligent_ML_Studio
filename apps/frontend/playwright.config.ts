@@ -17,9 +17,22 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'] },
     },
   ],
-  webServer: {
-    command: 'npm run dev',
-    url: 'http://localhost:5173',
-    reuseExistingServer: !process.env.CI,
-  },
+  webServer: [
+    {
+      command: process.platform === 'win32'
+        ? 'python -m uvicorn app.main:app --port 8000'
+        : 'python -m uvicorn app.main:app --port 8000',
+      cwd: '../backend',
+      url: 'http://localhost:8000/health',
+      reuseExistingServer: !process.env.CI,
+      timeout: 60000,
+    },
+    {
+      command: process.platform === 'win32' ? 'npm.cmd run dev' : 'npm run dev',
+      url: 'http://localhost:5173',
+      reuseExistingServer: !process.env.CI,
+      timeout: 60000,
+    },
+  ],
 });
+

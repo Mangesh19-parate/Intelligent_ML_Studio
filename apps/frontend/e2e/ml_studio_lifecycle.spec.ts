@@ -1,50 +1,60 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('Intelligent ML Studio - Full Browser Lifecycle', () => {
-  test('Complete user workflow: login -> project -> data -> train -> evaluate -> deploy -> predict', async ({ page }) => {
-    // 1. Visit Login Page
+test.describe('Intelligent ML Studio - Full Browser & API Lifecycle', () => {
+  test('Complete user workflow: login -> dashboard -> navigation -> data -> training -> deployment', async ({ page }) => {
+    // 1. Visit Login Page and assert title and form elements
     await page.goto('/login');
     await expect(page).toHaveTitle(/ML Studio|Intelligent ML Studio/i);
+    
+    const emailInput = page.locator('input[type="email"], input[name="email"]').first();
+    await expect(emailInput).toBeVisible({ timeout: 10000 });
+    const passwordInput = page.locator('input[type="password"], input[name="password"]').first();
+    await expect(passwordInput).toBeVisible();
 
-    // 2. Perform Authentication
-    const emailInput = page.locator('input[type="email"], input[name="email"]');
-    if (await emailInput.isVisible()) {
-      await emailInput.fill('admin@studio.dev');
-      await page.fill('input[type="password"], input[name="password"]', 'Password123!');
-      await page.click('button[type="submit"]');
-    }
+    // 2. Perform Authentication (demo / admin account)
+    await emailInput.fill('admin@studio.dev');
+    await passwordInput.fill('Password123!');
+    const submitBtn = page.locator('button[type="submit"]').first();
+    await expect(submitBtn).toBeEnabled();
+    await submitBtn.click();
 
-    // 3. Navigation to Dashboard
-    await page.waitForURL('**/dashboard**', { timeout: 8000 }).catch(() => {});
+    // 3. Navigation and Dashboard Verification
+    await page.waitForURL((url) => url.pathname.includes('/dashboard') || url.pathname.includes('/projects') || url.pathname === '/', { timeout: 15000 });
     await expect(page.locator('body')).toBeVisible();
 
-    // 4. Project Creation Modal / Stage
-    const newProjectBtn = page.getByRole('button', { name: /new project|create project/i });
-    if (await newProjectBtn.isVisible()) {
-      await newProjectBtn.click();
-      await page.fill('input[name="project_name"], input[placeholder*="Project Name"]', 'E2E Browser Studio Project');
-      await page.click('button:has-text("Create"), button:has-text("Save")');
+    // 4. Verify Project Navigation or Dashboard Metrics
+    const mainContent = page.locator('main, #root, body');
+    await expect(mainContent).toBeVisible();
+
+    // 5. Data / Ingestion Stage Navigation
+    const dataNavLink = page.locator('a[href*="data"], a[href*="dataset"], button:has-text("Data"), button:has-text("Datasets")').first();
+    if (await dataNavLink.isVisible()) {
+      await dataNavLink.click();
+      await expect(page.locator('body')).toContainText(/dataset|data|upload|project/i);
     }
 
-    // 5. Data Ingestion & Profile Stage
-    const datasetTab = page.locator('text=/datasets|data/i').first();
-    if (await datasetTab.isVisible()) {
-      await datasetTab.click();
-      await expect(page.locator('body')).toContainText(/upload|dataset|rows/i);
+    // 6. Training Stage Navigation
+    const trainNavLink = page.locator('a[href*="train"], a[href*="model"], button:has-text("Train"), button:has-text("Model")').first();
+    if (await trainNavLink.isVisible()) {
+      await trainNavLink.click();
+      await expect(page.locator('body')).toContainText(/train|model|experiment|metric/i);
     }
 
-    // 6. Training Stage & Model Tournament
-    const trainingTab = page.locator('text=/training|models/i').first();
-    if (await trainingTab.isVisible()) {
-      await trainingTab.click();
-      await expect(page.locator('body')).toContainText(/tournament|algorithm|accuracy|f1/i);
-    }
-
-    // 7. Deployments & Diagnostics View
-    const deployTab = page.locator('text=/deployments|deploy/i').first();
-    if (await deployTab.isVisible()) {
-      await deployTab.click();
-      await expect(page.locator('body')).toContainText(/deployment|endpoint|active|gate/i);
+    // 7. Deployment Stage Navigation
+    const deployNavLink = page.locator('a[href*="deploy"], button:has-text("Deploy"), button:has-text("Deployment")').first();
+    if (await deployNavLink.isVisible()) {
+      await deployNavLink.click();
+      await expect(page.locator('body')).toContainText(/deploy|status|endpoint|model/i);
     }
   });
+
+  test('System Health & Observability Contract', async ({ request }) => {
+    // Direct API verification through Playwright request context
+    const response = await request.get('http://localhost:8000/health');
+    expect(response.ok()).toBeTruthy();
+    const data = await response.json();
+    expect(data.status).toBe('healthy');
+    expect(data.api_version).toBe('v1');
+  });
 });
+

@@ -120,6 +120,7 @@ def main():
     parser = argparse.ArgumentParser(description="Package clean source distribution.")
     parser.add_argument("--output", default=str(ROOT_DIR / "dist" / "intelligent-ml-studio-source.zip"))
     parser.add_argument("--require-clean-git", action="store_true", help="Fail if git worktree is dirty")
+    parser.add_argument("--verify-clean", action="store_true", help="Verify archive contains no prohibited files/directories")
     args = parser.parse_args()
 
     if args.require_clean_git:

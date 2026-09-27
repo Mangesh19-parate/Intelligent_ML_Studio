@@ -226,8 +226,9 @@ def submit_experiment_task(
                 detail="Task queue backpressure: Global queued capacity saturated. Please retry later.",
             )
 
+        exp_uuid = UUID(str(experiment_id)) if not isinstance(experiment_id, UUID) else experiment_id
         active_for_exp = db.query(DurableTask).filter(
-            DurableTask.experiment_id == str(experiment_id),
+            DurableTask.experiment_id == exp_uuid,
             DurableTask.state.in_([TaskState.QUEUED.value, TaskState.RUNNING.value]),
         ).count()
         if active_for_exp >= MAX_ACTIVE_FOR_EXP:
@@ -239,7 +240,7 @@ def submit_experiment_task(
         task_id = f"task-{uuid.uuid4()}"
         record = DurableTaskRecord(
             task_id=task_id,
-            experiment_id=str(experiment_id),
+            experiment_id=str(exp_uuid),
             idempotency_key=idempotency_key,
             timeout_seconds=timeout_seconds,
             state=TaskState.QUEUED,

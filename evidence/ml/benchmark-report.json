@@ -1,11 +1,11 @@
 {
-  "generated_at": "2026-09-24T15:27:57.280388+00:00",
+  "generated_at": "2026-09-27T14:37:47.870341+00:00",
   "fingerprint": {
-    "commit": "d1639593cf40415faa13246a8b1382184060250d",
+    "commit": "1cdf6eb191e432eb754fba868e2330637e64ec5f",
     "dirty_worktree": true,
     "python_version": "3.13.14",
     "platform": "win32",
-    "backend_requirements_sha256": "a1cb5031ae9563c657fd4f2280121a18cc7914ea7c8b2af51cf0493f3ab669e5",
+    "backend_requirements_sha256": "6c72085617d7f6b111e8d4d49020ce08d9f02916114f267c55b737c7f1c45e63",
     "pyproject_sha256": "b32242d63996b967aa89df256d33263ee567133d964a2fa1ee6d75d3dcd678f0"
   },
   "measurement_scope": "in_process_model_prediction",
@@ -16,15 +16,15 @@
       "rows": 20640,
       "features": 8,
       "champion_algorithm": "RandomForestRegressor",
-      "single_fit_training_time_s": 0.813,
+      "single_fit_training_time_s": 0.783,
       "peak_training_traced_ram_mb": 1.46,
-      "process_rss_mb": 248.94,
+      "process_rss_mb": 249.27,
       "artifact_size_mb": 17.25,
       "measured": true,
       "in_process_prediction_latency_ms": {
-        "p50_ms": 1.05,
-        "p95_ms": 1.51,
-        "p99_ms": 1.66,
+        "p50_ms": 0.99,
+        "p95_ms": 1.29,
+        "p99_ms": 1.56,
         "raw_observations_count": 100
       }
     },
@@ -34,23 +34,23 @@
       "rows": 2000,
       "features": 12,
       "champion_algorithm": "GradientBoostingClassifier",
-      "single_fit_training_time_s": 0.088,
+      "single_fit_training_time_s": 0.082,
       "peak_training_traced_ram_mb": 0.27,
-      "process_rss_mb": 233.95,
+      "process_rss_mb": 234.2,
       "artifact_size_mb": 0.04,
       "measured": true,
       "in_process_prediction_latency_ms": {
-        "p50_ms": 0.69,
-        "p95_ms": 0.86,
-        "p99_ms": 0.94,
+        "p50_ms": 0.63,
+        "p95_ms": 0.72,
+        "p99_ms": 0.95,
         "raw_observations_count": 100
       }
     }
   ],
   "pooled_in_process_latency_percentiles": {
-    "p50_ms": 0.97,
-    "p95_ms": 1.29,
-    "p99_ms": 1.59,
+    "p50_ms": 0.94,
+    "p95_ms": 1.21,
+    "p99_ms": 1.56,
     "total_observations": 200
   }
 }

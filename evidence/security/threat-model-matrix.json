@@ -1,11 +1,11 @@
 {
-  "generated_at": "2026-09-24T15:27:57.280388+00:00",
+  "generated_at": "2026-09-27T14:37:47.870341+00:00",
   "fingerprint": {
-    "commit": "d1639593cf40415faa13246a8b1382184060250d",
+    "commit": "1cdf6eb191e432eb754fba868e2330637e64ec5f",
     "dirty_worktree": true,
     "python_version": "3.13.14",
     "platform": "win32",
-    "backend_requirements_sha256": "a1cb5031ae9563c657fd4f2280121a18cc7914ea7c8b2af51cf0493f3ab669e5",
+    "backend_requirements_sha256": "6c72085617d7f6b111e8d4d49020ce08d9f02916114f267c55b737c7f1c45e63",
     "pyproject_sha256": "b32242d63996b967aa89df256d33263ee567133d964a2fa1ee6d75d3dcd678f0"
   },
   "controls": [

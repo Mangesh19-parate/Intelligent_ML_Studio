@@ -65,6 +65,12 @@ research/results.db
 brain/
 scratch/
 
+# Evidence, Verification & Release Artifacts
+evidence/
+artifacts/
+benchmarks/results/
+research/results/
+
 # Archives & Distribution Bundles
 dist/
 dist_export/

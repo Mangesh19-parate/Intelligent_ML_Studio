@@ -1,0 +1,19 @@
+# Auto-normalize line endings across OS
+* text=auto eol=lf
+
+# Explicit binary files
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.zip binary
+*.tar.gz binary
+*.db binary
+*.sqlite binary
+*.sqlite3 binary
+*.parquet binary
+*.pkl binary
+*.joblib binary
+*.pyc binary

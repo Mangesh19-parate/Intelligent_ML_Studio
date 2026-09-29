@@ -3,6 +3,7 @@
 Intelligent ML Studio - Zero-Known-Defect Release Verification Gate.
 
 Executes sequential multi-stage validation across:
+0. Pre-Flight Working Tree Hygiene Gate
 1. Python Environment & Dependency Integrity
 2. Python Syntax Compilation
 3. Backend Test Suite (Pytest Unit + Invariants + Gate + Security)
@@ -12,8 +13,9 @@ Executes sequential multi-stage validation across:
 7. Frontend Vitest Test Suite
 8. Frontend Production Bundle (Vite)
 9. Release Packaging Hygiene & Artifact Containment
+10. Post-Verification Worktree Immutability & Cleanliness Assertion
 
-Outputs an immutable, measurement-derived release certificate JSON to evidence/release_certificate.json.
+Outputs an immutable, measurement-derived release certificate JSON.
 """
 
 import sys
@@ -24,7 +26,6 @@ import argparse
 import subprocess
 import time
 from pathlib import Path
-
 from datetime import datetime, timezone
 
 # Ensure UTF-8 output on all platforms including Windows CP1252 consoles
@@ -37,7 +38,7 @@ if sys.stdout.encoding != 'utf-8':
 ROOT_DIR = Path(__file__).resolve().parent.parent
 FRONTEND_DIR = ROOT_DIR / "apps" / "frontend"
 BACKEND_DIR = ROOT_DIR / "apps" / "backend"
-EVIDENCE_DIR = ROOT_DIR / "evidence"
+DEFAULT_EVIDENCE_DIR = ROOT_DIR / "evidence"
 
 
 def get_git_commit() -> str:
@@ -114,8 +115,7 @@ def run_step(step_name: str, cmd: list[str], cwd: Path) -> tuple[bool, str, floa
 def check_worktree_clean() -> tuple[bool, str]:
     try:
         status = subprocess.check_output(["git", "status", "--porcelain"], cwd=str(ROOT_DIR), text=True).strip()
-        # Filter out transient untracked evidence / certificate files if any
-        lines = [l for l in status.splitlines() if l.strip() and not l.strip().endswith(".tmp")]
+        lines = [l for l in status.splitlines() if l.strip()]
         if lines:
             return False, f"Working tree is dirty ({len(lines)} uncommitted changes):\n" + "\n".join(lines[:10])
         return True, "Working tree is clean."
@@ -126,16 +126,20 @@ def check_worktree_clean() -> tuple[bool, str]:
 def main():
     parser = argparse.ArgumentParser(description="Zero-Known-Defect Verification Gate")
     parser.add_argument("--allow-dirty", action="store_true", help="Allow dirty working tree for dev iterations")
+    parser.add_argument("--evidence-dir", default=str(DEFAULT_EVIDENCE_DIR), help="Output directory for generated verification evidence")
     args = parser.parse_args()
+
+    evidence_out = Path(args.evidence_dir).resolve()
 
     print("=" * 80, flush=True)
     print(" INTELLIGENT ML STUDIO — ZERO-KNOWN-DEFECT RELEASE VERIFICATION GATE", flush=True)
+    print(f" Evidence Destination: {evidence_out}")
     print("=" * 80, flush=True)
     
     stages_record = {}
     results = []
 
-    # 0. Working Tree Hygiene Gate
+    # 0. Working Tree Hygiene Pre-Check
     print("\n[0. Working Tree Hygiene Gate] Checking git status...", flush=True)
     t0_start = time.time()
     is_clean, clean_msg = check_worktree_clean()
@@ -160,7 +164,6 @@ def main():
     stages_record["dependencies"] = {"status": "PASSED" if s1_success else "FAILED", "duration_s": round(s1_dur, 2)}
     if not s1_success:
         sys.exit(1)
-
 
     # 2. Syntax & Compilation Gate
     s2_success, s2_out, s2_dur = run_step(
@@ -208,7 +211,7 @@ def main():
     # 5. Live Measurement Evidence Pack Generation
     s5_success, s5_out, s5_dur = run_step(
         "5. Live Measurement Evidence Generation",
-        [sys.executable, "scripts/generate_evidence_pack.py"],
+        [sys.executable, "scripts/generate_evidence_pack.py", "--output-dir", str(evidence_out)],
         ROOT_DIR
     )
     results.append(("5. Evidence Pack Generation", s5_success, s5_dur))
@@ -260,6 +263,19 @@ def main():
     if not s9_success:
         sys.exit(1)
 
+    # 10. Post-Verification Worktree Immutability Check
+    print("\n[10. Post-Verification Immutability Check] Verifying worktree remains clean...", flush=True)
+    t10_start = time.time()
+    is_clean_post, clean_msg_post = check_worktree_clean()
+    t10_dur = time.time() - t10_start
+    if is_clean and not is_clean_post and not args.allow_dirty:
+        print(f"[10. Post-Verification Immutability Gate] FAILED ({t10_dur:.2f}s)\n  > {clean_msg_post}", flush=True)
+        print("\n>>> CRITICAL INTEGRITY ERROR: Verification modified tracked source files! <<<\n", flush=True)
+        sys.exit(1)
+    else:
+        results.append(("10. Worktree Immutability Gate", True, t10_dur))
+        stages_record["post_verification_immutability"] = {"status": "PASSED" if is_clean_post else "DIRTY_ALLOWED", "duration_s": round(t10_dur, 2)}
+
     # Output Scorecard
     print("\n" + "=" * 80, flush=True)
     print(" ZERO-KNOWN-DEFECT VERIFICATION SCORECARD", flush=True)
@@ -280,7 +296,8 @@ def main():
     print(f"{'Total Verification Duration':<48} | {total_time:>8.2f}s |", flush=True)
     print("=" * 80, flush=True)
     
-    if not is_clean:
+    current_commit = get_git_commit()
+    if not is_clean or not is_clean_post:
         release_verdict = "DEVELOPMENT_MODE_UNCERTIFIED"
     elif all_passed:
         release_verdict = "ZERO_KNOWN_DEFECT_CERTIFIED"
@@ -288,25 +305,34 @@ def main():
         release_verdict = "RELEASE_BLOCKED"
 
     # Save Immutable Verification Certificate
-    EVIDENCE_DIR.mkdir(parents=True, exist_ok=True)
+    evidence_out.mkdir(parents=True, exist_ok=True)
     certificate = {
         "platform": "Intelligent ML Studio",
         "version": "1.0.0",
-        "git_commit": get_git_commit(),
+        "git_commit": current_commit,
         "verified_at": datetime.now(timezone.utc).isoformat(),
         "total_duration_seconds": round(total_time, 2),
-        "clean_worktree": is_clean,
+        "clean_worktree": is_clean and is_clean_post,
         "stages": stages_record,
         "release_verdict": release_verdict,
     }
     
-    cert_path = EVIDENCE_DIR / "release_certificate.json"
+    cert_path = evidence_out / "release_certificate.json"
     with open(cert_path, "w", encoding="utf-8") as f:
         json.dump(certificate, f, indent=2)
-    print(f"\n[CERTIFICATE] Saved verified release certificate to: {cert_path.relative_to(ROOT_DIR)}")
+    print(f"\n[CERTIFICATE] Saved verified release certificate to: {cert_path}")
+
+    # Also record in out-of-tree artifacts folder if unversioned or commit exists
+    commit_artifact_dir = ROOT_DIR / "artifacts" / "release" / current_commit[:12]
+    try:
+        commit_artifact_dir.mkdir(parents=True, exist_ok=True)
+        with open(commit_artifact_dir / "release_certificate.json", "w", encoding="utf-8") as f:
+            json.dump(certificate, f, indent=2)
+    except Exception:
+        pass
 
     if release_verdict == "ZERO_KNOWN_DEFECT_CERTIFIED":
-        print("\n>>> ALL 9 RELEASE GATES PASSED & CLEAN TREE: ZERO-KNOWN-DEFECT RELEASE CERTIFIED <<<\n", flush=True)
+        print("\n>>> ALL RELEASE GATES PASSED & CLEAN TREE: ZERO-KNOWN-DEFECT RELEASE CERTIFIED <<<\n", flush=True)
         sys.exit(0)
     elif release_verdict == "DEVELOPMENT_MODE_UNCERTIFIED":
         print("\n>>> ALL VERIFICATION GATES PASSED (DEVELOPMENT MODE: UNSTAGED/DIRTY WORKTREE) <<<\n", flush=True)

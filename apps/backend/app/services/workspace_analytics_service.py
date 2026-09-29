@@ -15,7 +15,7 @@ from app.models.model_metric import ModelMetric
 from app.models.deployment_gate import DeploymentGate
 from app.models.deployment import Deployment
 from app.models.user import User
-from app.config.state_machines import ExperimentState, ModelState
+from app.config.state_machines import ExperimentState, ModelState, DeploymentState
 from app.services.monitoring_service import MonitoringService
 
 
@@ -110,7 +110,13 @@ def derive_pipeline_stages_batch(project_ids: list[UUID | str], db: Session) -> 
     for e in experiments:
         if e.locked_test_consumed:
             locked_consumed_projects.add(e.project_id)
-        if e.status in [ExperimentState.REGISTERED.value, ExperimentState.EVALUATED.value, ExperimentState.TEST_CONSUMED.value, "COMPLETED"]:
+        if e.status in [
+            ExperimentState.REGISTERED.value,
+            ExperimentState.EVALUATED.value,
+            ExperimentState.TEST_CONSUMED.value,
+            ExperimentState.CONFIGURED.value,
+            "COMPLETED",
+        ]:
             completed_exps.add(e.project_id)
         elif e.status in [ExperimentState.TRAINING.value, "RUNNING"]:
             running_exps.add(e.project_id)
@@ -134,7 +140,7 @@ def derive_pipeline_stages_batch(project_ids: list[UUID | str], db: Session) -> 
             db.query(Deployment.model_id)
             .filter(
                 Deployment.model_id.in_(all_model_ids),
-                Deployment.status.in_(["LIVE", "DEPLOYED"]),
+                Deployment.status.in_([DeploymentState.DEPLOYED.value, "LIVE", "DEPLOYED"]),
             )
             .all()
         )

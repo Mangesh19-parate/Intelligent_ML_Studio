@@ -109,6 +109,7 @@ class ExperimentRepository(BaseRepository[Experiment]):
             elif status in [
                 ExperimentState.REGISTERED.value,
                 ExperimentState.EVALUATED.value,
+                ExperimentState.CONFIGURED.value,
                 ExperimentState.TRAINING_FAILED.value,
                 ExperimentState.ARTIFACT_WRITE_FAILED.value,
                 "COMPLETED",

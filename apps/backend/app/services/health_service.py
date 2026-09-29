@@ -234,6 +234,7 @@ class HealthService:
         try:
             from app.models.durable_task import DurableTask
             from app.models.worker_heartbeat import WorkerHeartbeat
+            from app.tasks.task_state import TaskState
             from datetime import timedelta
             now = datetime.now(timezone.utc)
 
@@ -251,7 +252,7 @@ class HealthService:
             active_tasks = (
                 session.query(DurableTask)
                 .filter(
-                    DurableTask.state == "RUNNING",
+                    DurableTask.state == TaskState.RUNNING.value,
                     DurableTask.heartbeat_at >= (now - timedelta(seconds=60)),
                 )
                 .all()
@@ -259,7 +260,7 @@ class HealthService:
             stale_tasks = (
                 session.query(DurableTask)
                 .filter(
-                    DurableTask.state == "RUNNING",
+                    DurableTask.state == TaskState.RUNNING.value,
                     DurableTask.lease_expires_at < now,
                 )
                 .count()

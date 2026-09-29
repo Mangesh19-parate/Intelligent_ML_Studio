@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from app.core.database import SessionLocal
 from app.models.durable_task import DurableTask
 from app.models.experiment import Experiment
+from app.tasks.task_state import TaskState
 
 _LATENCY_SAMPLES: list[float] = []
 _MAX_SAMPLES = 1000
@@ -31,11 +32,11 @@ def get_system_metrics(db: Session | None = None) -> dict[str, Any]:
         close_db = True
     try:
         # Task queue depth and counts
-        queued_count = db.query(DurableTask).filter(DurableTask.state == "QUEUED").count()
-        running_count = db.query(DurableTask).filter(DurableTask.state == "RUNNING").count()
-        succeeded_count = db.query(DurableTask).filter(DurableTask.state == "SUCCEEDED").count()
-        failed_count = db.query(DurableTask).filter(DurableTask.state == "FAILED").count()
-        timed_out_count = db.query(DurableTask).filter(DurableTask.state == "TIMED_OUT").count()
+        queued_count = db.query(DurableTask).filter(DurableTask.state == TaskState.QUEUED.value).count()
+        running_count = db.query(DurableTask).filter(DurableTask.state == TaskState.RUNNING.value).count()
+        succeeded_count = db.query(DurableTask).filter(DurableTask.state == TaskState.SUCCEEDED.value).count()
+        failed_count = db.query(DurableTask).filter(DurableTask.state == TaskState.FAILED.value).count()
+        timed_out_count = db.query(DurableTask).filter(DurableTask.state == TaskState.TIMED_OUT.value).count()
 
         # Latency statistics
         if _LATENCY_SAMPLES:

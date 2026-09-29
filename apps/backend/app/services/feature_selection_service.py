@@ -356,7 +356,7 @@ class FeatureSelectionService:
             splitter = KFold(n_splits=n_splits, shuffle=True, random_state=seed)
 
         # 3. Create Experiment shell record
-        experiment = self.exp_repo.create_experiment(project.id, status="RUNNING")
+        experiment = self.exp_repo.create_experiment(project.id, status=ExperimentState.TRAINING.value)
 
         fold_ensemble_scores: list[dict[str, float]] = []
         all_feature_names: set[str] = set()
@@ -541,7 +541,7 @@ class FeatureSelectionService:
                 final_selection_method="rank_aggregation_ensemble",
             )
             experiment.feature_selection_snapshot_id = fs_snapshot.id
-            self.exp_repo.update_status(experiment.id, "COMPLETED")
+            self.exp_repo.update_status(experiment.id, ExperimentState.CONFIGURED.value)
             self.db.commit()
 
             return {
@@ -560,7 +560,7 @@ class FeatureSelectionService:
             }
 
         except Exception as err:
-            self.exp_repo.update_status(experiment.id, "FAILED")
+            self.exp_repo.update_status(experiment.id, ExperimentState.TRAINING_FAILED.value)
             self.db.rollback()
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

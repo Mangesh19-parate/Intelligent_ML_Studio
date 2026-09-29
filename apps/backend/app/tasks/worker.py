@@ -19,6 +19,7 @@ import app.models
 from app.models.durable_task import DurableTask
 from app.models.worker_heartbeat import WorkerHeartbeat
 from app.tasks.task_state import TaskState
+from app.config.state_machines import ExperimentState
 from app.tasks.experiment_tasks import (
     run_task_with_timeout_enforcement,
     recover_stale_tasks,
@@ -125,8 +126,8 @@ def claim_next_queued_task(
 
             # Atomically transition parent experiment from CONFIGURED/CREATED to TRAINING
             exp = db.query(Experiment).filter(Experiment.id == task.experiment_id).first()
-            if exp and exp.status in ["CONFIGURED", "CREATED", "QUEUED"]:
-                exp.status = "TRAINING"
+            if exp and exp.status in [ExperimentState.CONFIGURED.value, ExperimentState.CREATED.value, "QUEUED"]:
+                exp.status = ExperimentState.TRAINING.value
                 exp.started_at = now
 
             db.commit()

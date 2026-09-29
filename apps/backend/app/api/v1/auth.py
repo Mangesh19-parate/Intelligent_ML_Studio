@@ -206,10 +206,18 @@ def logout(
     if token_str:
         service = AuthService(db)
         service.revoke_refresh_token(token_str)
+    is_prod = (settings.ENV.lower() == "production")
+    secure = settings.COOKIE_SECURE if settings.COOKIE_SECURE is not None else is_prod
+    samesite = settings.COOKIE_SAMESITE.lower()
+    if samesite == "none":
+        secure = True
     response.delete_cookie(
         key="refresh_token",
         path="/",
         domain=settings.COOKIE_DOMAIN,
+        httponly=True,
+        secure=secure,
+        samesite=samesite,
     )
     return {"message": "Logged out successfully"}
 

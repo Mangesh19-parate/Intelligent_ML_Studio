@@ -126,6 +126,8 @@ openssl rand -hex 32
 | `JWT_SECRET` | *(Generated secret ≥32 chars)* | Signs user session JWTs |
 | `ARTIFACT_SIGNING_KEY` | *(Generated secret ≥32 chars)* | HMAC signing key for model files |
 | `BACKEND_CORS_ORIGINS` | `https://your-app.vercel.app` | Comma-separated allowed frontend origins |
+| `COOKIE_SAMESITE` | `none` | Cross-site cookie attribute (`none` required for Vercel + Render split domains) |
+| `COOKIE_SECURE` | `true` | Enforces HTTPS-only cookies (required when `COOKIE_SAMESITE=none`) |
 
 5. Click **Create Web Service**.
 

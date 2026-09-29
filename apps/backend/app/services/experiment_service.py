@@ -80,18 +80,6 @@ class ExperimentService:
     7. Concurrency Protection (SRS v9 §6): At most one active TRAINING job per experiment; concurrent attempts rejected immediately.
     """
 
-    VALID_REGRESSION_ALGORITHMS = {
-        "LinearRegression", "Linear Regression", "linear_regression",
-        "RandomForestRegressor", "Random Forest", "Random Forest Regressor", "random_forest_regressor",
-        "GradientBoostingRegressor", "Gradient Boosting", "Gradient Boosting Regressor", "gradient_boosting_regressor",
-    }
-
-    VALID_CLASSIFICATION_ALGORITHMS = {
-        "LogisticRegression", "Logistic Regression", "logistic_regression",
-        "RandomForestClassifier", "Random Forest", "Random Forest Classifier", "random_forest_classifier",
-        "GradientBoostingClassifier", "Gradient Boosting", "Gradient Boosting Classifier", "gradient_boosting_classifier",
-    }
-
     def __init__(self, db: Session, storage: StorageService | None = None):
         self.db = db
         self.storage = storage or get_storage_service()

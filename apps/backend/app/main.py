@@ -149,7 +149,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
         },
     )
 
-from fastapi import Response, Depends, status
+from fastapi import APIRouter, Response, Depends, status
 from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.services.health_service import HealthService
@@ -160,8 +160,9 @@ from app.schemas.health import (
     DetailedHealthResponse,
 )
 
-@app.get("/health", tags=["Health"], summary="Backward-compatible baseline health probe")
-@app.get("/api/v1/health", tags=["Health"], summary="Backward-compatible baseline health probe")
+health_router = APIRouter(tags=["Health"])
+
+@health_router.get("/health", summary="Backward-compatible baseline health probe")
 def health_check():
     return {
         "status": "healthy",
@@ -171,14 +172,12 @@ def health_check():
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
 
-@app.get("/health/live", response_model=LivenessResponse, tags=["Health"], summary="Kubernetes / container liveness probe")
-@app.get("/api/v1/health/live", response_model=LivenessResponse, tags=["Health"], summary="Kubernetes / container liveness probe")
+@health_router.get("/health/live", response_model=LivenessResponse, summary="Kubernetes / container liveness probe")
 def liveness_check():
     service = HealthService()
     return service.check_liveness()
 
-@app.get("/health/ready", response_model=ReadinessResponse, tags=["Health"], summary="Kubernetes / load-balancer deep readiness probe")
-@app.get("/api/v1/health/ready", response_model=ReadinessResponse, tags=["Health"], summary="Kubernetes / load-balancer deep readiness probe")
+@health_router.get("/health/ready", response_model=ReadinessResponse, summary="Kubernetes / load-balancer deep readiness probe")
 def readiness_check(response: Response, db: Session = Depends(get_db)):
     service = HealthService(db)
     is_ready, data = service.check_readiness(db)
@@ -186,17 +185,19 @@ def readiness_check(response: Response, db: Session = Depends(get_db)):
         response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
     return data
 
-@app.get("/health/worker", response_model=SubsystemHealth, tags=["Health"], summary="Standalone worker health and heartbeat probe")
-@app.get("/api/v1/health/worker", response_model=SubsystemHealth, tags=["Health"], summary="Standalone worker health and heartbeat probe")
+@health_router.get("/health/worker", response_model=SubsystemHealth, summary="Standalone worker health and heartbeat probe")
 def worker_health_check(db: Session = Depends(get_db)):
     service = HealthService(db)
     return service.check_worker(db)
 
-@app.get("/health/status", response_model=DetailedHealthResponse, tags=["Health"], summary="Multi-service subsystem observability and telemetry report")
-@app.get("/api/v1/health/status", response_model=DetailedHealthResponse, tags=["Health"], summary="Multi-service subsystem observability and telemetry report")
+@health_router.get("/health/status", response_model=DetailedHealthResponse, summary="Multi-service subsystem observability and telemetry report")
 def detailed_health_status(response: Response, db: Session = Depends(get_db)):
     service = HealthService(db)
     http_code, data = service.get_detailed_status(db, code_version=get_code_version())
     response.status_code = http_code
     return data
+
+app.include_router(health_router)
+app.include_router(health_router, prefix="/api/v1")
+
 

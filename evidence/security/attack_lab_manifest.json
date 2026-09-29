@@ -1,6 +1,6 @@
 {
   "manifest_version": "1.0.0",
-  "timestamp": "2026-09-28T14:10:12.194251+00:00",
+  "timestamp": "2026-09-29T13:21:53.782454+00:00",
   "dataset": {
     "name": "Synthetic Leakage Benchmark",
     "samples": 200,

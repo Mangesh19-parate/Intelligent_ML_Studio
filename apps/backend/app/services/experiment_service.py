@@ -63,16 +63,6 @@ from app.services.experiments.passport_signer import ModelPassportSigner
 
 logger = logging.getLogger(__name__)
 
-# Scavenger registry tracking orphaned artifacts where immediate deletion failed (Day 3 P0)
-ORPHANED_RECOVERABLE_REGISTRY: set[str] = set()
-
-def get_orphaned_recoverable_registry() -> set[str]:
-    """Returns the set of artifact file paths marked as ORPHANED_RECOVERABLE."""
-    return ORPHANED_RECOVERABLE_REGISTRY
-
-def clear_orphaned_recoverable_registry() -> None:
-    """Clears the in-memory scavenger registry (useful in test teardown)."""
-    ORPHANED_RECOVERABLE_REGISTRY.clear()
 
 class ExperimentService:
     """

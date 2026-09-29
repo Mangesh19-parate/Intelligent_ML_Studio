@@ -82,9 +82,54 @@ jobs:
         working-directory: apps/frontend
         run: npm run build
 
+  e2e-quality-gate:
+    name: Full-Lifecycle Playwright E2E Integration Gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install Backend Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r apps/backend/requirements.txt uvicorn
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "npm"
+          cache-dependency-path: apps/frontend/package-lock.json
+
+      - name: Install Frontend Dependencies
+        working-directory: apps/frontend
+        run: npm ci
+
+      - name: Install Playwright Chromium Browser
+        working-directory: apps/frontend
+        run: npx playwright install --with-deps chromium
+
+      - name: Run Full Lifecycle Playwright E2E Tests
+        working-directory: apps/frontend
+        env:
+          CI: true
+          ENV: testing
+          SEED_DEMO_DATA: true
+          JWT_SECRET: testing-jwt-secret-key-must-be-at-least-32-chars
+          DATABASE_URL: sqlite:///./e2e_ci.db
+        run: npm run test:e2e
+
   production-promotion-gate:
     name: Production Promotion & Release Packaging Gate
-    needs: [backend-quality-gate, frontend-quality-gate]
+    needs: [backend-quality-gate, frontend-quality-gate, e2e-quality-gate]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:
@@ -95,9 +140,32 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+          cache: "pip"
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "npm"
+          cache-dependency-path: apps/frontend/package-lock.json
+
+      - name: Install All Toolchain Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r apps/backend/requirements.txt
+          cd apps/frontend && npm ci && cd ../..
+
+      - name: Execute Full Zero-Defect Release Verification Suite
+        env:
+          ENV: testing
+          AUTO_CREATE_TABLES: true
+          JWT_SECRET: testing-jwt-secret-key-must-be-at-least-32-chars
+          DATABASE_URL: sqlite:///./ci_release.db
+        run: |
+          python scripts/verify.py
 
       - name: Validate Release Packaging Hygiene
         run: |
-          python scripts/package_release.py
-          echo "All quality, security, and packaging gates passed cleanly."
+          python scripts/package_release.py --verify-clean
+          echo "All quality, security, E2E, and packaging gates passed cleanly."
           echo "Clean production release archive generated and verified."

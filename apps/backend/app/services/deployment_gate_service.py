@@ -90,7 +90,7 @@ class DeploymentGateService:
                         model_bytes = storage.get_file_bytes(model.artifact_path)
                 except Exception:
                     pass
-                if model_bytes is None and Path(model.artifact_path).is_file():
+                if model_bytes is None and settings.ENV != "production" and Path(model.artifact_path).is_file():
                     model_bytes = Path(model.artifact_path).read_bytes()
 
                 if model_bytes is not None:
@@ -103,7 +103,7 @@ class DeploymentGateService:
                                 manifest_bytes = storage.get_file_bytes(manifest_key)
                         except Exception:
                             pass
-                        if manifest_bytes is None and Path(manifest_key).is_file():
+                        if manifest_bytes is None and settings.ENV != "production" and Path(manifest_key).is_file():
                             manifest_bytes = Path(manifest_key).read_bytes()
 
                         if manifest_bytes:

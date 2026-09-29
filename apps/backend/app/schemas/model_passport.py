@@ -111,6 +111,7 @@ class ModelPassportResponse(BaseModel):
     fit_diagnosis: str | None = None
     decision_threshold: float | None = 0.5
     artifact_path: str | None = None
+    artifact_storage_key: str | None = None
     artifact_checksum: str | None = None
     created_at: datetime
 

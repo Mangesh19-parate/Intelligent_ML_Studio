@@ -140,7 +140,7 @@ class ExperimentHealthService:
                             data_bytes = storage.get_file_bytes(champion_model.artifact_path)
                     except Exception:
                         pass
-                    if data_bytes is None and Path(champion_model.artifact_path).is_file():
+                    if data_bytes is None and settings.ENV.lower() != "production" and Path(champion_model.artifact_path).is_file():
                         data_bytes = Path(champion_model.artifact_path).read_bytes()
 
                     if data_bytes is not None:
@@ -155,9 +155,9 @@ class ExperimentHealthService:
                     else:
                         checksum_status = "MISSING" if artifact_checksum_val else "PENDING"
                 except Exception:
-                    checksum_status = "VERIFIED" if artifact_checksum_val else "PENDING"
+                    checksum_status = "MISSING" if artifact_checksum_val else "PENDING"
             else:
-                checksum_status = "VERIFIED" if artifact_checksum_val else "PENDING"
+                checksum_status = "PENDING"
 
         # 5. Extract Locked Test Status
         locked_test_status = "CONSUMED" if experiment.locked_test_consumed else "NOT_EVALUATED"

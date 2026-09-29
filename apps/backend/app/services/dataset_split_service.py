@@ -40,7 +40,7 @@ class DatasetSplitService:
     def _load_full_dataframe(self, dataset: Dataset) -> pd.DataFrame:
         try:
             file_bytes = self.storage.get_file_bytes(dataset.file_path)
-        except (PermissionError, FileNotFoundError):
+        except (PermissionError, FileNotFoundError, Exception):
             if Path(dataset.file_path).is_file():
                 file_bytes = Path(dataset.file_path).read_bytes()
             else:

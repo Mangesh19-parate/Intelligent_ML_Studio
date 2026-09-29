@@ -35,8 +35,18 @@ class TrainedModel(Base):
     # Day 3 / SRS v9 §5 / §2.11: Frozen decision threshold for binary classification
     decision_threshold = Column(Numeric(6, 4), nullable=True, default=0.5)
 
-    # Day 8: Model artifact serialization & snapshot links
+    # Day 8: Model artifact serialization & snapshot links (Canonical storage key)
     artifact_path = Column(Text, nullable=True)
+
+    @property
+    def artifact_storage_key(self) -> str | None:
+        """Canonical storage key in object store."""
+        return self.artifact_path
+
+    @artifact_storage_key.setter
+    def artifact_storage_key(self, value: str | None) -> None:
+        self.artifact_path = value
+
     artifact_checksum = Column(String(64), nullable=True)
     preprocessing_snapshot_id = Column(
         Uuid(as_uuid=True),

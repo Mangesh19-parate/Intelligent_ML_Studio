@@ -203,18 +203,22 @@ def load_signed_model_from_storage(
     from app.infrastructure.storage.object_store import get_storage_service
     storage_svc = storage or get_storage_service()
 
-    # If storage_key exists directly on local disk, verify and load it directly
-    if Path(storage_key).exists():
-        return verify_and_load_model_artifact(
-            storage_key,
-            secret=secret,
-            allow_unsigned_fixtures=allow_unsigned_fixtures
-        )
+    # In testing/development, allow reading direct test fixture paths outside storage root
+    if settings.ENV.lower() in ("testing", "development"):
+        try:
+            if Path(storage_key).is_file():
+                return verify_and_load_model_artifact(
+                    storage_key,
+                    secret=secret,
+                    allow_unsigned_fixtures=allow_unsigned_fixtures,
+                )
+        except (OSError, ValueError, TypeError):
+            pass
 
     clean_key = storage_key.replace("\\", "/").lstrip("/")
     manifest_key = str(Path(clean_key).with_suffix(".manifest.json")).replace("\\", "/")
 
-    # Ensure local path is cached and accessible for both manifest and model
+    # Ensure local path is cached and accessible for both manifest and model via storage service
     try:
         _ = storage_svc.get_file_path(manifest_key)
     except Exception:

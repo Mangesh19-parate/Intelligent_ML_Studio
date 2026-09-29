@@ -247,6 +247,12 @@ def test_condition_3_artifact_verified_disk_checksum(gate_test_environment, db_s
     gate_deleted = service.check_gate(model.id)
     assert gate_deleted.artifact_verified is False
 
+    # Restore valid artifact file and model state for subsequent tests
+    artifact_file.write_bytes(b"sample-valid-serialized-model-artifact")
+    model.status = ModelState.DEPLOYABLE.value
+    db_session.add(model)
+    db_session.commit()
+
 
 def test_condition_4_lineage_complete(gate_test_environment, db_session: Session):
     """

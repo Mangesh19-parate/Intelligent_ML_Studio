@@ -278,6 +278,7 @@ class ModelPassportService:
             fit_diagnosis=model.fit_diagnosis,
             decision_threshold=float(model.decision_threshold) if model.decision_threshold is not None else 0.5,
             artifact_path=model.artifact_path,
+            artifact_storage_key=model.artifact_storage_key,
             artifact_checksum=model.artifact_checksum,
             created_at=model.created_at,
             project=PassportProjectInfo(

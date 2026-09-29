@@ -110,11 +110,17 @@ def healthy_experiment_setup(db_session: Session, tmp_path: Path):
     experiment.feature_selection_snapshot_id = fs_snap.id
     experiment.transformation_snapshot_id = trans_snap.id
 
-    # 5. Model binary on disk
+    # 5. Model binary in storage
     model_obj = LinearRegression()
-    artifact_path = tmp_path / "healthy_model.joblib"
-    joblib.dump(model_obj, artifact_path)
-    checksum = hashlib.sha256(artifact_path.read_bytes()).hexdigest()
+    import io
+    from app.infrastructure.storage.object_store import get_storage_service
+    storage = get_storage_service()
+    buf = io.BytesIO()
+    joblib.dump(model_obj, buf)
+    model_bytes = buf.getvalue()
+    checksum = hashlib.sha256(model_bytes).hexdigest()
+    storage_key = f"models/{experiment.id}/healthy_model.joblib"
+    storage.save_bytes(storage_key, model_bytes)
 
     trained_model = TrainedModel(
         id=uuid4(),
@@ -122,7 +128,7 @@ def healthy_experiment_setup(db_session: Session, tmp_path: Path):
         algorithm_name="LinearRegression",
         hyperparameters={"fit_intercept": True},
         status=ModelState.DEPLOYABLE.value,
-        artifact_path=str(artifact_path),
+        artifact_path=storage_key,
         artifact_checksum=checksum,
         quick_cv_score=10.5,
         model_selection_score=10.6,
@@ -257,17 +263,23 @@ def test_experiment_health_report_flagged_risks(client: TestClient, db_session: 
     db_session.flush()
     experiment.feature_selection_snapshot_id = fs_snap.id
 
-    # Model with potential overfit
-    artifact_path = tmp_path / "overfit_model.joblib"
-    joblib.dump(LinearRegression(), artifact_path)
-    checksum = hashlib.sha256(artifact_path.read_bytes()).hexdigest()
+    # Model with potential overfit in storage
+    from app.infrastructure.storage.object_store import get_storage_service
+    import io
+    storage = get_storage_service()
+    buf = io.BytesIO()
+    joblib.dump(LinearRegression(), buf)
+    model_bytes = buf.getvalue()
+    checksum = hashlib.sha256(model_bytes).hexdigest()
+    storage_key = f"models/{experiment.id}/overfit_model.joblib"
+    storage.save_bytes(storage_key, model_bytes)
 
     trained_model = TrainedModel(
         id=uuid4(),
         experiment_id=experiment.id,
         algorithm_name="RandomForestRegressor",
         status=ModelState.TRAINED.value,
-        artifact_path=str(artifact_path),
+        artifact_path=storage_key,
         artifact_checksum=checksum,
         quick_cv_score=5.0,
         model_selection_score=25.0,
@@ -334,17 +346,23 @@ def test_experiment_health_report_artifact_tamper_critical(client: TestClient, d
     db_session.add(experiment)
     db_session.flush()
 
-    # Create model artifact on disk with recorded checksum
-    artifact_path = tmp_path / "tampered_model.joblib"
-    joblib.dump(LinearRegression(), artifact_path)
-    recorded_checksum = hashlib.sha256(artifact_path.read_bytes()).hexdigest()
+    # Create model artifact in storage with recorded checksum
+    from app.infrastructure.storage.object_store import get_storage_service
+    import io
+    storage = get_storage_service()
+    buf = io.BytesIO()
+    joblib.dump(LinearRegression(), buf)
+    model_bytes = buf.getvalue()
+    recorded_checksum = hashlib.sha256(model_bytes).hexdigest()
+    storage_key = f"models/{experiment.id}/tampered_model.joblib"
+    storage.save_bytes(storage_key, model_bytes)
 
     trained_model = TrainedModel(
         id=uuid4(),
         experiment_id=experiment.id,
         algorithm_name="LinearRegression",
         status=ModelState.DEPLOYABLE.value,
-        artifact_path=str(artifact_path),
+        artifact_path=storage_key,
         artifact_checksum=recorded_checksum,
         fit_diagnosis="GOOD_FIT",
         created_by=trainer.id,
@@ -354,8 +372,8 @@ def test_experiment_health_report_artifact_tamper_critical(client: TestClient, d
     experiment.selected_model_id = trained_model.id
     db_session.commit()
 
-    # Tamper with disk binary
-    artifact_path.write_bytes(b"TAMPERED_MALICIOUS_BYTES_999")
+    # Tamper with storage binary
+    storage.save_bytes(storage_key, b"TAMPERED_MALICIOUS_BYTES_999")
 
     resp = client.get(f"/api/v1/experiments/{experiment.id}/health", headers=auth_headers)
     assert resp.status_code == status.HTTP_200_OK

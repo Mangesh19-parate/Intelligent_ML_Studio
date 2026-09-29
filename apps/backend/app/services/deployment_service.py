@@ -13,6 +13,7 @@ from app.config.state_machines import (
     validate_transition,
     InvalidStateTransitionError,
 )
+from app.core.config import settings
 from app.services.deployment_gate_service import DeploymentGateService
 
 
@@ -78,7 +79,7 @@ class DeploymentService:
                 model_bytes = storage.get_file_bytes(model.artifact_path)
         except Exception:
             pass
-        if model_bytes is None and model.artifact_path and Path(model.artifact_path).is_file():
+        if model_bytes is None and settings.ENV != "production" and model.artifact_path and Path(model.artifact_path).is_file():
             model_bytes = Path(model.artifact_path).read_bytes()
 
         if model_bytes is None:

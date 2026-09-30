@@ -112,6 +112,38 @@ async def http_exception_handler(request: Request, exc: HTTPException):
         headers=getattr(exc, "headers", None),
     )
 
+from app.core.exceptions import StudioBaseException
+
+@app.exception_handler(StudioBaseException)
+async def studio_exception_handler(request: Request, exc: StudioBaseException):
+    request_id = request.headers.get("x-request-id") or str(uuid.uuid4())
+    status_title = STATUS_TITLES.get(exc.status_code, "Application Error")
+    timestamp = datetime.now(timezone.utc).isoformat()
+
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={
+            "type": get_error_type(exc.status_code, exc.error_code),
+            "title": status_title,
+            "status": exc.status_code,
+            "detail": exc.message,
+            "instance": str(request.url.path),
+            "request_id": request_id,
+            "timestamp": timestamp,
+            "error": {
+                "status_code": exc.status_code,
+                "code": exc.error_code,
+                "message": exc.message,
+                "details": exc.details or [
+                    {"loc": [str(request.url.path)], "message": exc.message, "code": exc.error_code}
+                ],
+                "path": str(request.url.path),
+                "request_id": request_id,
+                "timestamp": timestamp,
+            },
+        },
+    )
+
 from fastapi.encoders import jsonable_encoder
 
 @app.exception_handler(RequestValidationError)

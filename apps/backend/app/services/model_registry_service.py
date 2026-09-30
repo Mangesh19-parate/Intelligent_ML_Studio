@@ -142,7 +142,7 @@ class ModelRegistryService:
                 detail="This model has no persisted artifact — download is only available for the winning model of a completed experiment",
             )
 
-        from app.infrastructure.storage.object_store import get_storage_service
+        from app.infrastructure.storage.object_store import get_storage_service, ObjectNotFoundError, StorageError
         from app.infrastructure.security.artifact_signing import load_signed_model_from_storage, SecurityError
         storage = get_storage_service()
 
@@ -157,10 +157,15 @@ class ModelRegistryService:
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail=f"Cryptographic verification failed: {str(sec_err)}",
             )
-        except Exception as e:
+        except (ObjectNotFoundError, FileNotFoundError) as not_found_err:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Model artifact file not found for '{model.artifact_path}': {not_found_err}",
+            )
+        except (StorageError, IOError, ValueError) as storage_err:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail=f"Failed to load model artifact for '{model.artifact_path}': {str(e)}",
+                detail=f"Failed to load model artifact for '{model.artifact_path}': {storage_err}",
             )
 
         buffer = io.BytesIO()

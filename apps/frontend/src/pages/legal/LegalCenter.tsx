@@ -1,14 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { LegalLayout } from './LegalLayout';
-import {
-  ShieldCheck,
-  FileText,
-  Lock,
-  Cookie,
-  ArrowRight,
-  CheckCircle2,
-} from 'lucide-react';
+import { ShieldCheck, FileText, Lock, Cookie, ArrowRight, CheckCircle2 } from 'lucide-react';
 
 export const LegalCenter: React.FC = () => {
   const tocItems = [

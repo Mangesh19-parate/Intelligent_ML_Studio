@@ -99,28 +99,31 @@ export const ModelTraining: React.FC<ModelTrainingProps> = ({
     [projectId]
   );
 
-  const startPolling = useCallback((experimentId: string) => {
-    if (pollingTimerRef.current) clearInterval(pollingTimerRef.current);
-    setPollingActive(true);
+  const startPolling = useCallback(
+    (experimentId: string) => {
+      if (pollingTimerRef.current) clearInterval(pollingTimerRef.current);
+      setPollingActive(true);
 
-    const poll = async () => {
-      try {
-        const res = await experimentApi.get(experimentId);
-        setActiveExperiment(res.data);
-        if (res.data.status === 'COMPLETED' || res.data.status === 'FAILED') {
-          clearInterval(pollingTimerRef.current);
-          setPollingActive(false);
-          await loadLeaderboardData(experimentId);
-          onExperimentCompleted?.();
+      const poll = async () => {
+        try {
+          const res = await experimentApi.get(experimentId);
+          setActiveExperiment(res.data);
+          if (res.data.status === 'COMPLETED' || res.data.status === 'FAILED') {
+            clearInterval(pollingTimerRef.current);
+            setPollingActive(false);
+            await loadLeaderboardData(experimentId);
+            onExperimentCompleted?.();
+          }
+        } catch (err) {
+          console.error('Polling error:', err);
         }
-      } catch (err) {
-        console.error('Polling error:', err);
-      }
-    };
+      };
 
-    poll();
-    pollingTimerRef.current = setInterval(poll, 2500);
-  }, [loadLeaderboardData, onExperimentCompleted]);
+      poll();
+      pollingTimerRef.current = setInterval(poll, 2500);
+    },
+    [loadLeaderboardData, onExperimentCompleted]
+  );
 
   const loadHistory = useCallback(async () => {
     try {

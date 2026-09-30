@@ -1,12 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-  FolderKanban,
-  ChevronDown,
-  Plus,
-  Search,
-  Target,
-} from 'lucide-react';
+import { FolderKanban, ChevronDown, Plus, Search, Target } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useProject } from '../../context/ProjectContext';
 import { Badge } from '../ui/Badge';

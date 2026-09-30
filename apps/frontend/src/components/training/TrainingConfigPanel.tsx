@@ -1,10 +1,7 @@
 import React from 'react';
 import { Cpu, Play, RotateCw, Shuffle } from 'lucide-react';
 import { Button } from '../ui/Button';
-import {
-  REGRESSION_ALGORITHMS,
-  CLASSIFICATION_ALGORITHMS,
-} from './algorithms';
+import { REGRESSION_ALGORITHMS, CLASSIFICATION_ALGORITHMS } from './algorithms';
 
 interface TrainingConfigPanelProps {
   taskType: 'REGRESSION' | 'CLASSIFICATION' | string;

@@ -75,43 +75,46 @@ export const DatasetsPage: React.FC = () => {
   }, []);
 
   // Load project details and datasets
-  const loadProjectData = useCallback(async (projId: string) => {
-    if (!projId) {
-      setLoading(false);
-      return;
-    }
-    try {
-      setLoading(true);
-      setError('');
-
-      const dsRes = await datasetApi.listVersions(projId);
-      const dsList = dsRes.data || [];
-      setDatasets(dsList as unknown as DatasetItem[]);
-
-      if (dsList.length > 0) {
-        const latest = dsList[0];
-        setSelectedDataset(latest as unknown as DatasetItem);
-        const colRes = await datasetApi.getColumns(latest.id);
-        setColumns((colRes.data || []) as unknown as ColumnSchemaItem[]);
-        await loadSplitAndPreview(latest.id);
-      } else {
-        setSelectedDataset(null);
-        setColumns([]);
-        setSplitSummary(null);
-        setDevPreview(null);
+  const loadProjectData = useCallback(
+    async (projId: string) => {
+      if (!projId) {
+        setLoading(false);
+        return;
       }
-    } catch (err: unknown) {
-      const errorMsg =
-        err && typeof err === 'object' && 'response' in err
-          ? (err as { response?: { data?: { detail?: string } } }).response?.data?.detail ||
-            'Failed to load dataset details.'
-          : 'Failed to load dataset details.';
-      console.error('Failed to load project data', err);
-      setError(errorMsg);
-    } finally {
-      setLoading(false);
-    }
-  }, [loadSplitAndPreview]);
+      try {
+        setLoading(true);
+        setError('');
+
+        const dsRes = await datasetApi.listVersions(projId);
+        const dsList = dsRes.data || [];
+        setDatasets(dsList as unknown as DatasetItem[]);
+
+        if (dsList.length > 0) {
+          const latest = dsList[0];
+          setSelectedDataset(latest as unknown as DatasetItem);
+          const colRes = await datasetApi.getColumns(latest.id);
+          setColumns((colRes.data || []) as unknown as ColumnSchemaItem[]);
+          await loadSplitAndPreview(latest.id);
+        } else {
+          setSelectedDataset(null);
+          setColumns([]);
+          setSplitSummary(null);
+          setDevPreview(null);
+        }
+      } catch (err: unknown) {
+        const errorMsg =
+          err && typeof err === 'object' && 'response' in err
+            ? (err as { response?: { data?: { detail?: string } } }).response?.data?.detail ||
+              'Failed to load dataset details.'
+            : 'Failed to load dataset details.';
+        console.error('Failed to load project data', err);
+        setError(errorMsg);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [loadSplitAndPreview]
+  );
 
   useEffect(() => {
     if (activeProjectId) {

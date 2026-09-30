@@ -1,12 +1,7 @@
 import React, { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import {
-  Sun,
-  Moon,
-  ArrowLeft,
-  ChevronRight,
-} from 'lucide-react';
+import { Sun, Moon, ArrowLeft, ChevronRight } from 'lucide-react';
 
 interface TocItem {
   id: string;

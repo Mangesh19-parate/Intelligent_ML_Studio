@@ -57,6 +57,9 @@ def seed_demo_accounts(db: Session) -> None:
             db.flush()
         else:
             admin_user.role_id = admin_role.id
+            admin_user.password_hash = get_password_hash("DemoPassword123!")
+            admin_user.is_active = True
+            admin_user.is_two_factor_enabled = False
 
     # 1. trainer@demo.com
     trainer = db.query(User).filter(User.email == "trainer@demo.com").first()
@@ -72,6 +75,9 @@ def seed_demo_accounts(db: Session) -> None:
         db.flush()
     else:
         trainer.role_id = user_role.id
+        trainer.password_hash = get_password_hash("DemoPassword123!")
+        trainer.is_active = True
+        trainer.is_two_factor_enabled = False
 
     # 2. approver@demo.com
     approver = db.query(User).filter(User.email == "approver@demo.com").first()
@@ -87,6 +93,9 @@ def seed_demo_accounts(db: Session) -> None:
         db.flush()
     else:
         approver.role_id = user_role.id
+        approver.password_hash = get_password_hash("DemoPassword123!")
+        approver.is_active = True
+        approver.is_two_factor_enabled = False
 
     # Explicit DEPLOY override for approver
     deploy_override = db.query(UserPermissionOverride).filter(

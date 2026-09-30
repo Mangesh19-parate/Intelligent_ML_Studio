@@ -53,7 +53,11 @@ def _set_refresh_cookie(response: Response, refresh_token: str) -> None:
     is_prod = (settings.ENV.lower() == "production")
     secure = settings.COOKIE_SECURE if settings.COOKIE_SECURE is not None else is_prod
     samesite = settings.COOKIE_SAMESITE.lower()
-    if samesite == "none":
+    if not is_prod:
+        secure = False
+        if samesite == "none":
+            samesite = "lax"
+    elif samesite == "none":
         secure = True
     response.set_cookie(
         key="refresh_token",

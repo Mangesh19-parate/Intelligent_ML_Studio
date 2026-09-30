@@ -264,9 +264,10 @@ def main():
         sys.exit(1)
 
     # 10. Frontend Full-Lifecycle Browser E2E Tests (Playwright)
+    npx_bin = "npx.cmd" if sys.platform == "win32" else "npx"
     s10_success, s10_out, s10_dur = run_step(
         "10. Frontend Browser E2E Suite (Playwright)",
-        ["npx", "playwright", "test"],
+        [npx_bin, "playwright", "test"],
         FRONTEND_DIR
     )
     results.append(("10. Browser E2E (Playwright)", s10_success, s10_dur))

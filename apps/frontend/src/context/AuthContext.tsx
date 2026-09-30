@@ -1,6 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { authApi, twoFactorApi } from '../api/client';
+import { authApi, twoFactorApi, getAccessToken } from '../api/client';
 import { User, LoginResponse } from '../types/api';
 
 export interface AuthContextType {
@@ -48,12 +48,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  // Initial silent auth initialization via HttpOnly cookie refresh
+  // Initial silent auth initialization via stored token or HttpOnly cookie refresh
   useEffect(() => {
     const initAuth = async () => {
       try {
-        await authApi.refresh();
-        await refreshUser();
+        if (getAccessToken()) {
+          await refreshUser();
+        } else {
+          await authApi.refresh();
+          await refreshUser();
+        }
       } catch {
         setUser(null);
       } finally {

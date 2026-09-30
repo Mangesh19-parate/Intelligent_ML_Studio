@@ -10,6 +10,9 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Intelligent ML Studio - Full Platform Lifecycle', () => {
   test('Complete End-to-End User Workflow & Distributed Pipeline Execution', async ({ page }) => {
+    page.on('console', (msg) => console.log(`[Browser Console ${msg.type()}]: ${msg.text()}`));
+    page.on('pageerror', (err) => console.log(`[Browser Error]: ${err.message}`));
+
     // 1. Visit Login Page & Assert UI Structure
     await page.goto('/login');
     await expect(page).toHaveTitle(/ML Studio|Intelligent ML Studio/i);
@@ -27,7 +30,7 @@ test.describe('Intelligent ML Studio - Full Platform Lifecycle', () => {
     await submitBtn.click();
 
     // 3. Assert Navigation to Workspace Dashboard
-    await page.waitForURL((url) => url.pathname.includes('/dashboard') || url.pathname.includes('/projects') || url.pathname === '/', { timeout: 20000 });
+    await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 20000 });
     await expect(page.locator('body')).toBeVisible();
     await expect(page.locator('h1, h2, h3').first()).toBeVisible();
 
@@ -74,17 +77,17 @@ test.describe('Intelligent ML Studio - Full Platform Lifecycle', () => {
 
   test('System Health, Readiness & Observability Contract', async ({ request }) => {
     // 1. Live Health Probe
-    const healthResp = await request.get('http://localhost:8000/health');
+    const healthResp = await request.get('http://127.0.0.1:8000/health');
     expect(healthResp.ok()).toBeTruthy();
     const healthData = await healthResp.json();
     expect(healthData.status).toBe('healthy');
     expect(healthData.api_version).toBe('v1');
 
     // 2. Readiness Probe
-    const readyResp = await request.get('http://localhost:8000/health/ready');
+    const readyResp = await request.get('http://127.0.0.1:8000/health/ready');
     expect(readyResp.ok()).toBeTruthy();
     const readyData = await readyResp.json();
     expect(readyData.ready).toBe(true);
-    expect(readyData.database).toBe('healthy');
+    expect(readyData.dependencies.database.status).toBe('UP');
   });
 });

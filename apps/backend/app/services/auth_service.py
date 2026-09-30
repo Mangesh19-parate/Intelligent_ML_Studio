@@ -6,6 +6,7 @@ from uuid import UUID
 from datetime import timedelta
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 from app.core.security import (
     get_password_hash,
     verify_password,
@@ -485,12 +486,19 @@ class AuthService:
             )
 
         # Invalidate the consumed refresh token
-        revoked_record = RevokedToken(
-            token_hash=token_hash,
-            user_id=user.id,
-        )
-        self.db.add(revoked_record)
-        self.db.commit()
+        try:
+            revoked_record = RevokedToken(
+                token_hash=token_hash,
+                user_id=user.id,
+            )
+            self.db.add(revoked_record)
+            self.db.commit()
+        except IntegrityError:
+            self.db.rollback()
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Refresh token reuse detected. This token was already rotated."
+            )
 
         # Issue rotated token pair
         sv = getattr(user, "session_version", 1) or 1
@@ -527,10 +535,13 @@ class AuthService:
                 except Exception:
                     parsed_uid = None
             if parsed_uid:
-                revoked_record = RevokedToken(
-                    token_hash=token_hash,
-                    user_id=parsed_uid,
-                )
-                self.db.add(revoked_record)
-                self.db.commit()
+                try:
+                    revoked_record = RevokedToken(
+                        token_hash=token_hash,
+                        user_id=parsed_uid,
+                    )
+                    self.db.add(revoked_record)
+                    self.db.commit()
+                except IntegrityError:
+                    self.db.rollback()
         return True

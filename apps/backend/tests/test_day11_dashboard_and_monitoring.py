@@ -175,12 +175,12 @@ def test_acceptance_check_a_walkthrough_all_derived_stages(db_session: Session):
 
     assert derive_pipeline_stage(project.id, db_session) == "TRANSFORMED", "Active transformations without experiments must be TRANSFORMED"
 
-    # Step 5: Start experiment (RUNNING)
+    # Step 5: Start experiment (TRAINING)
     exp_service = ExperimentService(db_session)
     exp = Experiment(
         id=uuid.uuid4(),
         project_id=project.id,
-        status="RUNNING",
+        status="TRAINING",
         task_type="REGRESSION",
         fold_count=5,
         selection_metric="rmse",
@@ -191,14 +191,14 @@ def test_acceptance_check_a_walkthrough_all_derived_stages(db_session: Session):
 
     assert derive_pipeline_stage(project.id, db_session) == "TRAINING", "Running experiment must be TRAINING"
 
-    # Step 6: Complete experiment training (COMPLETED, but not finalized / no locked test metrics)
-    exp.status = "COMPLETED"
+    # Step 6: Complete experiment training (EVALUATED, but not finalized / no locked test metrics)
+    exp.status = "EVALUATED"
     trained_model = TrainedModel(
         id=uuid.uuid4(),
         experiment_id=exp.id,
         algorithm_name="LinearRegression",
         quick_cv_score=0.85,
-        status="COMPLETED",
+        status="TRAINED",
         fit_diagnosis="GOOD_FIT",
     )
     db_session.add(trained_model)

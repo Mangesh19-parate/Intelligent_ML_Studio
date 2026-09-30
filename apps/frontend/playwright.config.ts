@@ -8,7 +8,7 @@ export default defineConfig({
   workers: process.env.CI ? 1 : undefined,
   reporter: 'list',
   use: {
-    baseURL: 'http://localhost:5173',
+    baseURL: 'http://127.0.0.1:5173',
     trace: 'on-first-retry',
   },
   projects: [
@@ -19,11 +19,9 @@ export default defineConfig({
   ],
   webServer: [
     {
-      command: process.platform === 'win32'
-        ? 'python -m uvicorn app.main:app --port 8000'
-        : 'python -m uvicorn app.main:app --port 8000',
+      command: 'python -m uvicorn app.main:app --host 127.0.0.1 --port 8000',
       cwd: '../backend',
-      url: 'http://localhost:8000/health',
+      url: 'http://127.0.0.1:8000/health',
       env: {
         ENV: 'testing',
         SEED_DEMO_DATA: 'true',
@@ -33,8 +31,13 @@ export default defineConfig({
       timeout: 60000,
     },
     {
-      command: process.platform === 'win32' ? 'npm.cmd run dev' : 'npm run dev',
-      url: 'http://localhost:5173',
+      command: process.platform === 'win32'
+        ? 'npm.cmd run dev -- --host 127.0.0.1 --port 5173'
+        : 'npm run dev -- --host 127.0.0.1 --port 5173',
+      url: 'http://127.0.0.1:5173',
+      env: {
+        VITE_API_URL: 'http://127.0.0.1:8000',
+      },
       reuseExistingServer: !process.env.CI,
       timeout: 60000,
     },

@@ -49,10 +49,18 @@ if (
   );
 }
 
-let inMemoryAccessToken: string | null = null;
+let inMemoryAccessToken: string | null =
+  typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
 
 export const setAccessToken = (token: string | null): void => {
   inMemoryAccessToken = token;
+  if (typeof window !== 'undefined') {
+    if (token) {
+      localStorage.setItem('access_token', token);
+    } else {
+      localStorage.removeItem('access_token');
+    }
+  }
 };
 
 export const getAccessToken = (): string | null => inMemoryAccessToken;

@@ -375,7 +375,7 @@ def test_acceptance_check_f_backfill_script_marks_approximate(db_session, regres
     legacy_exp = Experiment(
         id=uuid4(),
         project_id=project.id,
-        status="COMPLETED",
+        status="EVALUATED",
         task_type="REGRESSION",
         fold_count=5,
         cv_seed=42,
@@ -479,7 +479,7 @@ def test_lineage_api_endpoint_backfilled_experiment(client, create_test_user, db
     legacy_exp = Experiment(
         id=uuid4(),
         project_id=project.id,
-        status="COMPLETED",
+        status="EVALUATED",
         task_type="REGRESSION",
         fold_count=5,
         cv_seed=77,

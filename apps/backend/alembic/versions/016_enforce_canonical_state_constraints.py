@@ -43,14 +43,14 @@ def upgrade() -> None:
         with op.batch_alter_table('experiments') as batch_op:
             batch_op.create_check_constraint(
                 'chk_experiment_status',
-                "status IN ('CREATED', 'CONFIGURED', 'TRAINING', 'EVALUATED', 'TEST_CONSUMED', 'REGISTERED', 'TRAINING_FAILED', 'ARTIFACT_WRITE_FAILED', 'RUNNING', 'COMPLETED', 'FAILED', 'CANCELLED')"
+                "status IN ('CREATED', 'CONFIGURED', 'TRAINING', 'EVALUATED', 'TEST_CONSUMED', 'REGISTERED', 'TRAINING_FAILED', 'ARTIFACT_WRITE_FAILED')"
             )
 
     if 'trained_models' in tables:
         with op.batch_alter_table('trained_models') as batch_op:
             batch_op.create_check_constraint(
                 'chk_trained_model_status',
-                "status IN ('TRAINED', 'ARTIFACT_VERIFIED', 'DEPLOYABLE', 'ARTIFACT_INVALID', 'CANDIDATE', 'COMPLETED', 'FAILED')"
+                "status IN ('TRAINED', 'ARTIFACT_VERIFIED', 'DEPLOYABLE', 'ARTIFACT_INVALID', 'CANDIDATE')"
             )
 
     if 'durable_tasks' in tables:

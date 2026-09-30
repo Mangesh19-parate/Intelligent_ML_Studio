@@ -1,0 +1,107 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: ml_studio_e2e_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ml_studio_e2e
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: e2e_password
+    ports:
+      - "5433:5432"
+    volumes:
+      - e2e_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d ml_studio_e2e"]
+      interval: 3s
+      timeout: 3s
+      retries: 5
+
+  minio:
+    image: minio/minio:latest
+    container_name: ml_studio_e2e_minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadminpassword
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - e2e_minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 3s
+      timeout: 3s
+      retries: 5
+
+  backend:
+    build:
+      context: ../../apps/backend
+      dockerfile: Dockerfile
+    container_name: ml_studio_e2e_backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    environment:
+      ENV: testing
+      AUTO_CREATE_TABLES: "true"
+      SEED_DEMO_DATA: "true"
+      DATABASE_URL: postgresql://postgres:e2e_password@postgres:5432/ml_studio_e2e
+      STORAGE_BACKEND: s3
+      S3_BUCKET_NAME: ml-studio-e2e-artifacts
+      S3_ENDPOINT_URL: http://minio:9000
+      S3_ACCESS_KEY_ID: minioadmin
+      S3_SECRET_ACCESS_KEY: minioadminpassword
+      S3_REGION_NAME: us-east-1
+      JWT_SECRET: e2e-jwt-test-secret-key-32charslong!
+      ARTIFACT_SIGNING_KEY: e2e-artifact-signing-key-32chars!
+      COOKIE_SAMESITE: none
+      COOKIE_SECURE: "true"
+    ports:
+      - "8000:8000"
+
+  worker:
+    build:
+      context: ../../apps/backend
+      dockerfile: Dockerfile
+    container_name: ml_studio_e2e_worker
+    restart: unless-stopped
+    command: python -m app.tasks.worker
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    environment:
+      ENV: testing
+      DATABASE_URL: postgresql://postgres:e2e_password@postgres:5432/ml_studio_e2e
+      STORAGE_BACKEND: s3
+      S3_BUCKET_NAME: ml-studio-e2e-artifacts
+      S3_ENDPOINT_URL: http://minio:9000
+      S3_ACCESS_KEY_ID: minioadmin
+      S3_SECRET_ACCESS_KEY: minioadminpassword
+      S3_REGION_NAME: us-east-1
+      JWT_SECRET: e2e-jwt-test-secret-key-32charslong!
+      ARTIFACT_SIGNING_KEY: e2e-artifact-signing-key-32chars!
+
+  frontend:
+    build:
+      context: ../../apps/frontend
+      dockerfile: Dockerfile
+    container_name: ml_studio_e2e_frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "5173:80"
+
+volumes:
+  e2e_postgres_data:
+  e2e_minio_data:

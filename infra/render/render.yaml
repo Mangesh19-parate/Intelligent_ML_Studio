@@ -37,6 +37,10 @@ services:
         generateValue: true
       - key: ARTIFACT_SIGNING_KEY
         generateValue: true
+      - key: COOKIE_SAMESITE
+        value: "none"
+      - key: COOKIE_SECURE
+        value: "true"
       - key: BACKEND_CORS_ORIGINS
         sync: false
         # Example: https://your-frontend.vercel.app,http://localhost:3000

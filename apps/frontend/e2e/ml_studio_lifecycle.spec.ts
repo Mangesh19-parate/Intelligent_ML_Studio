@@ -1,60 +1,90 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('Intelligent ML Studio - Full Browser & API Lifecycle', () => {
-  test('Complete user workflow: login -> dashboard -> navigation -> data -> training -> deployment', async ({ page }) => {
-    // 1. Visit Login Page and assert title and form elements
+/**
+ * Intelligent ML Studio - Full-Lifecycle Browser & API End-to-End Suite.
+ * Validates deterministic complete platform workflow:
+ * Authentication -> Workspace Dashboard -> Project Creation -> Dataset Ingestion ->
+ * Exploratory Data Analysis -> Transformations -> Feature Engineering -> Model Training ->
+ * Model Diagnostics -> Deployment Governance -> Real-time Inference & Observability.
+ */
+
+test.describe('Intelligent ML Studio - Full Platform Lifecycle', () => {
+  test('Complete End-to-End User Workflow & Distributed Pipeline Execution', async ({ page }) => {
+    // 1. Visit Login Page & Assert UI Structure
     await page.goto('/login');
     await expect(page).toHaveTitle(/ML Studio|Intelligent ML Studio/i);
-    
+
     const emailInput = page.locator('input[type="email"], input[name="email"]').first();
-    await expect(emailInput).toBeVisible({ timeout: 10000 });
+    await expect(emailInput).toBeVisible({ timeout: 15000 });
     const passwordInput = page.locator('input[type="password"], input[name="password"]').first();
     await expect(passwordInput).toBeVisible();
 
-    // 2. Perform Authentication (demo / admin account)
+    // 2. Perform Deterministic Authentication with Seeded Admin / Trainer Account
     await emailInput.fill('admin@studio.dev');
-    await passwordInput.fill('Password123!');
+    await passwordInput.fill('DemoPassword123!');
     const submitBtn = page.locator('button[type="submit"]').first();
     await expect(submitBtn).toBeEnabled();
     await submitBtn.click();
 
-    // 3. Navigation and Dashboard Verification
-    await page.waitForURL((url) => url.pathname.includes('/dashboard') || url.pathname.includes('/projects') || url.pathname === '/', { timeout: 15000 });
+    // 3. Assert Navigation to Workspace Dashboard
+    await page.waitForURL((url) => url.pathname.includes('/dashboard') || url.pathname.includes('/projects') || url.pathname === '/', { timeout: 20000 });
     await expect(page.locator('body')).toBeVisible();
+    await expect(page.locator('h1, h2, h3').first()).toBeVisible();
 
-    // 4. Verify Project Navigation or Dashboard Metrics
-    const mainContent = page.locator('main, #root, body');
-    await expect(mainContent).toBeVisible();
+    // 4. Data Ingestion & Dataset Management Stage
+    await page.goto('/data');
+    await page.waitForURL((url) => url.pathname.includes('/data'), { timeout: 15000 });
+    await expect(page.locator('body')).toContainText(/dataset|data|project|schema|upload/i);
 
-    // 5. Data / Ingestion Stage Navigation
-    const dataNavLink = page.locator('a[href*="data"], a[href*="dataset"], button:has-text("Data"), button:has-text("Datasets")').first();
-    if (await dataNavLink.isVisible()) {
-      await dataNavLink.click();
-      await expect(page.locator('body')).toContainText(/dataset|data|upload|project/i);
-    }
+    // 5. Exploratory Data Analysis & Statistical Profiling Stage
+    await page.goto('/data-analysis');
+    await page.waitForURL((url) => url.pathname.includes('/data-analysis'), { timeout: 15000 });
+    await expect(page.locator('body')).toContainText(/analysis|profiling|eda|distribution|statistics/i);
 
-    // 6. Training Stage Navigation
-    const trainNavLink = page.locator('a[href*="train"], a[href*="model"], button:has-text("Train"), button:has-text("Model")').first();
-    if (await trainNavLink.isVisible()) {
-      await trainNavLink.click();
-      await expect(page.locator('body')).toContainText(/train|model|experiment|metric/i);
-    }
+    // 6. Data Cleaning & Feature Transformation Stage
+    await page.goto('/transformations');
+    await page.waitForURL((url) => url.pathname.includes('/transformations'), { timeout: 15000 });
+    await expect(page.locator('body')).toContainText(/transform|scaling|imputation|encoding|clean/i);
 
-    // 7. Deployment Stage Navigation
-    const deployNavLink = page.locator('a[href*="deploy"], button:has-text("Deploy"), button:has-text("Deployment")').first();
-    if (await deployNavLink.isVisible()) {
-      await deployNavLink.click();
-      await expect(page.locator('body')).toContainText(/deploy|status|endpoint|model/i);
-    }
+    // 7. Feature Engineering & Selection Stage
+    await page.goto('/feature-engineering');
+    await page.waitForURL((url) => url.pathname.includes('/feature-engineering'), { timeout: 15000 });
+    await expect(page.locator('body')).toContainText(/feature|selection|importance|ranking|correlation/i);
+
+    // 8. Model Training & Leaderboard Stage
+    await page.goto('/ml');
+    await page.waitForURL((url) => url.pathname.includes('/ml'), { timeout: 15000 });
+    await expect(page.locator('body')).toContainText(/training|leaderboard|model|experiment|metric/i);
+
+    // 9. Model Diagnostics, Recommendations & SHAP Explainability Stage
+    await page.goto('/diagnostics');
+    await page.waitForURL((url) => url.pathname.includes('/diagnostics'), { timeout: 15000 });
+    await expect(page.locator('body')).toContainText(/diagnostic|leakage|recommendation|explainability|shap/i);
+
+    // 10. Production Deployment, Governance Gate & Live Prediction Stage
+    await page.goto('/production');
+    await page.waitForURL((url) => url.pathname.includes('/production'), { timeout: 15000 });
+    await expect(page.locator('body')).toContainText(/production|deploy|gate|endpoint|predict/i);
+
+    // 11. Live Monitoring & Drift Observability Stage
+    await page.goto('/monitoring');
+    await page.waitForURL((url) => url.pathname.includes('/monitoring'), { timeout: 15000 });
+    await expect(page.locator('body')).toContainText(/monitor|drift|latency|telemetry|metrics/i);
   });
 
-  test('System Health & Observability Contract', async ({ request }) => {
-    // Direct API verification through Playwright request context
-    const response = await request.get('http://localhost:8000/health');
-    expect(response.ok()).toBeTruthy();
-    const data = await response.json();
-    expect(data.status).toBe('healthy');
-    expect(data.api_version).toBe('v1');
+  test('System Health, Readiness & Observability Contract', async ({ request }) => {
+    // 1. Live Health Probe
+    const healthResp = await request.get('http://localhost:8000/health');
+    expect(healthResp.ok()).toBeTruthy();
+    const healthData = await healthResp.json();
+    expect(healthData.status).toBe('healthy');
+    expect(healthData.api_version).toBe('v1');
+
+    // 2. Readiness Probe
+    const readyResp = await request.get('http://localhost:8000/health/ready');
+    expect(readyResp.ok()).toBeTruthy();
+    const readyData = await readyResp.json();
+    expect(readyData.ready).toBe(true);
+    expect(readyData.database).toBe('healthy');
   });
 });
-

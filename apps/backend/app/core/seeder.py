@@ -31,14 +31,32 @@ from app.core.security import get_password_hash
 
 def seed_demo_accounts(db: Session) -> None:
     """
-    Seeds the two non-admin demonstration accounts:
-    1. trainer@demo.com: role USER (READ, EDIT_DATA, TRAIN, EXPORT) without DEPLOY
-    2. approver@demo.com: role USER (same default bundle) + explicit DEPLOY permission override
-    Demonstrates the per-user permission override mechanism without ADMIN escalation.
+    Seeds demonstration and test accounts:
+    1. admin@studio.dev / admin@demo.com: role ADMIN (full access)
+    2. trainer@demo.com: role USER (READ, EDIT_DATA, TRAIN, EXPORT) without DEPLOY
+    3. approver@demo.com: role USER (same default bundle) + explicit DEPLOY permission override
+    Demonstrates the per-user permission override mechanism and provides deterministic E2E admin accounts.
     """
+    admin_role = db.query(Role).filter(Role.role_name == "ADMIN").first()
     user_role = db.query(Role).filter(Role.role_name == "USER").first()
-    if not user_role:
+    if not user_role or not admin_role:
         return
+
+    # 0. admin@studio.dev / admin@demo.com (E2E & Admin fixture)
+    for admin_email in ["admin@studio.dev", "admin@demo.com"]:
+        admin_user = db.query(User).filter(User.email == admin_email).first()
+        if not admin_user:
+            admin_user = User(
+                full_name="System Administrator",
+                email=admin_email,
+                password_hash=get_password_hash("DemoPassword123!"),
+                role_id=admin_role.id,
+                is_active=True,
+            )
+            db.add(admin_user)
+            db.flush()
+        else:
+            admin_user.role_id = admin_role.id
 
     # 1. trainer@demo.com
     trainer = db.query(User).filter(User.email == "trainer@demo.com").first()
@@ -86,7 +104,7 @@ def seed_demo_accounts(db: Session) -> None:
         deploy_override.is_granted = True
 
     db.commit()
-    logger.info("Demo accounts (trainer@demo.com and approver@demo.com) successfully seeded.")
+    logger.info("Demo accounts (admin@studio.dev, trainer@demo.com, approver@demo.com) successfully seeded.")
 
 def seed_rbac_data(db: Session) -> None:
     """

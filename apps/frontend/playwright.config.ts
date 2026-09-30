@@ -24,6 +24,11 @@ export default defineConfig({
         : 'python -m uvicorn app.main:app --port 8000',
       cwd: '../backend',
       url: 'http://localhost:8000/health',
+      env: {
+        ENV: 'testing',
+        SEED_DEMO_DATA: 'true',
+        AUTO_CREATE_TABLES: 'true',
+      },
       reuseExistingServer: !process.env.CI,
       timeout: 60000,
     },

@@ -7,8 +7,6 @@ from app.infrastructure.storage.object_store import (
     ObjectNotFoundError,
     StorageUnavailableError,
     StoragePermissionDeniedError,
-    StorageTimeoutError,
-    StorageConfigurationError,
 )
 
 __all__ = [
@@ -20,6 +18,4 @@ __all__ = [
     "ObjectNotFoundError",
     "StorageUnavailableError",
     "StoragePermissionDeniedError",
-    "StorageTimeoutError",
-    "StorageConfigurationError",
 ]

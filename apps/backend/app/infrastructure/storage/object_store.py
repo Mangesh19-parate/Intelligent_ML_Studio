@@ -36,14 +36,7 @@ class StoragePermissionDeniedError(StorageError, PermissionError):
     pass
 
 
-class StorageTimeoutError(StorageError, TimeoutError):
-    """Raised when an object storage operation exceeds timeout threshold."""
-    pass
 
-
-class StorageConfigurationError(StorageError):
-    """Raised when object store is misconfigured or required client libraries are missing."""
-    pass
 
 
 class StorageService(ABC):

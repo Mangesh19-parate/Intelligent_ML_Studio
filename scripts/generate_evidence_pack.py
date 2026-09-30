@@ -34,6 +34,8 @@ if str(BACKEND_DIR) not in sys.path:
     sys.path.insert(0, str(BACKEND_DIR))
 
 
+import platform
+
 def get_git_fingerprint() -> dict:
     commit = "unknown"
     dirty = False
@@ -53,9 +55,12 @@ def get_git_fingerprint() -> dict:
         "commit": commit,
         "dirty_worktree": dirty,
         "python_version": sys.version.split()[0],
-        "platform": sys.platform,
+        "os": sys.platform,
+        "cpu_architecture": platform.machine(),
         "backend_requirements_sha256": hash_file(BACKEND_DIR / "requirements.txt"),
+        "backend_requirements_lock_sha256": hash_file(BACKEND_DIR / "requirements.lock"),
         "pyproject_sha256": hash_file(ROOT_DIR / "pyproject.toml"),
+        "frontend_package_json_sha256": hash_file(ROOT_DIR / "apps" / "frontend" / "package.json"),
     }
 
 
@@ -214,7 +219,8 @@ def generate_live_evidence(output_dir: Path):
         },
         "system_telemetry": {
             "peak_rss_mb": max(bench_cal["process_rss_mb"], bench_syn["process_rss_mb"]),
-            "cpu_architecture": sys.platform,
+            "os": sys.platform,
+            "cpu_architecture": platform.machine(),
         }
     }
     with open(output_dir / "ml" / "benchmark-report.json", "w", encoding="utf-8") as f:

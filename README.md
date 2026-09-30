@@ -131,12 +131,13 @@ python scripts/verify.py
 ```
 
 The verification suite validates:
-1. **Python Environment**: Dependencies & module imports verified.
-2. **Database Schema**: Migration integrity and table synchronization.
-3. **Backend Test Suite**: 490 pytest test cases passing green (including adversarial leakage and SHAP additivity).
+1. **Python Environment & Dependencies**: Locked production dependency hashes verified.
+2. **Database Schema & Constraints**: Migration integrity and strict canonical state machines.
+3. **Backend Test Suite**: Pytest Unit, Integration, Adversarial Leakage & HMAC Security Suite.
 4. **Frontend Typecheck**: `tsc --noEmit` passing with 0 TypeScript errors.
-5. **Frontend Unit Tests**: 51 Vitest component and stage test cases passing green.
+5. **Frontend Test Suites**: Vitest unit & component test suite + Playwright E2E browser test suite.
 6. **Frontend Build**: Vite production bundle compiled cleanly.
+7. **Release Packaging**: Clean source distribution archive verification.
 
 ---
 

@@ -219,62 +219,84 @@ def main():
     if not s5_success:
         sys.exit(1)
 
-    # 6. Frontend TypeScript Typecheck
+    # 6. Frontend Code Style & Formatting Gate (Prettier)
     s6_success, s6_out, s6_dur = run_step(
-        "6. Frontend Typecheck (tsc)",
-        ["npm", "run", "typecheck"],
+        "6. Frontend Code Formatting (Prettier)",
+        ["npm", "run", "format:check"],
         FRONTEND_DIR
     )
-    results.append(("6. Frontend Typecheck", s6_success, s6_dur))
-    stages_record["frontend_typecheck"] = {"status": "PASSED" if s6_success else "FAILED", "duration_s": round(s6_dur, 2)}
+    results.append(("6. Code Formatting (Prettier)", s6_success, s6_dur))
+    stages_record["frontend_formatting"] = {"status": "PASSED" if s6_success else "FAILED", "duration_s": round(s6_dur, 2)}
     if not s6_success:
         sys.exit(1)
 
-    # 7. Frontend Vitest Tests
+    # 7. Frontend TypeScript Typecheck
     s7_success, s7_out, s7_dur = run_step(
-        "7. Frontend Unit & Component Tests",
-        ["npm", "test"],
+        "7. Frontend Typecheck (tsc)",
+        ["npm", "run", "typecheck"],
         FRONTEND_DIR
     )
-    results.append(("7. Frontend Tests (Vitest)", s7_success, s7_dur))
-    stages_record["frontend_tests"] = {"status": "PASSED" if s7_success else "FAILED", "duration_s": round(s7_dur, 2)}
+    results.append(("7. Frontend Typecheck", s7_success, s7_dur))
+    stages_record["frontend_typecheck"] = {"status": "PASSED" if s7_success else "FAILED", "duration_s": round(s7_dur, 2)}
     if not s7_success:
         sys.exit(1)
 
-    # 8. Frontend Production Bundle Build
+    # 8. Frontend Vitest Tests
     s8_success, s8_out, s8_dur = run_step(
-        "8. Frontend Production Bundle (Vite)",
-        ["npm", "run", "build"],
+        "8. Frontend Unit & Component Tests",
+        ["npm", "test"],
         FRONTEND_DIR
     )
-    results.append(("8. Frontend Production Build", s8_success, s8_dur))
-    stages_record["frontend_build"] = {"status": "PASSED" if s8_success else "FAILED", "duration_s": round(s8_dur, 2)}
+    results.append(("8. Frontend Tests (Vitest)", s8_success, s8_dur))
+    stages_record["frontend_tests"] = {"status": "PASSED" if s8_success else "FAILED", "duration_s": round(s8_dur, 2)}
     if not s8_success:
         sys.exit(1)
 
-    # 9. Release Packaging Hygiene Validation
+    # 9. Frontend Production Bundle Build
     s9_success, s9_out, s9_dur = run_step(
-        "9. Release Packaging Hygiene & Clean Archive Gate",
-        [sys.executable, "scripts/package_release.py", "--verify-clean"],
-        ROOT_DIR
+        "9. Frontend Production Bundle (Vite)",
+        ["npm", "run", "build"],
+        FRONTEND_DIR
     )
-    results.append(("9. Clean Packaging Gate", s9_success, s9_dur))
-    stages_record["release_hygiene"] = {"status": "PASSED" if s9_success else "FAILED", "duration_s": round(s9_dur, 2)}
+    results.append(("9. Frontend Production Build", s9_success, s9_dur))
+    stages_record["frontend_build"] = {"status": "PASSED" if s9_success else "FAILED", "duration_s": round(s9_dur, 2)}
     if not s9_success:
         sys.exit(1)
 
-    # 10. Post-Verification Worktree Immutability Check
-    print("\n[10. Post-Verification Immutability Check] Verifying worktree remains clean...", flush=True)
-    t10_start = time.time()
+    # 10. Frontend Full-Lifecycle Browser E2E Tests (Playwright)
+    s10_success, s10_out, s10_dur = run_step(
+        "10. Frontend Browser E2E Suite (Playwright)",
+        ["npx", "playwright", "test"],
+        FRONTEND_DIR
+    )
+    results.append(("10. Browser E2E (Playwright)", s10_success, s10_dur))
+    stages_record["frontend_e2e_playwright"] = {"status": "PASSED" if s10_success else "FAILED", "duration_s": round(s10_dur, 2)}
+    if not s10_success:
+        sys.exit(1)
+
+    # 11. Release Packaging Hygiene Validation
+    s11_success, s11_out, s11_dur = run_step(
+        "11. Release Packaging Hygiene & Clean Archive Gate",
+        [sys.executable, "scripts/package_release.py", "--verify-clean"],
+        ROOT_DIR
+    )
+    results.append(("11. Clean Packaging Gate", s11_success, s11_dur))
+    stages_record["release_hygiene"] = {"status": "PASSED" if s11_success else "FAILED", "duration_s": round(s11_dur, 2)}
+    if not s11_success:
+        sys.exit(1)
+
+    # 12. Post-Verification Worktree Immutability Check
+    print("\n[12. Post-Verification Immutability Check] Verifying worktree remains clean...", flush=True)
+    t12_start = time.time()
     is_clean_post, clean_msg_post = check_worktree_clean()
-    t10_dur = time.time() - t10_start
+    t12_dur = time.time() - t12_start
     if is_clean and not is_clean_post and not args.allow_dirty:
-        print(f"[10. Post-Verification Immutability Gate] FAILED ({t10_dur:.2f}s)\n  > {clean_msg_post}", flush=True)
+        print(f"[12. Post-Verification Immutability Gate] FAILED ({t12_dur:.2f}s)\n  > {clean_msg_post}", flush=True)
         print("\n>>> CRITICAL INTEGRITY ERROR: Verification modified tracked source files! <<<\n", flush=True)
         sys.exit(1)
     else:
-        results.append(("10. Worktree Immutability Gate", True, t10_dur))
-        stages_record["post_verification_immutability"] = {"status": "PASSED" if is_clean_post else "DIRTY_ALLOWED", "duration_s": round(t10_dur, 2)}
+        results.append(("12. Worktree Immutability Gate", True, t12_dur))
+        stages_record["post_verification_immutability"] = {"status": "PASSED" if is_clean_post else "DIRTY_ALLOWED", "duration_s": round(t12_dur, 2)}
 
     # Output Scorecard
     print("\n" + "=" * 80, flush=True)

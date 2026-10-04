@@ -29,6 +29,11 @@ class StructuredLoggingMiddleware(BaseHTTPMiddleware):
             return response
         finally:
             duration_ms = round((time.perf_counter() - start_time) * 1000, 2)
+            try:
+                from app.core.metrics import record_request_latency
+                record_request_latency(duration_ms)
+            except Exception:
+                pass
             log_entry = {
                 "timestamp": time.time(),
                 "request_id": request_id,
@@ -42,3 +47,4 @@ class StructuredLoggingMiddleware(BaseHTTPMiddleware):
                 logger.error(json.dumps(log_entry))
             else:
                 logger.info(json.dumps(log_entry))
+

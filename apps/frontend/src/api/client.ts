@@ -34,7 +34,7 @@ const resolveApiBaseUrl = (): string => {
   return !envUrl ? '/api/v1' : envUrl.endsWith('/api/v1') ? envUrl : `${envUrl}/api/v1`;
 };
 
-const API_BASE_URL = resolveApiBaseUrl();
+export const API_BASE_URL = resolveApiBaseUrl();
 
 if (
   typeof window !== 'undefined' &&

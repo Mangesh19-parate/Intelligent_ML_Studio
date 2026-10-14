@@ -54,7 +54,7 @@ interface ProfileInfo {
 interface ActiveProjectDetailsState {
   dataset: DatasetInfo | null;
   profile: ProfileInfo | null;
-  experiments: Array<{ id: string;[key: string]: unknown }>;
+  experiments: Array<{ id: string; [key: string]: unknown }>;
   leaderboard: Leaderboard | null;
   recommendations: RecommendationItem[];
   deployment: unknown | null;
@@ -99,9 +99,9 @@ export const Dashboard: React.FC = () => {
 
   const userPerms = new Set(
     user?.permissions ||
-    (user?.role?.permissions
-      ? user.role.permissions.map((p) => (typeof p === 'string' ? p : p.permission_key))
-      : [])
+      (user?.role?.permissions
+        ? user.role.permissions.map((p) => (typeof p === 'string' ? p : p.permission_key))
+        : [])
   );
   const isAdmin = userPerms.has('MANAGE_USERS');
   const canEditData = isAdmin || userPerms.has('EDIT_DATA');
@@ -166,7 +166,7 @@ export const Dashboard: React.FC = () => {
           try {
             const lbRes = await modelApi.getLeaderboard(selectedProjectId, exps[0].id);
             lbData = lbRes.data;
-          } catch { }
+          } catch {}
         }
 
         let dsData: DatasetInfo | null = null;
@@ -178,9 +178,9 @@ export const Dashboard: React.FC = () => {
             try {
               const pRes = await datasetApi.getProfile(dsData!.id);
               profData = pRes.data as unknown as ProfileInfo;
-            } catch { }
+            } catch {}
           }
-        } catch { }
+        } catch {}
 
         setActiveProjectDetails({
           dataset: dsData,
@@ -274,19 +274,21 @@ export const Dashboard: React.FC = () => {
           <div className="flex p-1 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-full shadow-sm">
             <button
               onClick={() => handleTabSwitch('overview')}
-              className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${activeTab === 'overview'
-                ? 'bg-[var(--color-accent)] text-white shadow-sm'
-                : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'
-                }`}
+              className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                activeTab === 'overview'
+                  ? 'bg-[var(--color-accent)] text-white shadow-sm'
+                  : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'
+              }`}
             >
               Project Overview
             </button>
             <button
               onClick={() => handleTabSwitch('projects')}
-              className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${activeTab === 'projects'
-                ? 'bg-[var(--color-accent)] text-white shadow-sm'
-                : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'
-                }`}
+              className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                activeTab === 'projects'
+                  ? 'bg-[var(--color-accent)] text-white shadow-sm'
+                  : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'
+              }`}
             >
               My Projects ({projects.length})
             </button>
@@ -385,10 +387,11 @@ export const Dashboard: React.FC = () => {
                   <Link
                     key={st.key}
                     to={selectedProjectId ? `${st.path}?project_id=${selectedProjectId}` : st.path}
-                    className={`p-3.5 rounded-2xl border transition-all flex flex-col items-center justify-between text-center space-y-2 group cursor-pointer shadow-xs hover:shadow-md ${isCurrent
-                      ? 'bg-[var(--color-accent-soft)] border-[var(--color-accent)] ring-1 ring-[var(--color-accent)] shadow-md shadow-[var(--color-accent)]/15 scale-[1.02]'
-                      : 'bg-[var(--color-surface-card)] border-[var(--color-border)] hover:border-[var(--color-border-subtle)] hover:bg-[var(--color-surface-hover)]'
-                      }`}
+                    className={`p-3.5 rounded-2xl border transition-all flex flex-col items-center justify-between text-center space-y-2 group cursor-pointer shadow-xs hover:shadow-md ${
+                      isCurrent
+                        ? 'bg-[var(--color-accent-soft)] border-[var(--color-accent)] ring-1 ring-[var(--color-accent)] shadow-md shadow-[var(--color-accent)]/15 scale-[1.02]'
+                        : 'bg-[var(--color-surface-card)] border-[var(--color-border)] hover:border-[var(--color-border-subtle)] hover:bg-[var(--color-surface-hover)]'
+                    }`}
                   >
                     <div className="w-8 h-8 rounded-full bg-[var(--color-surface)] border border-[var(--color-border)] flex items-center justify-center text-[var(--color-accent)] group-hover:scale-105 transition-transform shadow-xs">
                       <Icon className="w-4 h-4" />
@@ -518,17 +521,19 @@ export const Dashboard: React.FC = () => {
                   {activeProjectDetails.leaderboard.models.slice(0, 3).map((m, idx) => (
                     <div
                       key={m.id}
-                      className={`p-3.5 rounded-xl border flex items-center justify-between text-xs ${m.is_winner
-                        ? 'bg-[var(--color-accent-soft)] border-[var(--color-accent)]'
-                        : 'bg-[var(--color-surface-card)] border border-[var(--color-border)]'
-                        }`}
+                      className={`p-3.5 rounded-xl border flex items-center justify-between text-xs ${
+                        m.is_winner
+                          ? 'bg-[var(--color-accent-soft)] border-[var(--color-accent)]'
+                          : 'bg-[var(--color-surface-card)] border border-[var(--color-border)]'
+                      }`}
                     >
                       <div className="flex items-center space-x-3">
                         <span
-                          className={`w-5 h-5 rounded-full flex items-center justify-center font-bold text-[10px] ${m.is_winner
-                            ? 'bg-[var(--color-accent)] text-white'
-                            : 'bg-[var(--color-surface)] text-[var(--color-text-muted)]'
-                            }`}
+                          className={`w-5 h-5 rounded-full flex items-center justify-center font-bold text-[10px] ${
+                            m.is_winner
+                              ? 'bg-[var(--color-accent)] text-white'
+                              : 'bg-[var(--color-surface)] text-[var(--color-text-muted)]'
+                          }`}
                         >
                           {idx + 1}
                         </span>
@@ -661,10 +666,11 @@ export const Dashboard: React.FC = () => {
                   <button
                     key={tf}
                     onClick={() => setTaskFilter(tf)}
-                    className={`px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer ${taskFilter === tf
-                      ? 'bg-[var(--color-accent)] text-white shadow-xs'
-                      : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'
-                      }`}
+                    className={`px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                      taskFilter === tf
+                        ? 'bg-[var(--color-accent)] text-white shadow-xs'
+                        : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'
+                    }`}
                   >
                     {tf === 'ALL' ? 'All' : tf.charAt(0) + tf.slice(1).toLowerCase()}
                   </button>

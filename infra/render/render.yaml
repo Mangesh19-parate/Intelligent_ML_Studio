@@ -6,7 +6,7 @@ services:
     rootDir: apps/backend
     plan: starter
     buildCommand: pip install -r requirements.lock
-    startCommand: ./start.sh
+    startCommand: bash start.sh
     healthCheckPath: /health/ready
     autoDeploy: true
 

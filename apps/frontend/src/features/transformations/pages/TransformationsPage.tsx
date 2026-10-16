@@ -83,7 +83,33 @@ export const TransformationsPage: React.FC = () => {
     fetchProjects();
   }, [selectedProjectId, setSearchParams]);
 
-  // 2. Load Project Context and Columns
+  // Current dynamically compiled recipe
+  const currentRecipe = {
+    version: '1.0.0',
+    leakage_safe: true,
+    numerical_pipeline: {
+      imputer: numImputer,
+      arbitrary_value: numImputer === 'arbitrary' ? arbitraryVal : null,
+      knn_neighbors: numImputer === 'knn' ? knnNeighbors : null,
+      outlier_treatment: {
+        method: outlierMethod,
+        action: outlierAction,
+        z_score_threshold: zScoreThreshold,
+      },
+      scaler: scalingMethod,
+    },
+    categorical_pipeline: {
+      imputer: catImputer,
+      nominal_encoder: nominalEncoding,
+      ordinal_encoder: ordinalEncoding,
+    },
+    datetime_pipeline: {
+      parts: dateExtractParts,
+      cyclical_sin_cos: cyclicalEncoding,
+    },
+  };
+
+  // 2. Load Project Context, Columns, and Saved Recipe
   useEffect(() => {
     if (!selectedProjectId) return;
     const fetchDetails = async () => {
@@ -92,6 +118,33 @@ export const TransformationsPage: React.FC = () => {
         setError('');
         const projRes = await projectApi.get(selectedProjectId);
         setCurrentProject(projRes.data);
+
+        // Fetch saved transformation recipe from backend
+        try {
+          const recipeRes = await transformationApi.getRecipe(selectedProjectId);
+          if (recipeRes?.data) {
+            const r = recipeRes.data;
+            if (r.numerical_pipeline) {
+              if (r.numerical_pipeline.imputer) setNumImputer(r.numerical_pipeline.imputer);
+              if (r.numerical_pipeline.arbitrary_value != null) setArbitraryVal(String(r.numerical_pipeline.arbitrary_value));
+              if (r.numerical_pipeline.knn_neighbors != null) setKnnNeighbors(Number(r.numerical_pipeline.knn_neighbors));
+              if (r.numerical_pipeline.scaler) setScalingMethod(r.numerical_pipeline.scaler);
+              if (r.numerical_pipeline.outlier_treatment?.method) setOutlierMethod(r.numerical_pipeline.outlier_treatment.method);
+              if (r.numerical_pipeline.outlier_treatment?.action) setOutlierAction(r.numerical_pipeline.outlier_treatment.action);
+            }
+            if (r.categorical_pipeline) {
+              if (r.categorical_pipeline.imputer) setCatImputer(r.categorical_pipeline.imputer);
+              if (r.categorical_pipeline.nominal_encoder) setNominalEncoding(r.categorical_pipeline.nominal_encoder);
+              if (r.categorical_pipeline.ordinal_encoder) setOrdinalEncoding(r.categorical_pipeline.ordinal_encoder);
+            }
+            if (r.datetime_pipeline) {
+              if (r.datetime_pipeline.parts) setDateExtractParts(r.datetime_pipeline.parts);
+              if (r.datetime_pipeline.cyclical_sin_cos !== undefined) setCyclicalEncoding(r.datetime_pipeline.cyclical_sin_cos);
+            }
+          }
+        } catch {
+          // Defaults are used if no previous recipe is stored
+        }
 
         const dsRes = await datasetApi.listVersions(selectedProjectId);
         if (dsRes.data && dsRes.data.length > 0) {
@@ -116,25 +169,12 @@ export const TransformationsPage: React.FC = () => {
     }
     setSaving(true);
     setError('');
+    setSuccessMsg('');
     try {
-      for (const col of columns) {
-        if (col.is_target) continue;
-        const isNumeric = col.data_type === 'NUMERIC';
-        const payload = isNumeric
-          ? {
-              scaling_strategy: scalingMethod,
-              missing_value_strategy: numImputer,
-              outlier_strategy: outlierMethod === 'iqr' ? 'iqr' : outlierMethod === 'z_score' ? 'zscore' : 'none',
-              is_active: true,
-            }
-          : {
-              encoding_strategy: nominalEncoding,
-              missing_value_strategy: catImputer,
-              is_active: true,
-            };
-        await transformationApi.updateColumn(selectedProjectId, col.column_name, payload);
-      }
-      setSuccessMsg('Transformation pipeline recipe saved & compiled for CV fold isolation.');
+      const res = await transformationApi.saveRecipe(selectedProjectId, currentRecipe);
+      setSuccessMsg(
+        res.data?.message || 'Transformation pipeline recipe saved & compiled successfully in the backend.'
+      );
     } catch (err: any) {
       console.error('Failed to save transformation recipe', err);
       setError(err?.response?.data?.detail || 'Failed to save recipe.');
@@ -828,37 +868,73 @@ export const TransformationsPage: React.FC = () => {
             </div>
 
             <pre className="p-4 rounded-2xl bg-[var(--color-surface-card)] border border-[var(--color-border)] font-mono text-xs text-[var(--color-accent)] overflow-x-auto">
-              {JSON.stringify(
-                {
-                  version: '1.0.0',
-                  leakage_safe: true,
-                  numerical_pipeline: {
-                    imputer: numImputer,
-                    arbitrary_value: numImputer === 'arbitrary' ? arbitraryVal : null,
-                    knn_neighbors: numImputer === 'knn' ? knnNeighbors : null,
-                    outlier_treatment: {
-                      method: outlierMethod,
-                      action: outlierAction,
-                      z_score_threshold: zScoreThreshold,
-                    },
-                    scaler: scalingMethod,
-                  },
-                  categorical_pipeline: {
-                    imputer: catImputer,
-                    nominal_encoder: nominalEncoding,
-                    ordinal_encoder: ordinalEncoding,
-                  },
-                  datetime_pipeline: {
-                    parts: dateExtractParts,
-                    cyclical_sin_cos: cyclicalEncoding,
-                  },
-                },
-                null,
-                2
-              )}
+              {JSON.stringify(currentRecipe, null, 2)}
             </pre>
           </div>
         )}
+
+        {/* Live Recipe Summary Box - Always visible at the end of the section */}
+        <div className="mt-8 p-5 rounded-2xl bg-[var(--color-surface-card)] border border-[var(--color-border)] space-y-4 shadow-sm">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-[var(--color-border)] gap-2">
+            <div className="flex items-center space-x-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+              <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--color-text)] flex items-center space-x-2">
+                <Zap className="w-3.5 h-3.5 text-[var(--color-accent)]" />
+                <span>Live Compiled Pipeline Recipe</span>
+              </h4>
+              <span className="text-[10px] text-[var(--color-text-muted)] font-mono">
+                (Real-time reactive preview • updates with your selections above)
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setActiveTab('recipe')}
+              className="text-[11px] font-bold text-[var(--color-accent)] hover:underline flex items-center space-x-1 cursor-pointer"
+            >
+              <span>Inspect Full JSON Recipe</span>
+              <ArrowRight className="w-3 h-3" />
+            </button>
+          </div>
+
+          {/* Active Strategy Badges */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2">
+            <div className="p-2.5 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)]">
+              <div className="text-[10px] uppercase font-bold text-[var(--color-text-muted)]">Numeric Imputer</div>
+              <div className="text-xs font-mono font-bold text-[var(--color-accent)] truncate mt-0.5">{numImputer}</div>
+            </div>
+            <div className="p-2.5 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)]">
+              <div className="text-[10px] uppercase font-bold text-[var(--color-text-muted)]">Cat Imputer</div>
+              <div className="text-xs font-mono font-bold text-[var(--color-accent)] truncate mt-0.5">{catImputer}</div>
+            </div>
+            <div className="p-2.5 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)]">
+              <div className="text-[10px] uppercase font-bold text-[var(--color-text-muted)]">Nominal Encoding</div>
+              <div className="text-xs font-mono font-bold text-[var(--color-accent)] truncate mt-0.5">{nominalEncoding}</div>
+            </div>
+            <div className="p-2.5 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)]">
+              <div className="text-[10px] uppercase font-bold text-[var(--color-text-muted)]">Outlier Action</div>
+              <div className="text-xs font-mono font-bold text-[var(--color-accent)] truncate mt-0.5">{outlierMethod} ({outlierAction})</div>
+            </div>
+            <div className="p-2.5 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)]">
+              <div className="text-[10px] uppercase font-bold text-[var(--color-text-muted)]">Scaling</div>
+              <div className="text-xs font-mono font-bold text-[var(--color-accent)] truncate mt-0.5">{scalingMethod}</div>
+            </div>
+            <div className="p-2.5 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)]">
+              <div className="text-[10px] uppercase font-bold text-[var(--color-text-muted)]">Date Extraction</div>
+              <div className="text-xs font-mono font-bold text-[var(--color-accent)] truncate mt-0.5">{dateExtractParts.length} parts</div>
+            </div>
+          </div>
+
+          {/* Real-time Code Output Block */}
+          <div className="rounded-xl overflow-hidden border border-[var(--color-border)] bg-[var(--color-surface)]">
+            <div className="px-3 py-1.5 bg-[var(--color-surface-hover)] border-b border-[var(--color-border)] flex items-center justify-between text-[11px] font-mono text-[var(--color-text-muted)]">
+              <span>recipe.json • scikit-learn ColumnTransformer specification</span>
+              <span className="text-emerald-400 font-bold">100% Leakage Safe</span>
+            </div>
+            <pre className="p-3 text-[11px] font-mono text-[var(--color-accent)] overflow-x-auto max-h-48 leading-relaxed">
+              {JSON.stringify(currentRecipe, null, 2)}
+            </pre>
+          </div>
+        </div>
 
         {/* Action Footer */}
         <div className="pt-4 border-t border-[var(--color-border)] flex flex-wrap items-center justify-between gap-4">

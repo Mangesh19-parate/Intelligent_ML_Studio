@@ -60,3 +60,30 @@ def preview_transformation(
     return service.preview_transformation(
         id, payload.column, sample_size=payload.sample_size, preview_seed=payload.preview_seed
     )
+
+@router.get(
+    "/{id}/transformations/recipe",
+    status_code=status.HTTP_200_OK,
+    summary="Get compiled ColumnTransformer pipeline recipe for a project",
+)
+def get_project_transformation_recipe(
+    id: UUID,
+    current_user: User = Depends(require_permission("READ")),
+    db: Session = Depends(get_db),
+):
+    service = TransformationService(db)
+    return service.get_project_recipe(id)
+
+@router.post(
+    "/{id}/transformations/recipe",
+    status_code=status.HTTP_200_OK,
+    summary="Save and compile ColumnTransformer pipeline recipe for a project",
+)
+def save_project_transformation_recipe(
+    id: UUID,
+    payload: dict,
+    current_user: User = Depends(require_permission("EDIT_DATA")),
+    db: Session = Depends(get_db),
+):
+    service = TransformationService(db)
+    return service.save_project_recipe(id, payload)

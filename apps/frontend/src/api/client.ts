@@ -285,6 +285,10 @@ export const transformationApi = {
       column,
       sample_size: sampleSize,
     }),
+  getRecipe: (projectId: string) =>
+    apiClient.get(`/projects/${projectId}/transformations/recipe`),
+  saveRecipe: (projectId: string, recipe: any) =>
+    apiClient.post(`/projects/${projectId}/transformations/recipe`, recipe),
 };
 
 export const featureSelectionApi = {

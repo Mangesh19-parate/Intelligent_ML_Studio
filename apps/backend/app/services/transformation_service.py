@@ -349,7 +349,7 @@ class TransformationService:
         missing_strat = (_get_val("missing_value_strategy") or "none").lower()
         if missing_strat != "none":
             if is_numeric:
-                if missing_strat == "mean":
+                if missing_strat in ["mean", "end_tail"]:
                     steps.append(("imputer", SimpleImputer(strategy="mean")))
                 elif missing_strat == "median":
                     steps.append(("imputer", SimpleImputer(strategy="median")))
@@ -367,6 +367,10 @@ class TransformationService:
 
         # 2. Outlier Handling (Numeric only)
         outlier_strat = (_get_val("outlier_strategy") or "none").lower()
+        if outlier_strat == "z_score":
+            outlier_strat = "zscore"
+        elif outlier_strat == "winsorization":
+            outlier_strat = "winsorize"
         if is_numeric and outlier_strat != "none":
             steps.append(("outlier_capper", OutlierCapper(strategy=outlier_strat)))
 
@@ -383,15 +387,124 @@ class TransformationService:
         # 4. Encoding (Categorical only)
         encoding_strat = (_get_val("encoding_strategy") or "none").lower()
         if is_categorical and encoding_strat != "none":
-            if encoding_strat == "one_hot":
-                steps.append(("encoder", OneHotEncoder(handle_unknown="ignore", sparse_output=False)))
-            elif encoding_strat == "ordinal":
+            if encoding_strat in ["one_hot", "drop_first"]:
+                drop_mode = "first" if encoding_strat == "drop_first" else None
+                steps.append(("encoder", OneHotEncoder(drop=drop_mode, handle_unknown="ignore" if not drop_mode else None, sparse_output=False)))
+            elif encoding_strat in ["ordinal", "label"]:
                 steps.append(("encoder", OrdinalEncoder(handle_unknown="use_encoded_value", unknown_value=-1)))
 
         if not steps:
             return None
 
         return Pipeline(steps=steps)
+
+    def get_project_recipe(self, project_id: UUID | str) -> dict:
+        import json
+        parsed_id = UUID(str(project_id))
+        key = f"recipes/{parsed_id}/transformation_recipe.json"
+        try:
+            raw_bytes = self.storage.get_file_bytes(key)
+            if raw_bytes:
+                return json.loads(raw_bytes.decode("utf-8"))
+        except Exception:
+            pass
+
+        return {
+            "version": "1.0.0",
+            "leakage_safe": True,
+            "numerical_pipeline": {
+                "imputer": "median",
+                "arbitrary_value": "0",
+                "knn_neighbors": 5,
+                "outlier_treatment": {
+                    "method": "iqr",
+                    "action": "capping",
+                    "z_score_threshold": 3.0,
+                },
+                "scaler": "standard",
+            },
+            "categorical_pipeline": {
+                "imputer": "mode",
+                "nominal_encoder": "one_hot",
+                "ordinal_encoder": "ordinal",
+            },
+            "datetime_pipeline": {
+                "parts": ["year", "month", "day", "dayofweek", "is_weekend"],
+                "cyclical_sin_cos": True,
+            },
+        }
+
+    def save_project_recipe(self, project_id: UUID | str, recipe_dict: dict) -> dict:
+        import json
+        parsed_id = UUID(str(project_id))
+        project = self.project_repo.get_by_id(parsed_id)
+        if not project:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Project not found",
+            )
+
+        # 1. Persist the recipe JSON in storage
+        key = f"recipes/{parsed_id}/transformation_recipe.json"
+        self.storage.save_bytes(key, json.dumps(recipe_dict, indent=2).encode("utf-8"))
+
+        # 2. Extract pipeline configurations
+        num_pipe = recipe_dict.get("numerical_pipeline", {})
+        cat_pipe = recipe_dict.get("categorical_pipeline", {})
+
+        num_imputer = num_pipe.get("imputer", "median")
+        num_scaler = num_pipe.get("scaler", "standard")
+        outlier_info = num_pipe.get("outlier_treatment", {})
+        num_outlier = outlier_info.get("method", "iqr") if isinstance(outlier_info, dict) else "iqr"
+        if num_outlier == "z_score":
+            num_outlier = "zscore"
+        elif num_outlier == "winsorization":
+            num_outlier = "winsorize"
+
+        cat_imputer = cat_pipe.get("imputer", "mode")
+        cat_encoder = cat_pipe.get("nominal_encoder", "one_hot")
+
+        # 3. Apply to existing columns if project has datasets
+        updated_cols = 0
+        datasets = self.dataset_repo.get_by_project(project.id)
+        if datasets:
+            latest_dataset = datasets[0]
+            columns = self.dataset_repo.get_columns_by_dataset(latest_dataset.id)
+            for col in columns:
+                if col.is_target:
+                    continue
+                if col.data_type == "NUMERIC":
+                    self.trans_repo.upsert_config(
+                        project.id,
+                        col.column_name,
+                        {
+                            "missing_value_strategy": num_imputer,
+                            "scaling_strategy": num_scaler,
+                            "outlier_strategy": num_outlier,
+                            "is_active": True,
+                        },
+                    )
+                    updated_cols += 1
+                elif col.data_type in ["CATEGORICAL", "MIXED"]:
+                    self.trans_repo.upsert_config(
+                        project.id,
+                        col.column_name,
+                        {
+                            "missing_value_strategy": cat_imputer,
+                            "encoding_strategy": cat_encoder,
+                            "is_active": True,
+                        },
+                    )
+                    updated_cols += 1
+
+        self._update_pipeline_stage_if_needed(project)
+
+        return {
+            "project_id": project.id,
+            "recipe": recipe_dict,
+            "updated_columns_count": updated_cols,
+            "message": f"Transformation pipeline recipe compiled and saved successfully ({updated_cols} columns updated).",
+        }
 
     def build_pipeline_from_snapshot(self, experiment_id: UUID | str, project_id: UUID | str) -> ColumnTransformer:
         """

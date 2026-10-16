@@ -1493,6 +1493,27 @@ class ExperimentService:
                 trans_snapshots = self.exp_repo.get_transformation_snapshots(experiment.id)
                 if trans_snapshots:
                     trans_snapshot_id = str(trans_snapshots[0].id)
+                else:
+                    trans_configs = self.db.query(TransformationConfig).filter(
+                        TransformationConfig.project_id == project.id
+                    ).order_by(TransformationConfig.column_name.asc()).all()
+                    frozen_trans_json = [
+                        {
+                            "id": str(tc.id),
+                            "column_name": tc.column_name,
+                            "missing_value_strategy": tc.missing_value_strategy,
+                            "encoding_strategy": tc.encoding_strategy,
+                            "scaling_strategy": tc.scaling_strategy,
+                            "outlier_strategy": tc.outlier_strategy,
+                            "is_active": tc.is_active,
+                        }
+                        for tc in trans_configs
+                    ]
+                    created_snap = self.exp_repo.create_transformation_snapshot(
+                        experiment_id=experiment.id,
+                        config_json=frozen_trans_json,
+                    )
+                    trans_snapshot_id = str(created_snap.id)
             if trans_snapshot_id:
                 try:
                     from uuid import UUID as PyUUID

@@ -89,16 +89,47 @@ export const DeploymentGateModal: React.FC<DeploymentGateModalProps> = ({
     try {
       const res = await modelApi.getDeploymentGate(model.id);
       setGate(res.data);
+      setErrorMsg(null);
     } catch (err: unknown) {
-      if (axios.isAxiosError(err)) {
-        setErrorMsg(err.response?.data?.detail || 'Failed to evaluate deployment gate.');
+      if (axios.isAxiosError(err) && err.response?.status === 404) {
+        try {
+          const evalRes = await modelApi.evaluateDeploymentGate(model.id);
+          setGate(evalRes.data);
+          setErrorMsg(null);
+        } catch (evalErr: unknown) {
+          if (axios.isAxiosError(evalErr)) {
+            setErrorMsg(evalErr.response?.data?.detail || 'Failed to evaluate deployment gate.');
+          } else {
+            setErrorMsg('Failed to evaluate deployment gate.');
+          }
+        }
+      } else if (axios.isAxiosError(err)) {
+        setErrorMsg(err.response?.data?.detail || 'Failed to load deployment gate.');
       } else {
-        setErrorMsg('Failed to evaluate deployment gate.');
+        setErrorMsg('Failed to load deployment gate.');
       }
     } finally {
       setLoadingGate(false);
     }
   }, [model?.id]);
+
+  const handleReevaluateGate = async (): Promise<void> => {
+    if (!model?.id) return;
+    setLoadingGate(true);
+    setErrorMsg(null);
+    try {
+      const evalRes = await modelApi.evaluateDeploymentGate(model.id);
+      setGate(evalRes.data);
+    } catch (err: unknown) {
+      if (axios.isAxiosError(err)) {
+        setErrorMsg(err.response?.data?.detail || 'Failed to re-evaluate deployment gate.');
+      } else {
+        setErrorMsg('Failed to re-evaluate deployment gate.');
+      }
+    } finally {
+      setLoadingGate(false);
+    }
+  };
 
   useEffect(() => {
     if (isOpen && model?.id) {
@@ -426,7 +457,7 @@ export const DeploymentGateModal: React.FC<DeploymentGateModalProps> = ({
                   Mandatory Verification Checklist (All 6 Required)
                 </span>
                 <button
-                  onClick={loadGateStatus}
+                  onClick={handleReevaluateGate}
                   disabled={loadingGate}
                   className="text-xs text-[var(--color-accent)] hover:underline flex items-center gap-1 cursor-pointer font-semibold"
                 >

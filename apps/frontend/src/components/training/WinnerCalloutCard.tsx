@@ -65,6 +65,14 @@ export const WinnerCalloutCard: React.FC<WinnerCalloutCardProps> = ({
               <span>Fit:</span>
               <FitDiagnosisBadge diagnosis={winningModel.fit_diagnosis} />
             </div>
+            {winningModel.fit_diagnosis === 'GOOD_FIT' && (
+              <>
+                <span>•</span>
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 border border-emerald-500/25 text-emerald-400">
+                  ✓ Overfit-Safe
+                </span>
+              </>
+            )}
             {winningModel.decision_threshold !== null &&
               winningModel.decision_threshold !== undefined && (
                 <>

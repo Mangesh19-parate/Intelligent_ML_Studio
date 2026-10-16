@@ -189,7 +189,19 @@ export const LeaderboardTable: React.FC<LeaderboardTableProps> = ({
                   </td>
 
                   <td className="px-4 py-3">
-                    <FitDiagnosisBadge diagnosis={model.fit_diagnosis} />
+                    <div className="space-y-1">
+                      <FitDiagnosisBadge diagnosis={model.fit_diagnosis} />
+                      {['POTENTIAL_OVERFIT', 'POTENTIAL_UNDERFIT_WEAK_SIGNAL'].includes(
+                        model.fit_diagnosis || ''
+                      ) && (
+                        <span
+                          className="block text-[9px] font-bold text-rose-400"
+                          title="Overfit / underfit models disqualify themselves from being selected as the winning champion"
+                        >
+                          Disqualified
+                        </span>
+                      )}
+                    </div>
                   </td>
 
                   <td className="px-4 py-3">

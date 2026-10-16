@@ -1349,10 +1349,17 @@ class ExperimentService:
             val = float(cv_metric.metric_value) if cv_metric and cv_metric.metric_value is not None else float(model.quick_cv_score or 0.0)
             model_scores.append((model, val))
 
+        # Overfit / underfit guard: Models with generalization failure reject themselves from winning
+        eligible_scores = [
+            ms for ms in model_scores
+            if ms[0].fit_diagnosis not in ["POTENTIAL_OVERFIT", "POTENTIAL_UNDERFIT_WEAK_SIGNAL"]
+        ]
+        candidates = eligible_scores if eligible_scores else model_scores
+
         if direction == "MINIMIZE":
-            winning_model, winning_score = min(model_scores, key=lambda x: x[1])
+            winning_model, winning_score = min(candidates, key=lambda x: x[1])
         else:
-            winning_model, winning_score = max(model_scores, key=lambda x: x[1])
+            winning_model, winning_score = max(candidates, key=lambda x: x[1])
 
         experiment.selected_model_id = winning_model.id
         self.db.add(experiment)

@@ -389,7 +389,8 @@ class TransformationService:
         if is_categorical and encoding_strat != "none":
             if encoding_strat in ["one_hot", "drop_first"]:
                 drop_mode = "first" if encoding_strat == "drop_first" else None
-                steps.append(("encoder", OneHotEncoder(drop=drop_mode, handle_unknown="ignore" if not drop_mode else None, sparse_output=False)))
+                handle_unk = "infrequent_if_exist" if drop_mode else "ignore"
+                steps.append(("encoder", OneHotEncoder(drop=drop_mode, max_categories=50, handle_unknown=handle_unk, sparse_output=False)))
             elif encoding_strat in ["ordinal", "label"]:
                 steps.append(("encoder", OrdinalEncoder(handle_unknown="use_encoded_value", unknown_value=-1)))
 

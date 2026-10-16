@@ -61,6 +61,23 @@ def seed_demo_accounts(db: Session) -> None:
             admin_user.is_active = True
             admin_user.is_two_factor_enabled = False
 
+    # 0b. dev@mlstudio.io (Dev Quick Fill)
+    dev_user = db.query(User).filter(User.email == "dev@mlstudio.io").first()
+    if not dev_user:
+        dev_user = User(
+            full_name="Developer Account",
+            email="dev@mlstudio.io",
+            password_hash=get_password_hash("password123"),
+            role_id=admin_role.id,
+            is_active=True,
+        )
+        db.add(dev_user)
+        db.flush()
+    else:
+        dev_user.password_hash = get_password_hash("password123")
+        dev_user.is_active = True
+        dev_user.is_two_factor_enabled = False
+
     # 1. trainer@demo.com
     trainer = db.query(User).filter(User.email == "trainer@demo.com").first()
     if not trainer:

@@ -51,8 +51,8 @@ def bootstrap_admin_account(
         session_managed = True
 
     try:
-        # 1. Ensure canonical RBAC structure is seeded
-        seed_rbac_data(db)
+        # 1. Ensure canonical RBAC structure is seeded (without demo accounts)
+        seed_rbac_data(db, seed_demo=False)
 
         # 2. Query for the canonical ADMIN role
         admin_role = db.query(Role).filter(Role.role_name == "ADMIN").first()

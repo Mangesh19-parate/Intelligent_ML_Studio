@@ -10,7 +10,7 @@ export const datasetsApi = {
   uploadDataset: async (projectId: string, file: File): Promise<Dataset> => {
     const formData = new FormData();
     formData.append('file', file);
-    const res = await httpClient.post<Dataset>(`/projects/${projectId}/datasets/upload`, formData, {
+    const res = await httpClient.post<Dataset>(`/projects/${projectId}/datasets`, formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
@@ -19,55 +19,43 @@ export const datasetsApi = {
   },
 
   getDatasetPreview: async (
-    projectId: string,
+    _projectId: string,
     datasetId: string,
     limit: number = 50
   ): Promise<Record<string, unknown>[]> => {
-    const res = await httpClient.get<Record<string, unknown>[]>(
-      `/projects/${projectId}/datasets/${datasetId}/preview`,
-      {
-        params: { limit },
-      }
+    const res = await httpClient.get<{ preview_rows: Record<string, unknown>[] }>(
+      `/datasets/${datasetId}/preview?limit=${limit}`
     );
+    return res.data?.preview_rows || [];
+  },
+
+  getDatasetColumns: async (_projectId: string, datasetId: string): Promise<DatasetColumn[]> => {
+    const res = await httpClient.get<DatasetColumn[]>(`/datasets/${datasetId}/columns`);
     return res.data;
   },
 
-  getDatasetColumns: async (projectId: string, datasetId: string): Promise<DatasetColumn[]> => {
-    const res = await httpClient.get<DatasetColumn[]>(
-      `/projects/${projectId}/datasets/${datasetId}/columns`
-    );
-    return res.data;
-  },
-
-  getDatasetProfile: async (projectId: string, datasetId: string): Promise<DatasetProfile> => {
-    const res = await httpClient.get<DatasetProfile>(
-      `/projects/${projectId}/datasets/${datasetId}/profile`
-    );
+  getDatasetProfile: async (projectId: string, _datasetId?: string): Promise<DatasetProfile> => {
+    const res = await httpClient.get<DatasetProfile>(`/projects/${projectId}/dataset/profile`);
     return res.data;
   },
 
   createDatasetSplit: async (
     projectId: string,
-    datasetId: string,
+    _datasetId: string,
     testRatio: number = 0.2,
     seed: number = 42,
     stratify: boolean = true
   ): Promise<DatasetSplit> => {
-    const res = await httpClient.post<DatasetSplit>(
-      `/projects/${projectId}/datasets/${datasetId}/splits`,
-      {
-        test_ratio: testRatio,
-        seed,
-        stratify,
-      }
-    );
+    const res = await httpClient.post<DatasetSplit>(`/projects/${projectId}/dataset/split`, {
+      test_size: testRatio,
+      random_seed: seed,
+      stratified: stratify,
+    });
     return res.data;
   },
 
-  getDatasetSplits: async (projectId: string, datasetId: string): Promise<DatasetSplit[]> => {
-    const res = await httpClient.get<DatasetSplit[]>(
-      `/projects/${projectId}/datasets/${datasetId}/splits`
-    );
+  getDatasetSplits: async (_projectId: string, datasetId: string): Promise<DatasetSplit[]> => {
+    const res = await httpClient.get<DatasetSplit[]>(`/datasets/${datasetId}/splits`);
     return res.data;
   },
 };

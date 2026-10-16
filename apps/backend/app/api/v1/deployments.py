@@ -19,6 +19,24 @@ router = APIRouter(prefix="/deployments", tags=["Model Deployments"])
 
 
 @router.get(
+    "",
+    response_model=list[DeploymentResponse],
+    status_code=status.HTTP_200_OK,
+    summary="List deployments, optionally filtered by project_id (READ permission required)",
+)
+def list_deployments(
+    project_id: UUID | None = Query(None, description="Filter deployments by project ID"),
+    current_user: User = Depends(require_permission("READ")),
+    db: Session = Depends(get_db),
+):
+    service = DeploymentService(db)
+    if project_id:
+        verify_project_ownership(project_id, current_user, db)
+        return service.list_deployments_for_project(project_id)
+    return service.list_all()
+
+
+@router.get(
     "/{id}",
     response_model=DeploymentResponse,
     status_code=status.HTTP_200_OK,

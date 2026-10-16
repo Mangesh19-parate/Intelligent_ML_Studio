@@ -34,7 +34,7 @@ const resolveApiBaseUrl = (): string => {
   return !envUrl ? '/api/v1' : envUrl.endsWith('/api/v1') ? envUrl : `${envUrl}/api/v1`;
 };
 
-export const API_BASE_URL = resolveApiBaseUrl();
+const API_BASE_URL = resolveApiBaseUrl();
 
 if (
   typeof window !== 'undefined' &&
@@ -337,6 +337,10 @@ export const modelApi = {
 };
 
 export const deploymentApi = {
+  listByProject: (projectId: string) =>
+    apiClient.get<Deployment[]>(`/projects/${projectId}/deployments`),
+  list: (projectId?: string) =>
+    apiClient.get<Deployment[]>(`/deployments${projectId ? `?project_id=${projectId}` : ''}`),
   get: (deploymentId: string) => apiClient.get<Deployment>(`/deployments/${deploymentId}`),
   getMonitoring: (deploymentId: string, lookbackHours = 24) =>
     apiClient.get(`/deployments/${deploymentId}/monitoring?lookback_hours=${lookbackHours}`),

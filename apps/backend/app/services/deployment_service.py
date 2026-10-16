@@ -221,3 +221,23 @@ class DeploymentService:
 
     def get_by_id(self, deployment_id: UUID | str) -> Deployment | None:
         return self.db.query(Deployment).filter(Deployment.id == deployment_id).first()
+
+    def list_deployments_for_project(self, project_id: UUID | str) -> list[Deployment]:
+        from app.models.experiment import Experiment
+        return (
+            self.db.query(Deployment)
+            .join(TrainedModel, Deployment.model_id == TrainedModel.id)
+            .join(Experiment, TrainedModel.experiment_id == Experiment.id)
+            .filter(Experiment.project_id == project_id)
+            .order_by(Deployment.deployed_at.desc())
+            .all()
+        )
+
+    def list_all(self, project_id: UUID | str | None = None) -> list[Deployment]:
+        if project_id:
+            return self.list_deployments_for_project(project_id)
+        return (
+            self.db.query(Deployment)
+            .order_by(Deployment.deployed_at.desc())
+            .all()
+        )

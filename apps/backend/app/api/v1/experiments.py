@@ -230,7 +230,7 @@ def start_experiment_training_endpoint(
             if exp.task_type == "CLASSIFICATION":
                 algorithms = ["LogisticRegression", "RandomForestClassifier", "GradientBoostingClassifier"]
             else:
-                algorithms = ["LinearRegression", "Ridge", "RandomForestRegressor"]
+                algorithms = ["LinearRegression", "GradientBoostingRegressor", "RandomForestRegressor"]
 
         eff_metric = exp.selection_metric or ("rmse" if exp.task_type == "REGRESSION" else "f1_macro")
         eff_direction = exp.selection_direction or ("MINIMIZE" if eff_metric in ["rmse", "mae", "mse"] else "MAXIMIZE")

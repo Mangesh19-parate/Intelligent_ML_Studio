@@ -222,10 +222,10 @@ export const LandingPage: React.FC = () => {
       explanation: 'Compare standardized tabular models using controlled cross-validation.',
       metric: 'Standardized Leaderboard',
       detail:
-        'Automated hyperparameter exploration for Logistic Regression, Ridge, Random Forest, and LightGBM with identical fold splits.',
+        'Standardized cross-validation for Logistic Regression, Linear Regression, Random Forest, and Gradient Boosting with identical fold splits.',
       code: `experiment = experiment_service.train_model(
     project_id=project.id,
-    algorithm="LIGHTGBM",
+    algorithm="GradientBoostingClassifier",
     cv_strategy="STRATIFIED_K_FOLD"
 )
 # F1 Macro: 0.942 | ROC AUC: 0.978`,
@@ -269,7 +269,7 @@ export const LandingPage: React.FC = () => {
       metric: '< 12ms P99 Latency',
       detail:
         'Low-latency REST inference with background input payload logging, PSI data drift monitoring, and automatic fallback.',
-      code: `POST /api/v1/deployments/{id}/predict
+      code: `POST /api/v1/predict/{deployment_id}
 { "account_age": 42, "credit_score": 750 }
 # Response: { "prediction": 0, "latency_ms": 6.8 }`,
     },
@@ -462,7 +462,10 @@ export const LandingPage: React.FC = () => {
                 <div className="flex items-center space-x-2">
                   <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                   <span className="font-bold font-mono text-[var(--color-text)]">
-                    Model Passport: LightGBM-v3
+                    Model Passport: GradientBoostingClassifier-v1
+                  </span>
+                  <span className="text-[10px] text-[var(--color-text-muted)] font-sans italic">
+                    (Sample Demonstration Preview)
                   </span>
                 </div>
                 <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
@@ -817,13 +820,13 @@ export const LandingPage: React.FC = () => {
                       <>
                         <div>1. Logistic Regression (Baseline)</div>
                         <div>2. Random Forest Classifier</div>
-                        <div>3. LightGBM GBDT Classifier</div>
+                        <div>3. Gradient Boosting Classifier</div>
                       </>
                     ) : (
                       <>
-                        <div>1. Ridge / Lasso Regression (Baseline)</div>
+                        <div>1. Linear Regression (Baseline)</div>
                         <div>2. Random Forest Regressor</div>
-                        <div>3. LightGBM GBDT Regressor</div>
+                        <div>3. Gradient Boosting Regressor</div>
                       </>
                     )}
                   </div>

@@ -1,6 +1,21 @@
 import { httpClient } from '../../shared/api/httpClient';
 import { TransformationConfig } from '../../types/api';
 
+export interface TransformationPayload {
+  scaling_strategy?: string | null;
+  encoding_strategy?: string | null;
+  missing_value_strategy?: string | null;
+  outlier_strategy?: string | null;
+  is_active?: boolean;
+}
+
+export interface TransformationPreviewResponse {
+  column: string;
+  original_sample: any[];
+  transformed_sample: any[];
+  strategy_applied: string;
+}
+
 export const transformationsApi = {
   getTransformationRecipes: async (projectId: string): Promise<TransformationConfig[]> => {
     const res = await httpClient.get<TransformationConfig[]>(
@@ -9,24 +24,26 @@ export const transformationsApi = {
     return res.data;
   },
 
-  applyTransformation: async (
+  updateColumnTransformation: async (
     projectId: string,
-    datasetId: string,
-    transformationType: string,
-    parameters: Record<string, unknown>
+    column: string,
+    payload: TransformationPayload
   ): Promise<TransformationConfig> => {
-    const res = await httpClient.post<TransformationConfig>(
-      `/projects/${projectId}/transformations`,
-      {
-        dataset_id: datasetId,
-        transformation_type: transformationType,
-        parameters,
-      }
+    const res = await httpClient.put<TransformationConfig>(
+      `/projects/${projectId}/transformations/${column}`,
+      payload
     );
     return res.data;
   },
 
-  rollbackTransformation: async (projectId: string, stepId: string): Promise<void> => {
-    await httpClient.post(`/projects/${projectId}/transformations/${stepId}/rollback`);
+  previewTransformation: async (
+    projectId: string,
+    payload: { column: string; sample_size?: number }
+  ): Promise<TransformationPreviewResponse> => {
+    const res = await httpClient.post<TransformationPreviewResponse>(
+      `/projects/${projectId}/transformations/preview`,
+      payload
+    );
+    return res.data;
   },
 };

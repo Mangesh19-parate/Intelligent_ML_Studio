@@ -186,10 +186,6 @@ class Settings(BaseSettings):
             "secretkey",
         }
         if self.ENV.lower() == "production":
-            if self.SEED_DEMO_DATA:
-                raise ValueError(
-                    "Production security hygiene violation: SEED_DEMO_DATA is strictly prohibited in production."
-                )
             if self.JWT_SECRET in known_dev_secrets or len(self.JWT_SECRET) < 32:
                 raise ValueError(
                     "Production security hygiene violation: JWT_SECRET must be set to a secure, non-default secret with at least 32 characters in production."
@@ -201,6 +197,10 @@ class Settings(BaseSettings):
             if self.ARTIFACT_SIGNING_KEY == self.JWT_SECRET:
                 raise ValueError(
                     "Production security hygiene violation: ARTIFACT_SIGNING_KEY must not be identical to JWT_SECRET (key separation required)."
+                )
+            if self.SEED_DEMO_DATA:
+                raise ValueError(
+                    "Production security hygiene violation: SEED_DEMO_DATA is strictly prohibited in production."
                 )
             if "*" in self.BACKEND_CORS_ORIGINS:
                 raise ValueError(

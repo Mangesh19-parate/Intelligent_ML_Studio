@@ -33,7 +33,7 @@ import zipfile
 from pathlib import Path
 import numpy as np
 import pandas as pd
-from sklearn.datasets import fetch_california_housing, load_breast_cancer
+from sklearn.datasets import fetch_california_housing, load_breast_cancer as sklearn_load_breast_cancer
 
 DEFAULT_CACHE_DIR = Path(__file__).parent / "data"
 
@@ -124,7 +124,7 @@ def load_breast_cancer(
     if csv_file.exists():
         df = pd.read_csv(csv_file)
     else:
-        raw = load_breast_cancer(as_frame=True)
+        raw = sklearn_load_breast_cancer(as_frame=True)
         df = raw.frame
         df.to_csv(csv_file, index=False)
 

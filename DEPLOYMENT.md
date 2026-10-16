@@ -108,7 +108,7 @@ openssl rand -hex 32
    - **Root Directory:** `apps/backend`
    - **Runtime:** `Python 3`
    - **Build Command:** `pip install -r requirements.txt`
-   - **Start Command:** `bash start.sh`
+   - **Start Command:** `./start.sh`
    - **Health Check Path:** `/health`
 4. Add the following **Environment Variables**:
 

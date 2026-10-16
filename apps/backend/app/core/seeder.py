@@ -115,7 +115,7 @@ def seed_demo_accounts(db: Session) -> None:
     db.commit()
     logger.info("Demo accounts (admin@studio.dev, trainer@demo.com, approver@demo.com) successfully seeded.")
 
-def seed_rbac_data(db: Session) -> None:
+def seed_rbac_data(db: Session, seed_demo: bool = True) -> None:
     """
     Seeds canonical roles, permissions, and role-permission mappings.
     Idempotent: will not duplicate existing entities.
@@ -157,7 +157,7 @@ def seed_rbac_data(db: Session) -> None:
 
     # 4. Seed Demo Accounts (Only if explicitly enabled and non-production)
     from app.core.config import settings
-    if settings.SEED_DEMO_DATA and settings.ENV.lower() != "production":
+    if seed_demo and settings.SEED_DEMO_DATA and settings.ENV.lower() != "production":
         seed_demo_accounts(db)
     else:
-        logger.info("Demo account auto-seeding is skipped (SEED_DEMO_DATA is False or in production).")
+        logger.info("Demo account auto-seeding is skipped (SEED_DEMO_DATA is False, seed_demo is False, or in production).")

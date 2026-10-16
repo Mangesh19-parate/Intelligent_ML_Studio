@@ -25,10 +25,8 @@ export const experimentsApi = {
     return res.data;
   },
 
-  getExperiment: async (projectId: string, experimentId: string): Promise<Experiment> => {
-    const res = await httpClient.get<Experiment>(
-      `/projects/${projectId}/experiments/${experimentId}`
-    );
+  getExperiment: async (_projectId: string, experimentId: string): Promise<Experiment> => {
+    const res = await httpClient.get<Experiment>(`/experiments/${experimentId}`);
     return res.data;
   },
 
@@ -42,24 +40,18 @@ export const experimentsApi = {
     return res.data;
   },
 
-  evaluateLockedTest: async (projectId: string, experimentId: string): Promise<Experiment> => {
-    const res = await httpClient.post<Experiment>(
-      `/projects/${projectId}/experiments/${experimentId}/evaluate-locked-test`
-    );
+  evaluateLockedTest: async (_projectId: string, experimentId: string): Promise<Experiment> => {
+    const res = await httpClient.post<Experiment>(`/experiments/${experimentId}/finalize`);
     return res.data;
   },
 
-  freezeExperiment: async (projectId: string, experimentId: string): Promise<Experiment> => {
-    const res = await httpClient.post<Experiment>(
-      `/projects/${projectId}/experiments/${experimentId}/freeze`
-    );
+  freezeExperiment: async (_projectId: string, experimentId: string): Promise<Experiment> => {
+    const res = await httpClient.post<Experiment>(`/experiments/${experimentId}/finalize`);
     return res.data;
   },
 
-  cancelExperiment: async (projectId: string, experimentId: string): Promise<Experiment> => {
-    const res = await httpClient.post<Experiment>(
-      `/projects/${projectId}/experiments/${experimentId}/cancel`
-    );
+  cancelExperiment: async (_projectId: string, experimentId: string): Promise<Experiment> => {
+    const res = await httpClient.post<Experiment>(`/experiments/${experimentId}/cancel`);
     return res.data;
   },
 };

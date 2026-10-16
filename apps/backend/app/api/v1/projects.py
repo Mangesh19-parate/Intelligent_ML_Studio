@@ -6,8 +6,10 @@ from app.core.dependencies import require_permission
 from app.models.user import User
 from app.schemas.project import ProjectCreate, ProjectUpdate, ProjectResponse, ProjectTransitionRequest
 from app.schemas.model_metric import LeaderboardResponse
+from app.schemas.deployment import DeploymentResponse
 from app.config.state_machines import ModelState
 from app.services.project_service import ProjectService
+from app.services.deployment_service import DeploymentService
 
 router = APIRouter(prefix="/projects", tags=["Projects"])
 
@@ -373,6 +375,24 @@ def get_project_snapshot(
     from app.services.workspace_analytics_service import WorkspaceAnalyticsService
     analytics_service = WorkspaceAnalyticsService(db)
     return analytics_service.get_project_snapshot(id, current_user)
+
+
+@router.get(
+    "/{id}/deployments",
+    response_model=list[DeploymentResponse],
+    status_code=status.HTTP_200_OK,
+    summary="List all deployments for a project (READ permission required)"
+)
+def list_project_deployments(
+    id: UUID,
+    current_user: User = Depends(require_permission("READ")),
+    db: Session = Depends(get_db),
+):
+    project_service = ProjectService(db)
+    project_service.get_project_by_id(id, current_user)
+    deployment_service = DeploymentService(db)
+    return deployment_service.list_deployments_for_project(id)
+
 
 
 

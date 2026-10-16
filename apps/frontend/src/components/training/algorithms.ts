@@ -13,10 +13,10 @@ export const REGRESSION_ALGORITHMS: AlgorithmOption[] = [
     description: 'Ordinary Least Squares baseline without regularization.',
   },
   {
-    id: 'Ridge',
-    name: 'Ridge Regression',
-    tag: 'L2 Regularized',
-    description: 'Linear model with L2 regularization to prevent multicollinearity.',
+    id: 'GradientBoostingRegressor',
+    name: 'Gradient Boosting Regressor',
+    tag: 'Sequential Boosting',
+    description: 'Sequential ensemble minimizing gradient residuals.',
   },
   {
     id: 'RandomForestRegressor',

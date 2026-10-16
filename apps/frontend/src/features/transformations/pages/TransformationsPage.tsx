@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { projectApi, datasetApi } from '../../../api/client';
+import { projectApi, datasetApi, transformationApi } from '../../../api/client';
 import { Project, DatasetColumn } from '../../../types/api';
 import {
   SlidersHorizontal,
@@ -109,13 +109,38 @@ export const TransformationsPage: React.FC = () => {
     fetchDetails();
   }, [selectedProjectId]);
 
-  const handleSaveRecipe = () => {
+  const handleSaveRecipe = async () => {
+    if (!selectedProjectId) {
+      setError('Please select a project first.');
+      return;
+    }
     setSaving(true);
     setError('');
-    setTimeout(() => {
-      setSaving(false);
+    try {
+      for (const col of columns) {
+        if (col.is_target) continue;
+        const isNumeric = col.data_type === 'NUMERIC';
+        const payload = isNumeric
+          ? {
+              scaling_strategy: scalingMethod,
+              missing_value_strategy: numImputer,
+              outlier_strategy: outlierMethod === 'iqr' ? 'iqr' : outlierMethod === 'z_score' ? 'zscore' : 'none',
+              is_active: true,
+            }
+          : {
+              encoding_strategy: nominalEncoding,
+              missing_value_strategy: catImputer,
+              is_active: true,
+            };
+        await transformationApi.updateColumn(selectedProjectId, col.column_name, payload);
+      }
       setSuccessMsg('Transformation pipeline recipe saved & compiled for CV fold isolation.');
-    }, 600);
+    } catch (err: any) {
+      console.error('Failed to save transformation recipe', err);
+      setError(err?.response?.data?.detail || 'Failed to save recipe.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const toggleDatePart = (part: string) => {

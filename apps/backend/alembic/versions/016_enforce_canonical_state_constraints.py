@@ -60,6 +60,13 @@ def upgrade() -> None:
                 "state IN ('QUEUED', 'RUNNING', 'SUCCEEDED', 'FAILED', 'TIMED_OUT', 'CANCELLED')"
             )
 
+    if 'deployments' in tables:
+        with op.batch_alter_table('deployments') as batch_op:
+            batch_op.create_check_constraint(
+                'chk_deployment_status',
+                "status IN ('CREATED', 'GATE_PENDING', 'GATE_PASSED', 'GATE_BLOCKED', 'APPROVED', 'DEPLOYED', 'LIVE', 'PAUSED', 'RETIRED')"
+            )
+
 
 def downgrade() -> None:
     bind = op.get_bind()

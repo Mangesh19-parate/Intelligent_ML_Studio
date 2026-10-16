@@ -18,6 +18,7 @@ from app.core.database import SessionLocal
 import app.models
 from app.models.durable_task import DurableTask
 from app.models.worker_heartbeat import WorkerHeartbeat
+from app.models.experiment import Experiment
 from app.tasks.task_state import TaskState
 from app.config.state_machines import ExperimentState
 from app.tasks.experiment_tasks import (
@@ -91,8 +92,11 @@ def handle_shutdown(signum, frame):
     RUNNING = False
 
 
-signal.signal(signal.SIGINT, handle_shutdown)
-signal.signal(signal.SIGTERM, handle_shutdown)
+try:
+    signal.signal(signal.SIGINT, handle_shutdown)
+    signal.signal(signal.SIGTERM, handle_shutdown)
+except (ValueError, AttributeError):
+    pass
 
 
 def claim_next_queued_task(

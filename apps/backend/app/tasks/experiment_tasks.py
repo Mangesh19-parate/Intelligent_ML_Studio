@@ -300,6 +300,7 @@ def _child_experiment_worker(
             experiment_id=experiment_id,
             auto_finalize=True,
             deployment_threshold=deployment_threshold,
+            from_worker=True,
         )
         if pipe_conn:
             pipe_conn.send({"status": "SUCCESS", "result": {"experiment_id": str(experiment_id), "status": "COMPLETED"}})

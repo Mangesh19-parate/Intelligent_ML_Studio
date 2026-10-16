@@ -32,6 +32,15 @@ async def lifespan(app: FastAPI):
             logger.critical(f"FATAL: Production database initialization/seeding failed: {e}")
             raise RuntimeError(f"FATAL: Production database connection/seeding failed: {e}") from e
         logger.warning(f"Database initialization deferred or skipped: {e}")
+
+    # Start in-process background worker daemon thread for seamless task execution
+    if settings.ENV != "production":
+        import threading
+        from app.tasks.worker import main as worker_main
+        worker_thread = threading.Thread(target=worker_main, daemon=True, name="in-process-worker")
+        worker_thread.start()
+        logger.info("Local background durable task worker daemon started.")
+
     yield
 
 app = FastAPI(

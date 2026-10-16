@@ -52,6 +52,12 @@ export const ModelTraining: React.FC<ModelTrainingProps> = ({
   const [selectedAlgorithms, setSelectedAlgorithms] = useState<string[]>(
     availableAlgs.map((a) => a.id)
   );
+  const selectedAlgObjects = useMemo(() => {
+    return selectedAlgorithms.map((id) => {
+      const found = availableAlgs.find((a) => a.id === id);
+      return found || { id, name: id, tag: 'Estimator', description: '' };
+    });
+  }, [selectedAlgorithms, availableAlgs]);
   const [folds, setFolds] = useState<number>(5);
   const [seed, setSeed] = useState<string>('');
   const [selectionMetric, setSelectionMetric] = useState<string>(
@@ -108,7 +114,7 @@ export const ModelTraining: React.FC<ModelTrainingProps> = ({
         try {
           const res = await experimentApi.get(experimentId);
           setActiveExperiment(res.data);
-          if (res.data.status === 'COMPLETED' || res.data.status === 'FAILED') {
+          if (['COMPLETED', 'REGISTERED', 'FAILED', 'TRAINING_FAILED'].includes(res.data.status)) {
             clearInterval(pollingTimerRef.current);
             setPollingActive(false);
             await loadLeaderboardData(experimentId);
@@ -131,11 +137,13 @@ export const ModelTraining: React.FC<ModelTrainingProps> = ({
       const list = res.data || [];
       setExperimentsHistory(list);
       if (list.length > 0) {
-        const latest = list[0];
-        setActiveExperiment(latest);
-        await loadLeaderboardData(latest.id);
-        if (latest.status === 'RUNNING') {
-          startPolling(latest.id);
+        const inProgress = list.find((e: any) => e.status === 'TRAINING' || e.status === 'RUNNING');
+        const completed = list.find((e: any) => ['REGISTERED', 'COMPLETED', 'EVALUATED'].includes(e.status));
+        const target = inProgress || completed || list[0];
+        setActiveExperiment(target);
+        await loadLeaderboardData(target.id);
+        if (target.status === 'RUNNING' || target.status === 'TRAINING') {
+          startPolling(target.id);
         }
       }
     } catch (err) {
@@ -451,7 +459,121 @@ export const ModelTraining: React.FC<ModelTrainingProps> = ({
 
         {/* Right 2 Columns: Official Leaderboard & Winner Callout */}
         <div className="lg:col-span-2 space-y-5">
-          {!leaderboard || !activeExperiment ? (
+          {/* Active Pre-Flight Selection Bar (Dynamically updates as user toggles options on left) */}
+          <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl p-5 shadow-sm space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[var(--color-border)] pb-3.5">
+              <div className="flex items-center space-x-2.5">
+                <div className="w-8 h-8 rounded-xl bg-[var(--color-accent-soft)] text-[var(--color-accent)] flex items-center justify-center font-bold">
+                  <Sparkles className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-xs font-bold text-[var(--color-text)] uppercase tracking-wider">
+                    Active Pre-Flight Configuration
+                  </h3>
+                  <p className="text-[11px] text-[var(--color-text-muted)]">
+                    Live selection payload that will be trained across CV folds and benchmarked
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center space-x-2">
+                <span
+                  className={`inline-flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-semibold ${
+                    pollingActive || loading
+                      ? 'bg-amber-500/10 text-amber-500 border border-amber-500/20'
+                      : (leaderboard?.models || []).length > 0
+                        ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                        : 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20'
+                  }`}
+                >
+                  <span
+                    className={`w-1.5 h-1.5 rounded-full ${
+                      pollingActive || loading
+                        ? 'bg-amber-500 animate-pulse'
+                        : (leaderboard?.models || []).length > 0
+                          ? 'bg-emerald-400'
+                          : 'bg-indigo-400'
+                    }`}
+                  />
+                  <span>
+                    {pollingActive || loading
+                      ? 'Training & Ranking...'
+                      : (leaderboard?.models || []).length > 0
+                        ? `${(leaderboard.models || []).length} Models Evaluated`
+                        : 'Ready for Cross-Validation'}
+                  </span>
+                </span>
+                <button
+                  type="button"
+                  onClick={handleStartTraining}
+                  disabled={loading || pollingActive || selectedAlgorithms.length === 0}
+                  className="inline-flex items-center space-x-1.5 px-4 py-1.5 rounded-full bg-[var(--color-accent)] hover:opacity-90 text-white text-xs font-bold transition-all shadow-sm cursor-pointer disabled:opacity-50"
+                >
+                  {loading || pollingActive ? (
+                    <>
+                      <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      <span>Training...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Play className="w-3.5 h-3.5 fill-white" />
+                      <span>{(leaderboard?.models || []).length > 0 ? 'Re-Train Suite' : 'Train Models'}</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* Target Algorithm Chips */}
+            <div className="space-y-1.5">
+              <span className="text-[10px] uppercase font-bold text-[var(--color-text-muted)] tracking-wider">
+                Selected Algorithms ({selectedAlgorithms.length} of {availableAlgs.length})
+              </span>
+              <div className="flex flex-wrap gap-2">
+                {selectedAlgObjects.map((alg) => (
+                  <div
+                    key={alg.id}
+                    className="inline-flex items-center space-x-2 px-3 py-1 rounded-xl bg-[var(--color-bg)] border border-[var(--color-accent)]/30 text-xs font-semibold text-[var(--color-text)] shadow-2xs"
+                  >
+                    <CheckCircle2 className="w-3.5 h-3.5 text-[var(--color-accent)]" />
+                    <span>{alg.name}</span>
+                    <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-md bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-text-muted)]">
+                      {alg.tag}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Metric & Scheme Pill Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
+              <div className="bg-[var(--color-bg)] border border-[var(--color-border)] rounded-xl px-3.5 py-2">
+                <span className="text-[10px] uppercase font-bold text-[var(--color-text-muted)] block">
+                  Primary Selection Metric
+                </span>
+                <span className="text-xs font-mono font-bold text-[var(--color-accent)]">
+                  {selectionMetric.toUpperCase()} ({isRegression ? 'Minimize Error' : 'Maximize Score'})
+                </span>
+              </div>
+              <div className="bg-[var(--color-bg)] border border-[var(--color-border)] rounded-xl px-3.5 py-2">
+                <span className="text-[10px] uppercase font-bold text-[var(--color-text-muted)] block">
+                  Cross-Validation Scheme
+                </span>
+                <span className="text-xs font-mono font-bold text-emerald-400">
+                  {folds}-Fold {isClassification ? 'Stratified CV' : 'K-Fold CV'}
+                </span>
+              </div>
+              <div className="bg-[var(--color-bg)] border border-[var(--color-border)] rounded-xl px-3.5 py-2">
+                <span className="text-[10px] uppercase font-bold text-[var(--color-text-muted)] block">
+                  Cross-Validation Seed
+                </span>
+                <span className="text-xs font-mono font-bold text-[var(--color-text)]">
+                  {seed ? `Fixed: ${seed}` : 'Randomized Isolation'}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {!leaderboard || (leaderboard.models || []).length === 0 ? (
             <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl p-6 sm:p-8 shadow-sm space-y-6">
               {/* Header */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-[var(--color-border)]">
@@ -472,48 +594,6 @@ export const ModelTraining: React.FC<ModelTrainingProps> = ({
                   <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
                   <span>Awaiting Training Run</span>
                 </span>
-              </div>
-
-              {/* Pre-flight Configuration Summary Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div className="bg-[var(--color-bg)] border border-[var(--color-border)] rounded-xl p-4 space-y-1">
-                  <span className="text-[10px] uppercase font-bold text-[var(--color-text-muted)] tracking-wider">
-                    Optimization Metric
-                  </span>
-                  <div className="text-sm font-mono font-bold text-[var(--color-accent)]">
-                    {selectionMetric.toUpperCase()}
-                  </div>
-                  <span className="text-[10px] text-[var(--color-text-muted)] block">
-                    {isRegression ? 'Minimizes validation error' : 'Maximizes macro classification'}
-                  </span>
-                </div>
-
-                <div className="bg-[var(--color-bg)] border border-[var(--color-border)] rounded-xl p-4 space-y-1">
-                  <span className="text-[10px] uppercase font-bold text-[var(--color-text-muted)] tracking-wider">
-                    Validation Scheme
-                  </span>
-                  <div className="text-sm font-mono font-bold text-emerald-400">
-                    {folds}-Fold {isClassification ? 'Stratified CV' : 'K-Fold CV'}
-                  </div>
-                  <span className="text-[10px] text-[var(--color-text-muted)] block">
-                    Leakage-isolated partitions
-                  </span>
-                </div>
-
-                <div className="bg-[var(--color-bg)] border border-[var(--color-border)] rounded-xl p-4 space-y-1">
-                  <span className="text-[10px] uppercase font-bold text-[var(--color-text-muted)] tracking-wider">
-                    Active Algorithms
-                  </span>
-                  <div className="text-sm font-mono font-bold text-indigo-400">
-                    {selectedAlgorithms.length} Selected
-                  </div>
-                  <span
-                    className="text-[10px] text-[var(--color-text-muted)] block truncate"
-                    title={selectedAlgorithms.join(', ')}
-                  >
-                    {selectedAlgorithms.join(', ')}
-                  </span>
-                </div>
               </div>
 
               {/* Step Flow Preview */}

@@ -156,9 +156,11 @@ export const TrainingPage: React.FC = () => {
                 Locked Test Partition
               </div>
               <div className="text-sm font-bold text-[var(--color-text)] mt-0.5">
-                {splitInfo
-                  ? `${Math.round((splitInfo.test_rows / (splitInfo.train_rows + splitInfo.test_rows)) * 100)}% Holdout`
-                  : 'Configured'}
+                {splitInfo?.locked_test_pct
+                  ? `${splitInfo.locked_test_pct}% Holdout`
+                  : splitInfo?.locked_test_rows && splitInfo?.development_rows
+                    ? `${Math.round((splitInfo.locked_test_rows / (splitInfo.development_rows + splitInfo.locked_test_rows)) * 100)}% Holdout`
+                    : '20% Holdout (Strict)'}
               </div>
             </div>
           </div>

@@ -35,6 +35,7 @@ from app.models.feature_selection_snapshot import FeatureSelectionSnapshot
 from app.models.experiment import Experiment
 from app.models.trained_model import TrainedModel
 from app.models.model_metric import ModelMetric
+from app.models.feature_selection_fold_result import FeatureSelectionFoldResult
 from app.models.reproducibility import ReproducibilityRun
 from app.repositories.project_repository import ProjectRepository
 from app.repositories.dataset_repository import DatasetRepository
@@ -561,6 +562,7 @@ class ExperimentService:
         experiment_id: UUID | str | None = None,
         auto_finalize: bool = True,
         deployment_threshold: dict[str, Any] | None = None,
+        from_worker: bool = False,
     ) -> dict[str, Any]:
         """
         Executes the cross-validation training experiment across requested algorithms.
@@ -668,7 +670,10 @@ class ExperimentService:
                     model_library_versions=env_info.get("model_library_versions"),
                     environment_capture_method="CAPTURED_LIVE",
                 )
-                self.start_training(experiment.id)
+                if not from_worker:
+                    self.start_training(experiment.id)
+                elif experiment.status != ExperimentState.TRAINING.value:
+                    self.start_training(experiment.id)
             else:
                 experiment.task_type = task_type
                 experiment.fold_count = folds
@@ -685,7 +690,10 @@ class ExperimentService:
                 experiment.environment_capture_method = "CAPTURED_LIVE"
                 self.db.add(experiment)
                 self.db.commit()
-                self.start_training(experiment.id)
+                if not from_worker:
+                    self.start_training(experiment.id)
+                elif experiment.status != ExperimentState.TRAINING.value:
+                    self.start_training(experiment.id)
         else:
             experiment = self.exp_repo.create_experiment(
                 project_id=project.id,
@@ -704,7 +712,21 @@ class ExperimentService:
                 model_library_versions=env_info.get("model_library_versions"),
                 environment_capture_method="CAPTURED_LIVE",
             )
-            self.start_training(experiment.id)
+            if not from_worker:
+                self.start_training(experiment.id)
+            elif experiment.status != ExperimentState.TRAINING.value:
+                self.start_training(experiment.id)
+
+        # Clean up any partial state from prior aborted runs for this experiment
+        experiment.locked_test_consumed = False
+        experiment.locked_test_consumed_at = None
+        self.db.add(experiment)
+        self.db.query(FeatureSelectionFoldResult).filter(FeatureSelectionFoldResult.experiment_id == experiment.id).delete()
+        prior_models = self.db.query(TrainedModel).filter(TrainedModel.experiment_id == experiment.id).all()
+        for pm in prior_models:
+            self.db.query(ModelMetric).filter(ModelMetric.model_id == pm.id).delete()
+            self.db.delete(pm)
+        self.db.commit()
 
         # 4. Assemble and freeze experiment_config if not already frozen
         if not experiment.experiment_config:

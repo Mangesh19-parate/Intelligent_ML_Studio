@@ -1,5 +1,5 @@
 import React from 'react';
-import { Eye, BrainCircuit, FileText, Download, ShieldCheck, Activity } from 'lucide-react';
+import { Eye, BrainCircuit, FileText, Download, ShieldCheck, Activity, Trophy } from 'lucide-react';
 import { FitDiagnosisBadge } from './FitDiagnosisBadge';
 import { Button } from '../ui/Button';
 
@@ -291,6 +291,23 @@ export const LeaderboardTable: React.FC<LeaderboardTableProps> = ({
                 </tr>
               );
             })}
+            {models.length === 0 && (
+              <tr>
+                <td colSpan={6} className="text-center py-12 px-4 text-xs text-[var(--color-text-muted)]">
+                  <div className="flex flex-col items-center justify-center space-y-3">
+                    <div className="w-10 h-10 rounded-full bg-[var(--color-accent-soft)] text-[var(--color-accent)] flex items-center justify-center">
+                      <Trophy className="w-5 h-5 opacity-70" />
+                    </div>
+                    <div className="font-bold text-sm text-[var(--color-text)]">
+                      No Trained Models for this Experiment Yet
+                    </div>
+                    <p className="max-w-md text-xs text-[var(--color-text-muted)] leading-relaxed">
+                      Select your target algorithms and cross-validation parameters on the left, then click <strong>Launch Model Training</strong> to fit estimators across folds and populate the authoritative leaderboard.
+                    </p>
+                  </div>
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>

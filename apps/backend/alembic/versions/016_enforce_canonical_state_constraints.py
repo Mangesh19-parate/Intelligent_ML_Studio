@@ -38,7 +38,14 @@ def upgrade() -> None:
     if 'durable_tasks' in tables:
         bind.execute(sa.text("UPDATE durable_tasks SET state = 'SUCCEEDED' WHERE state = 'COMPLETED'"))
 
-    # 4. Enforce check constraints using batch_alter_table for SQLite & Postgres compatibility
+    # 4. Drop existing check constraints before re-creating them (PostgreSQL requires explicit drop)
+    if bind.dialect.name == "postgresql":
+        bind.execute(sa.text("ALTER TABLE experiments DROP CONSTRAINT IF EXISTS chk_experiment_status"))
+        bind.execute(sa.text("ALTER TABLE deployments DROP CONSTRAINT IF EXISTS chk_deployment_status"))
+        bind.execute(sa.text("ALTER TABLE trained_models DROP CONSTRAINT IF EXISTS chk_trained_model_status"))
+        bind.execute(sa.text("ALTER TABLE durable_tasks DROP CONSTRAINT IF EXISTS chk_durable_task_state"))
+
+    # 5. Enforce check constraints using batch_alter_table for SQLite & Postgres compatibility
     if 'experiments' in tables:
         with op.batch_alter_table('experiments') as batch_op:
             batch_op.create_check_constraint(
@@ -73,23 +80,33 @@ def downgrade() -> None:
     inspector = sa.inspect(bind)
     tables = set(inspector.get_table_names())
 
-    if 'durable_tasks' in tables:
-        with op.batch_alter_table('durable_tasks') as batch_op:
-            try:
-                batch_op.drop_constraint('chk_durable_task_state', type_='check')
-            except Exception:
-                pass
+    if bind.dialect.name == "postgresql":
+        bind.execute(sa.text("ALTER TABLE experiments DROP CONSTRAINT IF EXISTS chk_experiment_status"))
+        bind.execute(sa.text("ALTER TABLE deployments DROP CONSTRAINT IF EXISTS chk_deployment_status"))
+        bind.execute(sa.text("ALTER TABLE trained_models DROP CONSTRAINT IF EXISTS chk_trained_model_status"))
+        bind.execute(sa.text("ALTER TABLE durable_tasks DROP CONSTRAINT IF EXISTS chk_durable_task_state"))
+        if 'experiments' in tables:
+            bind.execute(sa.text("ALTER TABLE experiments ADD CONSTRAINT chk_experiment_status CHECK (status IN ('RUNNING', 'COMPLETED', 'FAILED'))"))
+        if 'deployments' in tables:
+            bind.execute(sa.text("ALTER TABLE deployments ADD CONSTRAINT chk_deployment_status CHECK (status IN ('LIVE', 'PAUSED', 'RETIRED'))"))
+    else:
+        if 'durable_tasks' in tables:
+            with op.batch_alter_table('durable_tasks') as batch_op:
+                try:
+                    batch_op.drop_constraint('chk_durable_task_state', type_='check')
+                except Exception:
+                    pass
 
-    if 'trained_models' in tables:
-        with op.batch_alter_table('trained_models') as batch_op:
-            try:
-                batch_op.drop_constraint('chk_trained_model_status', type_='check')
-            except Exception:
-                pass
+        if 'trained_models' in tables:
+            with op.batch_alter_table('trained_models') as batch_op:
+                try:
+                    batch_op.drop_constraint('chk_trained_model_status', type_='check')
+                except Exception:
+                    pass
 
-    if 'experiments' in tables:
-        with op.batch_alter_table('experiments') as batch_op:
-            try:
-                batch_op.drop_constraint('chk_experiment_status', type_='check')
-            except Exception:
-                pass
+        if 'experiments' in tables:
+            with op.batch_alter_table('experiments') as batch_op:
+                try:
+                    batch_op.drop_constraint('chk_experiment_status', type_='check')
+                except Exception:
+                    pass
